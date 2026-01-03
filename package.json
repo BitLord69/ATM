@@ -1,17 +1,33 @@
 {
-  "name": "ATM",
+  "name": "atm",
   "type": "module",
   "private": true,
   "scripts": {
     "build": "nuxt build",
-    "dev": "nuxt dev",
+    "dev": "concurrently \"pnpm run dev:db\" \"nuxt dev\"",
+    "dev:db": "turso dev --db-file local.db",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
-    "postinstall": "nuxt prepare"
+    "postinstall": "nuxt prepare",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "typecheck": "nuxi typecheck",
+    "prepare": "husky"
   },
   "dependencies": {
+    "@nuxt/eslint": "1.12.1",
     "nuxt": "^4.2.2",
     "vue": "^3.5.26",
     "vue-router": "^4.6.4"
+  },
+  "devDependencies": {
+    "@antfu/eslint-config": "^6.7.3",
+    "eslint": "^9.39.2",
+    "eslint-plugin-format": "^1.1.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7"
+  },
+  "lint-staged": {
+    "*": "pnpm lint"
   }
 }
