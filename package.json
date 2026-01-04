@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "build": "nuxt build",
-    "dev": "concurrently \"pnpm run dev:db\" \"nuxt dev\"",
+    "dev": "nuxt dev",
+    "dev_full": "concurrently \"pnpm run dev:db\" \"nuxt dev\"",
     "dev:db": "turso dev --db-file local.db",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
