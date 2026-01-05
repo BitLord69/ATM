@@ -1,11 +1,13 @@
 <template>
   <div class="navbar bg-primary text-primary-content">
     <div class="navbar-start">
-      <NuxtLink to="/" class="btn btn-ghost">
+      <NuxtLink to="/" class="btn-outline">
         <img
-          src="/logo.png"
+          src="/logo-symbol.png"
+          srcset="/logo-symbol-32.png 32w, /logo-symbol-64.png 64w, /logo-symbol-128.png 128w"
+          sizes="(max-width: 640px) 64px, 128px"
           alt="Logo"
-          class="h-8 w-8 mr-2 inline-block"
+          class="w-12 sm:w-8 md:w-18 mr-2 inline-block prefers-dark-logo dark:invert dark:brightness-125"
         >
       </NuxtLink>
     </div>
@@ -16,3 +18,12 @@
     </div>
   </div>
 </template>
+
+<style scoped>
+/* Fallback for OS-level dark mode (for browsers without Tailwind `dark:` enabled) */
+@media (prefers-color-scheme: dark) {
+  .prefers-dark-logo {
+    filter: invert(1) brightness(1.15);
+  }
+}
+</style>
