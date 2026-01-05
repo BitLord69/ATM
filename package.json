@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "build": "nuxt build",
-    "dev": "concurrently \"pnpm run dev:db\" \"nuxt dev\"",
+    "dev": "nuxt dev",
+    "dev_later": "concurrently \"pnpm run dev:db\" \"nuxt dev\"",
     "dev:db": "turso dev --db-file local.db",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
@@ -15,13 +16,16 @@
     "prepare": "husky"
   },
   "dependencies": {
+    "@iconify-json/tabler": "^1.2.26",
     "@nuxt/eslint": "1.12.1",
+    "@tailwindcss/vite": "^4.1.18",
     "nuxt": "^4.2.2",
-    "vue": "^3.5.26",
-    "vue-router": "^4.6.4"
+    "tailwindcss": "^4.1.18"
   },
   "devDependencies": {
     "@antfu/eslint-config": "^6.7.3",
+    "@nuxt/icon": "2.1.1",
+    "daisyui": "^5.5.14",
     "eslint": "^9.39.2",
     "eslint-plugin-format": "^1.1.0",
     "husky": "^9.1.7",
