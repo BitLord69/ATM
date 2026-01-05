@@ -13,7 +13,8 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "typecheck": "nuxi typecheck",
-    "prepare": "husky"
+    "prepare": "husky",
+    "center-logos": "node scripts/center-logos.js"
   },
   "dependencies": {
     "@iconify-json/tabler": "^1.2.26",
@@ -29,7 +30,8 @@
     "eslint": "^9.39.2",
     "eslint-plugin-format": "^1.1.0",
     "husky": "^9.1.7",
-    "lint-staged": "^16.2.7"
+    "lint-staged": "^16.2.7",
+    "sharp": "^0.34.5"
   },
   "lint-staged": {
     "*": "pnpm lint"
