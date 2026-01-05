@@ -15,7 +15,7 @@ if (!fs.existsSync(backupDir))
 const files = fs.readdirSync(publicDir).filter(f => /^logo-symbol-\d+\.png$/.test(f));
 
 if (files.length === 0) {
-  console.log("No logo-symbol-*.png files found in public/. Nothing to do.");
+  console.warn("No logo-symbol-*.png files found in public/. Nothing to do.");
   process.exit(0);
 }
 
@@ -54,7 +54,7 @@ if (files.length === 0) {
         .png()
         .toFile(fp);
 
-      console.log(`Processed ${fn} (${origW}x${origH}) — backup in backups/`);
+      console.warn(`Processed ${fn} (${origW}x${origH}) — backup in backups/`);
     }
     catch (err) {
       console.error(`Failed processing ${fn}:`, err);

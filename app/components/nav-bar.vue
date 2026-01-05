@@ -1,3 +1,7 @@
+<script setup lang="ts">
+import ThemeToggle from "./theme-toggle.vue";
+</script>
+
 <template>
   <div class="navbar bg-primary text-primary-content">
     <div class="navbar-start">
@@ -12,7 +16,11 @@
       </NuxtLink>
     </div>
     <div class="navbar-end">
-      <NuxtLink to="/signin" class="btn btn-accent">
+      <ThemeToggle />
+      <NuxtLink
+        to="/signin"
+        class="btn btn-accent"
+      >
         Sign in
       </NuxtLink>
     </div>
