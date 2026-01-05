@@ -1,8 +1,8 @@
 <template>
   <div class="hero bg-base-300 container mx-auto my-6">
     <div class="hero-content text-center min-h-100">
-      <div class="max-w-md">
-        <h1 class="text-5xl font-bold">
+      <div class="max-w">
+        <h1 class="text-4xl font-bold my-2">
           Allround Tournament Manager
         </h1>
         <div class="carousel w-full h-80">
