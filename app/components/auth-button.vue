@@ -1,37 +1,25 @@
 <script setup lang="ts">
-import { createAuthClient } from "better-auth/client";
+import type { loginProviders } from "../stores/auth";
 
-const props = defineProps<Props>();
-
-const loading = ref(false);
-
-const authClient = createAuthClient();
+import { useAuthStore } from "../stores/auth";
 
 type Props = {
-  provider: "email" | "github" | "google" | "facebook" | "apple" | "microsoft";
+  provider: loginProviders;
   icon: string;
 };
 
-async function signIn() {
-  loading.value = true;
-
-  await authClient.signIn.social({
-    provider: props.provider,
-    callbackURL: "/dashboard",
-  });
-
-  loading.value = false;
-}
+const props = defineProps<Props>();
+const authStore = useAuthStore();
 </script>
 
 <template>
   <button
     class="btn btn-accent"
 
-    :disabled="loading"
-    @click="signIn"
+    :disabled="authStore.loading"
+    @click="authStore.signIn(props.provider)"
   >
-    <span v-if="loading" class="loading-spinner mr-2" />
+    <span v-if="authStore.loading" class="loading-spinner mr-2" />
     <Icon
       v-else
       :name="props.icon"
