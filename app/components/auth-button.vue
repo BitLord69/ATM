@@ -15,7 +15,6 @@ const authStore = useAuthStore();
 <template>
   <button
     class="btn btn-accent"
-
     :disabled="authStore.loading"
     @click="authStore.signIn(props.provider)"
   >

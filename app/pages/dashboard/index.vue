@@ -9,7 +9,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div v-if="authStore.loading">
+  <div v-if="authStore.loading" class="loading-spinner">
     Loading...
   </div>
   <div v-else>
