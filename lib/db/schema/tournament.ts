@@ -1,5 +1,7 @@
 import { int, integer, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
+import { user } from "./auth";
+
 export const tournament = sqliteTable("tournaments", {
   id: int().primaryKey({ autoIncrement: true }),
   name: text().notNull().unique(),
@@ -16,6 +18,7 @@ export const tournament = sqliteTable("tournaments", {
   hasDiscathon: integer({ mode: "boolean" }),
   hasDDC: integer({ mode: "boolean" }),
   hasFreestyle: integer({ mode: "boolean" }),
+  changedBy: int().notNull().references(() => user.id),
   createdAt: int().notNull().$default(() => Date.now()),
   changedAt: int().notNull().$default(() => Date.now()).$onUpdate(() => Date.now()),
 });
