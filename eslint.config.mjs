@@ -40,4 +40,9 @@ export default withNuxt(antfu({
       ignore: ["README.md"],
     }],
   },
+}, {
+  files: ["scripts/**/*.ts"],
+  rules: {
+    "no-console": "off",
+  },
 }));

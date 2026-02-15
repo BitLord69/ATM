@@ -1,5 +1,27 @@
 <script setup lang="ts">
+import { useAuthClient } from "~/stores/auth";
+
+import LogoutButton from "./logout-button.vue";
 import ThemeToggle from "./theme-toggle.vue";
+
+const authClient = useAuthClient();
+const isLoggedIn = ref(false);
+
+async function checkSession() {
+  const session = await authClient.getSession();
+  isLoggedIn.value = !!session?.data?.user;
+}
+
+onMounted(() => {
+  void checkSession();
+
+  // Listen for auth state changes
+  const unsubscribe = authClient.onAuthStateChange(() => {
+    void checkSession();
+  });
+
+  onUnmounted(unsubscribe);
+});
 </script>
 
 <template>
@@ -9,15 +31,17 @@ import ThemeToggle from "./theme-toggle.vue";
         <img
           src="/logo-symbol.png"
           srcset="/logo-symbol-32.png 32w, /logo-symbol-64.png 64w, /logo-symbol-128.png 128w"
-          sizes="(max-width: 640px) 64px, 128px"
+          sizes="(max-width: 640px) 24px, 40px"
           alt="Logo"
-          class="w-12 sm:w-8 md:w-18 mr-2 inline-block prefers-dark-logo dark:invert dark:brightness-125"
+          class="w-6 sm:w-6 md:w-10 mr-2 inline-block prefers-dark-logo dark:invert dark:brightness-125"
         >
       </NuxtLink>
     </div>
-    <div class="navbar-end">
+    <div class="navbar-end gap-2">
       <ThemeToggle />
+      <LogoutButton v-if="isLoggedIn" />
       <NuxtLink
+        v-else
         to="/signin"
         class="btn btn-accent"
       >

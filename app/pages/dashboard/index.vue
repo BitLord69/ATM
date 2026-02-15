@@ -1,15 +1,12 @@
 <script setup lang="ts">
-import { useAuthStore } from "../../stores/auth";
+// import { useAuthStore } from "../../stores/auth";
 
-const authStore = useAuthStore();
-
-onMounted(() => {
-  authStore.checkSession();
-});
+// const authStore = useAuthStore();
 </script>
 
 <template>
-  <div v-if="authStore.loading" class="loading-spinner">
+  <div>Hi there....</div>
+  <!-- <div v-if="authStore.loading" class="loading-spinner">
     Loading...
   </div>
   <div v-else>
@@ -19,5 +16,5 @@ onMounted(() => {
     <h1 v-else>
       You are NOT logged in!!!
     </h1>
-  </div>
+  </div> -->
 </template>

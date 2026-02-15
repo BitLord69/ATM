@@ -1,12 +1,33 @@
 import { createAuthClient } from "better-auth/client";
+import { inferAdditionalFields, organizationClient } from "better-auth/client/plugins";
 
-const authClient = createAuthClient();
+let authClientInstance: ReturnType<typeof createAuthClient> | null = null;
+
+export function useAuthClient() {
+  if (authClientInstance) {
+    return authClientInstance;
+  }
+
+  const config = useRuntimeConfig();
+
+  authClientInstance = createAuthClient({
+    baseURL: config.public.betterAuthUrl,
+    plugins: [
+      // Required for invitation and multi-tenant features
+      organizationClient(),
+      inferAdditionalFields(),
+    ],
+  });
+
+  return authClientInstance;
+}
 
 export type loginProviders = "email" | "github" | "google" | "facebook";
 
-export const useAuthStore = defineStore("useaAuthStore", () => {
+export const useAuthStore = defineStore("useAuthStore", () => {
   const loading = ref(false);
   const isSignedIn = ref(false);
+  const authClient = useAuthClient();
 
   async function signIn(_provider: loginProviders) {
     loading.value = true;
@@ -17,6 +38,19 @@ export const useAuthStore = defineStore("useaAuthStore", () => {
       errorCallbackURL: "/error",
     });
 
+    loading.value = false;
+  }
+
+  async function signOut() {
+    loading.value = true;
+    await authClient.signOut({
+      fetchOptions: {
+        onSuccess: () => {
+          isSignedIn.value = false;
+          navigateTo("/");
+        },
+      },
+    });
     loading.value = false;
   }
 
@@ -31,6 +65,7 @@ export const useAuthStore = defineStore("useaAuthStore", () => {
     loading,
     isSignedIn,
     signIn,
+    signOut,
     checkSession,
   };
 });

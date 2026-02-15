@@ -1,0 +1,8 @@
+[2026-02-15T02:17:29.309Z] 📧 Attempting to send invitation email to: bitlord.developer@gmail.com
+✅ Invitation email sent successfully to: bitlord.developer@gmail.com (ID: <85ad4f78-1e46-9b3e-a0e4-19270f1729a2@hotmail.com>)
+[2026-02-15T02:28:43.049Z] 📧 Attempting to send invitation email to: bitlord.developer@gmail.com
+✅ Invitation email sent successfully to: bitlord.developer@gmail.com (ID: <86fa2a12-ca3a-94dd-0a21-8968c12f5dd0@hotmail.com>)
+[2026-02-15T02:29:40.233Z] 📧 Attempting to send invitation email to: bitlord.developer@gmail.com
+✅ Invitation email sent successfully to: bitlord.developer@gmail.com (ID: <70c13bba-9a0e-22ac-03e3-6fb896dea9a0@hotmail.com>)
+[2026-02-15T02:33:46.206Z] 📧 Attempting to send invitation email to: bitlord.developer@gmail.com
+✅ Invitation email sent successfully to: bitlord.developer@gmail.com (ID: <2c6d90c1-a7aa-5778-39c7-45f9b3df7c68@hotmail.com>)

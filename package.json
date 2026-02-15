@@ -25,7 +25,11 @@
     "@tailwindcss/vite": "^4.1.18",
     "better-auth": "^1.4.10",
     "drizzle-orm": "^0.45.1",
+    "h3": "^1.15.4",
+    "nitropack": "^2.12.9",
+    "nodemailer": "^8.0.1",
     "nuxt": "^4.2.2",
+    "ofetch": "^1.5.1",
     "pinia": "^3.0.4",
     "tailwindcss": "^4.1.18",
     "zod": "^4.3.5"
@@ -33,15 +37,19 @@
   "devDependencies": {
     "@antfu/eslint-config": "^6.7.3",
     "@nuxt/icon": "2.1.1",
+    "@types/nodemailer": "^7.0.9",
     "daisyui": "^5.5.14",
+    "dotenv": "^17.3.1",
     "drizzle-kit": "^0.31.8",
     "eslint": "^9.39.2",
     "eslint-plugin-format": "^1.1.0",
     "husky": "^9.1.7",
     "lint-staged": "^16.2.7",
-    "sharp": "^0.34.5"
+    "sharp": "^0.34.5",
+    "tsx": "^4.21.0",
+    "vite-tsconfig-paths": "^6.1.0"
   },
   "lint-staged": {
-    "*": "pnpm lint"
+    "*": "eslint --fix"
   }
 }

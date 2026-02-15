@@ -1,20 +1,30 @@
 import tailwindcss from "@tailwindcss/vite";
+import { env } from "node:process";
+import tsconfigPaths from "vite-tsconfig-paths";
 
-import "./lib/env";
-
-// https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
-  compatibilityDate: "2025-07-15",
-  devtools: { enabled: false },
+  runtimeConfig: {
+    public: {
+      betterAuthUrl: env.BETTER_AUTH_URL,
+    },
+  },
   vite: {
     plugins: [
+      tsconfigPaths(),
       tailwindcss(),
     ],
   },
+  compatibilityDate: "2025-07-15",
+  devtools: { enabled: false },
   colorMode: {
     dataValue: "theme",
   },
-  modules: ["@nuxt/eslint", "@nuxt/icon", "@nuxtjs/color-mode", "@pinia/nuxt"],
+  modules: [
+    "@nuxt/eslint",
+    "@nuxt/icon",
+    "@nuxtjs/color-mode",
+    "@pinia/nuxt",
+  ],
   css: ["~/assets/css/main.css"],
   eslint: {
     config: {

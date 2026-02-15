@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import type { loginProviders } from "../stores/auth";
+import type { loginProviders } from "~/stores/auth";
 
-import { useAuthStore } from "../stores/auth";
+import { useAuthStore } from "~/stores/auth";
 
 type Props = {
   provider: loginProviders;

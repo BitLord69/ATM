@@ -14,6 +14,11 @@ const EnvSchema = z.object({
   FACEBOOK_CLIENT_SECRET: z.string(),
   GOOGLE_CLIENT_ID: z.string(),
   GOOGLE_CLIENT_SECRET: z.string(),
+  BREVO_SMTP_HOST: z.string(),
+  BREVO_SMTP_PORT: z.string().transform(Number),
+  BREVO_SMTP_USER: z.string(),
+  BREVO_SMTP_KEY: z.string(),
+  BREVO_FROM_EMAIL: z.string(),
 });
 
 export type EnvSchema = z.infer<typeof EnvSchema>;

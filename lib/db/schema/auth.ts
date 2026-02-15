@@ -1,6 +1,8 @@
 import { relations } from "drizzle-orm";
 import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
+import type { UserRole } from "#shared/types/auth";
+
 export const user = sqliteTable("user", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
@@ -11,6 +13,7 @@ export const user = sqliteTable("user", {
   image: text("image"),
   createdAt: integer("created_at").notNull().$default(() => Date.now()),
   updatedAt: integer("updated_at").notNull().$default(() => Date.now()).$onUpdate(() => Date.now()),
+  role: text("role").$type<UserRole>().notNull().default("guest"),
 });
 
 export const session = sqliteTable(

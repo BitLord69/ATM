@@ -1,4 +1,14 @@
 {
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "#shared/*": ["shared/*"],
+      "~/*": ["app/*"],
+      "@/*": ["app/*"],
+      "~lib/*": ["lib/*"],
+      "~shared/*": ["shared/*"]
+    }
+  },
   "references": [
     {
       "path": "./.nuxt/tsconfig.app.json"
