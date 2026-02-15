@@ -71,6 +71,7 @@ export const verification = sqliteTable(
 export const userRelations = relations(user, ({ many }) => ({
   sessions: many(session),
   accounts: many(account),
+  tournamentMemberships: many(() => import("./tournament-membership").then(m => m.tournamentMembership)),
 }));
 
 export const sessionRelations = relations(session, ({ one }) => ({

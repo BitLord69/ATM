@@ -27,6 +27,7 @@ export type loginProviders = "email" | "github" | "google" | "facebook";
 export const useAuthStore = defineStore("useAuthStore", () => {
   const loading = ref(false);
   const isSignedIn = ref(false);
+  const currentUser = ref<any>(null);
   const authClient = useAuthClient();
 
   async function signIn(_provider: loginProviders) {
@@ -47,6 +48,12 @@ export const useAuthStore = defineStore("useAuthStore", () => {
       fetchOptions: {
         onSuccess: () => {
           isSignedIn.value = false;
+          currentUser.value = null;
+
+          // Clear tournament context on logout
+          const tournamentStore = useTournamentStore();
+          tournamentStore.$reset();
+
           navigateTo("/");
         },
       },
@@ -58,12 +65,15 @@ export const useAuthStore = defineStore("useAuthStore", () => {
     loading.value = true;
     const session = await authClient.getSession();
     isSignedIn.value = !!session.data;
+    currentUser.value = session.data?.user || null;
     loading.value = false;
+    return session.data;
   }
 
   return {
     loading,
     isSignedIn,
+    currentUser,
     signIn,
     signOut,
     checkSession,
