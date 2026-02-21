@@ -44,21 +44,30 @@ export const useAuthStore = defineStore("useAuthStore", () => {
 
   async function signOut() {
     loading.value = true;
-    await authClient.signOut({
-      fetchOptions: {
-        onSuccess: () => {
-          isSignedIn.value = false;
-          currentUser.value = null;
+    try {
+      await authClient.signOut();
 
-          // Clear tournament context on logout
-          const tournamentStore = useTournamentStore();
-          tournamentStore.$reset();
+      // Clear state regardless of API success
+      isSignedIn.value = false;
+      currentUser.value = null;
 
-          navigateTo("/");
-        },
-      },
-    });
-    loading.value = false;
+      // Clear tournament context on logout
+      const tournamentStore = useTournamentStore();
+      tournamentStore.$reset();
+
+      // Navigate to home page
+      await navigateTo("/");
+    }
+    catch (error) {
+      console.error("Logout error:", error);
+      // Still clear local state and navigate even if API call fails
+      isSignedIn.value = false;
+      currentUser.value = null;
+      await navigateTo("/");
+    }
+    finally {
+      loading.value = false;
+    }
   }
 
   async function checkSession() {

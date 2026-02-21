@@ -14,13 +14,6 @@ async function checkSession() {
 
 onMounted(() => {
   void checkSession();
-
-  // Listen for auth state changes
-  const unsubscribe = authClient.onAuthStateChange(() => {
-    void checkSession();
-  });
-
-  onUnmounted(unsubscribe);
 });
 </script>
 
@@ -36,6 +29,26 @@ onMounted(() => {
           class="w-6 sm:w-6 md:w-10 mr-2 inline-block prefers-dark-logo dark:invert dark:brightness-125"
         >
       </NuxtLink>
+    </div>
+    <div class="navbar-center hidden lg:flex">
+      <ul class="menu menu-horizontal px-1 gap-1">
+        <li>
+          <NuxtLink
+            to="/tournaments"
+            class="btn btn-ghost"
+          >
+            Tournaments
+          </NuxtLink>
+        </li>
+        <li v-if="isLoggedIn">
+          <NuxtLink
+            to="/dashboard"
+            class="btn btn-ghost"
+          >
+            Dashboard
+          </NuxtLink>
+        </li>
+      </ul>
     </div>
     <div class="navbar-end gap-2">
       <ThemeToggle />

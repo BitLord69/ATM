@@ -49,6 +49,46 @@ export type AuthUser = {
   role: UserRole;
 };
 
+// Global role hierarchy - higher value = more privileges
+const GLOBAL_ROLE_HIERARCHY: Record<UserRole, number> = {
+  admin: 100, // System administrator
+  td: 50, // Global tournament director
+  presenter: 40, // Can present/announce
+  validator: 30, // Can validate results
+  scorer: 20, // Can score events
+  player: 10, // Registered player
+  invitee: 5, // Has been invited
+  guest: 1, // Unauthenticated or minimal access
+};
+
+/**
+ * Check if user has a minimum global role level
+ */
+export function hasGlobalRole(user: AuthUser | null, minRole: UserRole): boolean {
+  if (!user) {
+    return minRole === "guest";
+  }
+
+  const userLevel = GLOBAL_ROLE_HIERARCHY[user.role];
+  const requiredLevel = GLOBAL_ROLE_HIERARCHY[minRole];
+
+  return userLevel >= requiredLevel;
+}
+
+/**
+ * Check if user is authenticated (any role above guest)
+ */
+export function isAuthenticated(user: AuthUser | null): boolean {
+  return user !== null && user.role !== "guest";
+}
+
+/**
+ * Check if user is a system administrator
+ */
+export function isSysAdmin(user: AuthUser | null): boolean {
+  return user?.role === "admin";
+}
+
 /**
  * Check if a user has permission to perform an action on a tournament
  * @param user - The authenticated user

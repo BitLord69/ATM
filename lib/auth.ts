@@ -52,7 +52,7 @@ export const auth = betterAuth({
         const inviteLink = `${env.BETTER_AUTH_URL}/accept-invite?id=${data.id}`;
 
         const logMsg = `[${new Date().toISOString()}] 📧 Attempting to send invitation email to: ${email}`;
-        console.log(logMsg);
+        console.warn(logMsg);
         fs.appendFileSync("./email-log.txt", `${logMsg}\n`);
 
         const transporter = nodemailer.createTransport({
@@ -80,7 +80,7 @@ export const auth = betterAuth({
             .where(eq(schema.invitation.id, data.id));
 
           const successMsg = `✅ Invitation email sent successfully to: ${email} (ID: ${result.messageId})`;
-          console.log(successMsg);
+          console.warn(successMsg);
           fs.appendFileSync("./email-log.txt", `${successMsg}\n`);
         }
         catch (error: any) {
