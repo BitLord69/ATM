@@ -1,4 +1,13 @@
 <script setup lang="ts">
+import { getCountryCoordinates } from "~/utils/country-coordinates";
+
+const authStore = useAuthStore();
+const authUiReady = ref(false);
+
+onMounted(() => {
+  authUiReady.value = true;
+});
+
 const { data: activeTournaments, pending: activePending } = await useFetch("/api/tournaments/public", {
   query: { filter: "active" },
 });
@@ -7,10 +16,45 @@ const { data: upcomingTournaments, pending: upcomingPending } = await useFetch("
   query: { filter: "upcoming" },
 });
 
+// Fetch all tournaments for the map
+const { data: allTournaments } = await useFetch("/api/tournaments/public", {
+  query: { filter: "all" },
+});
+
 const isLoading = computed(() => activePending.value || upcomingPending.value);
 
 const featuredTournaments = computed(() =>
   upcomingTournaments.value?.slice(0, 3) || [],
+);
+
+const fallbackMapCenter = computed<[number, number]>(() => {
+  const userCountry = authStore.currentUser?.country?.trim();
+  if (userCountry) {
+    const userCountryCoords = getCountryCoordinates(userCountry);
+    if (userCountryCoords) {
+      return userCountryCoords;
+    }
+  }
+  return [20, 0];
+});
+
+// Calculate map center based on all tournaments
+const mapCenter = computed<[number, number]>(() => {
+  if (!allTournaments.value || allTournaments.value.length === 0) {
+    return fallbackMapCenter.value;
+  }
+  const validTournaments = allTournaments.value.filter(t => t.lat && t.long && t.lat !== 0 && t.long !== 0);
+  if (validTournaments.length === 0) {
+    return fallbackMapCenter.value;
+  }
+  const avgLat = validTournaments.reduce((sum, t) => sum + t.lat!, 0) / validTournaments.length;
+  const avgLong = validTournaments.reduce((sum, t) => sum + t.long!, 0) / validTournaments.length;
+  return [avgLat, avgLong];
+});
+
+// Filter tournaments with valid coordinates for the map
+const tournamentsWithCoordinates = computed(() =>
+  allTournaments.value?.filter(t => t.lat && t.long && t.lat !== 0 && t.long !== 0) || [],
 );
 </script>
 
@@ -84,10 +128,35 @@ const featuredTournaments = computed(() =>
           </div>
         </div>
 
+        <!-- Call to Action Buttons -->
+        <div class="flex flex-col sm:flex-row gap-4 justify-center my-8">
+          <NuxtLink
+            to="/tournaments"
+            class="btn btn-primary btn-lg gap-2"
+          >
+            <Icon
+              name="tabler:trophy"
+              size="24"
+            />
+            Browse Tournaments
+          </NuxtLink>
+          <NuxtLink
+            v-if="authUiReady && !authStore.isSignedIn"
+            to="/signin"
+            class="btn btn-accent btn-lg gap-2"
+          >
+            <Icon
+              name="tabler:login"
+              size="24"
+            />
+            Sign In
+          </NuxtLink>
+        </div>
+
         <!-- Active Tournaments Alert -->
         <div
           v-if="activeTournaments && activeTournaments.length > 0"
-          class="alert alert-success mb-6"
+          class="alert alert-success mb-8"
         >
           <Icon
             name="tabler:live-photo"
@@ -104,33 +173,10 @@ const featuredTournaments = computed(() =>
           </NuxtLink>
         </div>
 
-        <div class="flex flex-col sm:flex-row gap-4 justify-center mb-8">
-          <NuxtLink
-            to="/tournaments"
-            class="btn btn-primary btn-lg gap-2"
-          >
-            <Icon
-              name="tabler:trophy"
-              size="24"
-            />
-            Browse Tournaments
-          </NuxtLink>
-          <NuxtLink
-            to="/signin"
-            class="btn btn-accent btn-lg gap-2"
-          >
-            <Icon
-              name="tabler:login"
-              size="24"
-            />
-            Sign In
-          </NuxtLink>
-        </div>
-
         <!-- Featured Tournaments -->
         <div
           v-if="featuredTournaments.length > 0"
-          class="mt-12"
+          class="mb-12"
         >
           <h2 class="text-2xl font-bold mb-6">
             Upcoming Tournaments
@@ -152,7 +198,7 @@ const featuredTournaments = computed(() =>
                       name="tabler:calendar"
                       size="14"
                     />
-                    <span>{{ new Date(tournament.startDate).toLocaleDateString() }}</span>
+                    <span>{{ tournament.startDate ? new Date(tournament.startDate).toLocaleDateString() : "TBD" }}</span>
                   </div>
                   <div
                     v-if="tournament.city || tournament.country"
@@ -168,6 +214,23 @@ const featuredTournaments = computed(() =>
               </div>
             </NuxtLink>
           </div>
+        </div>
+
+        <!-- Tournaments Map -->
+        <div
+          v-if="tournamentsWithCoordinates.length > 0"
+          class="mt-12"
+        >
+          <h2 class="text-2xl font-bold mb-4">
+            Tournaments Worldwide
+          </h2>
+          <ClientOnly>
+            <TournamentsMap
+              :center="mapCenter"
+              :user-country="authStore.currentUser?.country"
+              :tournaments="tournamentsWithCoordinates"
+            />
+          </ClientOnly>
         </div>
 
         <!-- Features Section -->

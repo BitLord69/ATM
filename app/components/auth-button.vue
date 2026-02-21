@@ -18,7 +18,7 @@ const authStore = useAuthStore();
     :disabled="authStore.loading"
     @click="authStore.signIn(props.provider)"
   >
-    <span v-if="authStore.loading" class="loading-spinner mr-2" />
+    <span v-if="authStore.loading" class="loading loading-spinner loading-sm" />
     <Icon
       v-else
       :name="props.icon"

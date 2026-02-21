@@ -25,6 +25,21 @@ export const auth = betterAuth({
         input: true,
         defaultValue: "guest",
       },
+      country: {
+        type: "string",
+        required: false,
+        input: true,
+      },
+      pdgaNumber: {
+        type: "string",
+        required: false,
+        input: true,
+      },
+      homeClub: {
+        type: "string",
+        required: false,
+        input: true,
+      },
     },
   },
   baseURL: env.BETTER_AUTH_URL,

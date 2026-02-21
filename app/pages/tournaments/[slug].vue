@@ -183,39 +183,77 @@ function formatDateRange(start: number | null | undefined, end: number | null | 
               <EventTypeBadge
                 v-if="tournament.hasGolf"
                 type="golf"
-                size="sm"
+                size="md"
               />
               <EventTypeBadge
                 v-if="tournament.hasAccuracy"
                 type="accuracy"
-                size="sm"
+                size="md"
               />
               <EventTypeBadge
                 v-if="tournament.hasDistance"
                 type="distance"
-                size="sm"
+                size="md"
               />
               <EventTypeBadge
                 v-if="tournament.hasSCF"
                 type="scf"
-                size="sm"
+                size="md"
               />
               <EventTypeBadge
                 v-if="tournament.hasDiscathon"
                 type="discathon"
-                size="sm"
+                size="md"
               />
               <EventTypeBadge
                 v-if="tournament.hasDDC"
                 type="ddc"
-                size="sm"
+                size="md"
               />
               <EventTypeBadge
                 v-if="tournament.hasFreestyle"
                 type="freestyle"
-                size="sm"
+                size="md"
               />
             </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Map Section -->
+      <div
+        v-if="tournament.lat != null && tournament.long != null && tournament.lat !== 0 && tournament.long !== 0"
+        class="mb-6"
+      >
+        <ClientOnly>
+          <TournamentMap
+            :lat="tournament.lat"
+            :long="tournament.long"
+            :name="tournament.name"
+            :city="tournament.city"
+            :country="tournament.country"
+            :venues="tournament.venues"
+          />
+        </ClientOnly>
+      </div>
+
+      <!-- Map location not specified message -->
+      <div
+        v-else-if="tournament.city || tournament.country"
+        class="mb-6"
+      >
+        <div class="alert">
+          <Icon
+            name="tabler:map-off"
+            size="24"
+          />
+          <div>
+            <p class="font-semibold">
+              Map location not specified
+            </p>
+            <p class="text-sm opacity-70">
+              Coordinates haven't been set for this tournament yet. Location: {{ [tournament.city, tournament.country].filter(Boolean).join(", ") }}
+            </p>
           </div>
         </div>
       </div>

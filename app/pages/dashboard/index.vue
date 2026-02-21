@@ -232,13 +232,41 @@ onMounted(async () => {
                 v-if="tournament.hasGolf || tournament.hasAccuracy || tournament.hasDistance || tournament.hasSCF || tournament.hasDiscathon || tournament.hasDDC || tournament.hasFreestyle"
                 class="flex flex-wrap gap-1.5 pt-3 border-t border-base-300"
               >
-                <EventTypeBadge v-if="tournament.hasGolf" type="golf" />
-                <EventTypeBadge v-if="tournament.hasAccuracy" type="accuracy" />
-                <EventTypeBadge v-if="tournament.hasDistance" type="distance" />
-                <EventTypeBadge v-if="tournament.hasSCF" type="scf" />
-                <EventTypeBadge v-if="tournament.hasDiscathon" type="discathon" />
-                <EventTypeBadge v-if="tournament.hasDDC" type="ddc" />
-                <EventTypeBadge v-if="tournament.hasFreestyle" type="freestyle" />
+                <EventTypeBadge
+                  v-if="tournament.hasGolf"
+                  type="golf"
+                  size="md"
+                />
+                <EventTypeBadge
+                  v-if="tournament.hasAccuracy"
+                  type="accuracy"
+                  size="md"
+                />
+                <EventTypeBadge
+                  v-if="tournament.hasDistance"
+                  type="distance"
+                  size="md"
+                />
+                <EventTypeBadge
+                  v-if="tournament.hasSCF"
+                  type="scf"
+                  size="md"
+                />
+                <EventTypeBadge
+                  v-if="tournament.hasDiscathon"
+                  type="discathon"
+                  size="md"
+                />
+                <EventTypeBadge
+                  v-if="tournament.hasDDC"
+                  type="ddc"
+                  size="md"
+                />
+                <EventTypeBadge
+                  v-if="tournament.hasFreestyle"
+                  type="freestyle"
+                  size="md"
+                />
               </div>
             </div>
           </div>

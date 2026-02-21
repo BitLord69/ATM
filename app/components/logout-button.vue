@@ -1,40 +1,12 @@
 <script setup lang="ts">
-import { useAuthClient, useAuthStore } from "~/stores/auth";
+import { useAuthStore } from "~/stores/auth";
 
-const route = useRoute();
-const authClient = useAuthClient();
 const authStore = useAuthStore();
-
-const user = ref<{ email: string; name: string } | null>(null);
-const isLoading = ref(false);
-
-async function loadSession() {
-  const session = await authClient.getSession();
-  if (session?.data?.user) {
-    user.value = {
-      email: session.data.user.email,
-      name: session.data.user.name || "User",
-    };
-  }
-  else {
-    user.value = null;
-  }
-}
+const user = computed(() => authStore.currentUser);
 
 async function handleLogout() {
-  isLoading.value = true;
   await authStore.signOut();
-  isLoading.value = false;
 }
-
-onMounted(() => {
-  void loadSession();
-});
-
-// Re-check session when route changes (especially after logout redirect)
-watch(() => route.path, () => {
-  void loadSession();
-});
 </script>
 
 <template>
@@ -54,7 +26,7 @@ watch(() => route.path, () => {
 
     <ul
       tabindex="0"
-      class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52"
+      class="dropdown-content z-1 menu p-2 shadow bg-base-100 rounded-box w-52"
     >
       <li class="menu-title">
         <span>{{ user.email }}</span>
@@ -66,8 +38,8 @@ watch(() => route.path, () => {
         <a href="/admin/invites">Send Invitations</a>
       </li>
       <li>
-        <button :disabled="isLoading" @click="handleLogout">
-          <span v-if="isLoading" class="loading loading-spinner loading-sm" />
+        <button :disabled="authStore.loading" @click="handleLogout">
+          <span v-if="authStore.loading" class="loading loading-spinner loading-sm" />
           <span v-else>Log Out</span>
         </button>
       </li>

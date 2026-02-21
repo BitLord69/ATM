@@ -25,7 +25,10 @@ export default defineNuxtConfig({
     "@nuxtjs/color-mode",
     "@pinia/nuxt",
   ],
-  css: ["~/assets/css/main.css"],
+  css: [
+    "~/assets/css/main.css",
+    "leaflet/dist/leaflet.css",
+  ],
   eslint: {
     config: {
       standalone: false,

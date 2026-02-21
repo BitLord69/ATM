@@ -39,7 +39,7 @@ export const useAuthStore = defineStore("useAuthStore", () => {
       errorCallbackURL: "/error",
     });
 
-    loading.value = false;
+    // Note: loading.value = false is not needed since we redirect away
   }
 
   async function signOut() {

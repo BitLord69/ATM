@@ -1,19 +1,13 @@
 <script setup lang="ts">
-import { useAuthClient } from "~/stores/auth";
-
 import LogoutButton from "./logout-button.vue";
 import ThemeToggle from "./theme-toggle.vue";
 
-const authClient = useAuthClient();
-const isLoggedIn = ref(false);
-
-async function checkSession() {
-  const session = await authClient.getSession();
-  isLoggedIn.value = !!session?.data?.user;
-}
+const authStore = useAuthStore();
+const authUiReady = ref(false);
 
 onMounted(() => {
-  void checkSession();
+  void authStore.checkSession();
+  authUiReady.value = true;
 });
 </script>
 
@@ -40,7 +34,7 @@ onMounted(() => {
             Tournaments
           </NuxtLink>
         </li>
-        <li v-if="isLoggedIn">
+        <li v-if="authUiReady && authStore.isSignedIn">
           <NuxtLink
             to="/dashboard"
             class="btn btn-ghost"
@@ -52,14 +46,16 @@ onMounted(() => {
     </div>
     <div class="navbar-end gap-2">
       <ThemeToggle />
-      <LogoutButton v-if="isLoggedIn" />
-      <NuxtLink
-        v-else
-        to="/signin"
+      <LogoutButton v-if="authUiReady && authStore.isSignedIn" />
+      <button
+        v-else-if="authUiReady"
         class="btn btn-accent"
+        :disabled="authStore.loading"
+        @click="navigateTo('/signin')"
       >
-        Sign in
-      </NuxtLink>
+        <span v-if="authStore.loading" class="loading loading-spinner loading-sm" />
+        <span v-else>Sign in</span>
+      </button>
     </div>
   </div>
 </template>

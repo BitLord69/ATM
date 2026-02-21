@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 
 import db from "../../../lib/db";
-import { tournament } from "../../../lib/db/schema";
+import { tournament, tournamentVenue, venue } from "../../../lib/db/schema";
 import { getTournamentStatus } from "../../utils/authorization.ts";
 
 /**
@@ -26,6 +26,8 @@ export default defineEventHandler(async (event) => {
       description: tournament.description,
       country: tournament.country,
       city: tournament.city,
+      lat: tournament.lat,
+      long: tournament.long,
       contactName: tournament.contactName,
       contactEmail: tournament.contactEmail,
       contactPhone: tournament.contactPhone,
@@ -54,9 +56,24 @@ export default defineEventHandler(async (event) => {
   const t = tournaments[0];
   const tournamentStatus = getTournamentStatus(t.startDate, t.endDate);
 
+  // Fetch associated venues for discipline locations
+  const venues = await db
+    .select({
+      id: venue.id,
+      name: venue.name,
+      description: venue.description,
+      facilities: venue.facilities,
+      lat: venue.lat,
+      long: venue.long,
+    })
+    .from(tournamentVenue)
+    .innerJoin(venue, eq(tournamentVenue.venueId, venue.id))
+    .where(eq(tournamentVenue.tournamentId, t.id));
+
   return {
     ...t,
     status: tournamentStatus,
     isActive: tournamentStatus === "active",
+    venues,
   };
 });

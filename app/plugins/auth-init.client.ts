@@ -1,14 +1,14 @@
-import { useAuthClient } from "~/stores/auth";
+import { useAuthStore } from "~/stores/auth";
 import { useTournamentStore } from "~/stores/tournament";
 
 export default defineNuxtPlugin(async () => {
-  const authClient = useAuthClient();
+  const authStore = useAuthStore();
   const tournamentStore = useTournamentStore();
 
-  // Check for existing session on app load (client-side only)
-  const session = await authClient.getSession();
+  // Hydrate auth store once on app load (client-side only)
+  const session = await authStore.checkSession();
 
-  if (session?.data?.user) {
+  if (session?.user) {
     // User has an active session, restore tournament context
     await tournamentStore.loadTournaments();
   }
