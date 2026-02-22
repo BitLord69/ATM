@@ -238,9 +238,10 @@ async function handleInvite() {
           </button>
         </div>
 
-        <div class="form-control w-full">
-          <!-- DaisyUI Input with Label -->
-          <label class="label"><span class="label-text">Recipient Email</span></label>
+        <FormField
+          label="Recipient Email"
+          wrapper-class="w-full"
+        >
           <input
             v-model="email"
             type="email"
@@ -248,11 +249,12 @@ async function handleInvite() {
             class="input input-bordered w-full"
             :disabled="isSubmitting"
           >
-        </div>
+        </FormField>
 
-        <div class="form-control w-full mt-2">
-          <!-- DaisyUI Select -->
-          <label class="label"><span class="label-text">Assigned Role</span></label>
+        <FormField
+          label="Assigned Role"
+          wrapper-class="w-full mt-2"
+        >
           <select
             v-model="role"
             class="select select-bordered w-full"
@@ -266,31 +268,28 @@ async function handleInvite() {
               {{ r.charAt(0).toUpperCase() + r.slice(1) }}
             </option>
           </select>
-        </div>
+        </FormField>
 
-        <div class="form-control w-full mt-2">
-          <label class="label"><span class="label-text">Tournaments (select multiple)</span></label>
+        <FormField
+          label="Tournaments (select multiple)"
+          wrapper-class="w-full mt-2"
+        >
           <div v-if="pending" class="loading loading-spinner" />
           <div v-else-if="!organizations || organizations.length === 0" class="text-sm opacity-70">
             No tournaments available.
           </div>
-          <div v-else class="flex flex-col gap-2 max-h-48 overflow-y-auto border border-base-300 rounded-lg p-3">
-            <label
+          <div v-else class="flex flex-col gap-3 max-h-48 overflow-y-auto border border-base-300 rounded-lg p-3">
+            <ToggleField
               v-for="org in organizations"
               :key="org.id"
-              class="label cursor-pointer justify-start gap-2"
-            >
-              <input
-                v-model="selectedOrganizations"
-                type="checkbox"
-                :value="org.id"
-                class="checkbox checkbox-primary"
-                :disabled="isSubmitting"
-              >
-              <span class="label-text">{{ org.name }}</span>
-            </label>
+              v-model="selectedOrganizations"
+              :value="org.id"
+              :label="org.name"
+              :disabled="isSubmitting"
+              :stacked="false"
+            />
           </div>
-        </div>
+        </FormField>
 
         <div class="card-actions justify-end mt-6">
           <!-- DaisyUI Button with Loading State -->

@@ -4,10 +4,40 @@
  * Accessible to everyone including guests
  */
 
+import { useAuthStore } from "~/stores/auth";
+
+const authStore = useAuthStore();
 const filter = ref<"upcoming" | "active" | "finished" | "all">("upcoming");
 const { data: tournaments, pending } = await useFetch("/api/tournaments/public", {
   query: { filter },
   watch: [filter],
+});
+
+const editPermissions = ref<Record<number, boolean>>({});
+
+// Load edit permissions for all tournaments when list changes
+async function loadPermissions() {
+  if (!tournaments.value || !authStore.isSignedIn) {
+    return;
+  }
+
+  editPermissions.value = {};
+
+  for (const tournament of tournaments.value) {
+    try {
+      const { data } = await useFetch(`/api/tournaments/${tournament.slug}/check-edit-permission`);
+      if (data.value && typeof data.value === "object" && "canEdit" in data.value) {
+        editPermissions.value[tournament.id] = (data.value as { canEdit: boolean }).canEdit;
+      }
+    }
+    catch {
+      editPermissions.value[tournament.id] = false;
+    }
+  }
+}
+
+watch(() => tournaments.value, () => {
+  loadPermissions();
 });
 
 const filteredCount = computed(() => tournaments.value?.length || 0);
@@ -109,13 +139,12 @@ function formatDateRange(start: number | null | undefined, end: number | null | 
       v-else
       class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6"
     >
-      <NuxtLink
+      <div
         v-for="tournament in tournaments"
         :key="tournament.id"
-        :to="`/tournaments/${tournament.slug}`"
         class="card bg-base-100 border border-base-300 shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105"
       >
-        <div class="card-body p-5">
+        <div class="card-body p-5 flex flex-col h-full">
           <div class="flex items-start justify-between gap-2 mb-2">
             <h3 class="card-title text-lg flex-1">
               {{ tournament.name }}
@@ -209,8 +238,29 @@ function formatDateRange(start: number | null | undefined, end: number | null | 
               size="md"
             />
           </div>
+
+          <!-- Action Buttons -->
+          <div class="pt-3 border-t border-base-300 mt-auto flex gap-2 justify-between">
+            <NuxtLink
+              :to="`/tournaments/${tournament.slug}`"
+              class="btn btn-ghost btn-sm flex-1"
+            >
+              View Details
+            </NuxtLink>
+            <NuxtLink
+              v-if="editPermissions[tournament.id]"
+              :to="`/dashboard/tournaments/${tournament.slug}/edit`"
+              class="btn btn-primary btn-sm gap-1"
+            >
+              <Icon
+                name="tabler:edit"
+                size="16"
+              />
+              Edit
+            </NuxtLink>
+          </div>
         </div>
-      </NuxtLink>
+      </div>
     </div>
   </div>
 </template>

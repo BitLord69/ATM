@@ -3,6 +3,7 @@ import { int, integer, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 import { user } from "./auth";
 import { organization } from "./organization";
+import { tournamentMembership } from "./tournament-membership";
 
 export const tournament = sqliteTable("tournaments", {
   id: int().primaryKey({ autoIncrement: true }),
@@ -38,5 +39,5 @@ export const tournamentRelations = relations(tournament, ({ one, many }) => ({
     fields: [tournament.organizationId],
     references: [organization.id],
   }),
-  memberships: many(() => import("./tournament-membership").then(m => m.tournamentMembership)),
+  memberships: many(tournamentMembership),
 }));

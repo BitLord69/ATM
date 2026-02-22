@@ -317,30 +317,24 @@ onMounted(() => {
           </div>
 
           <!-- Email Display -->
-          <div class="form-control">
-            <label class="label">
-              <span class="label-text">Email</span>
-            </label>
+          <FormField label="Email">
             <input
               type="email"
               :value="invitationDetails.email"
               disabled
               class="input input-bordered bg-base-200"
             >
-          </div>
+          </FormField>
 
           <!-- Password Input -->
-          <div class="form-control">
-            <label class="label">
-              <span class="label-text">Password</span>
-            </label>
+          <FormField label="Password">
             <input
               v-model="loginForm.password"
               type="password"
               placeholder="Enter your password"
               class="input input-bordered"
             >
-          </div>
+          </FormField>
 
           <!-- Login Button -->
           <button
@@ -365,46 +359,37 @@ onMounted(() => {
           </div>
 
           <!-- Email Display -->
-          <div class="form-control">
-            <label class="label">
-              <span class="label-text">Email</span>
-            </label>
+          <FormField
+            label="Email"
+            hint="This is the email the invitation was sent to, and cannot be changed."
+          >
             <input
               type="email"
               :value="invitationDetails.email"
               disabled
               class="input input-bordered bg-base-200"
             >
-            <p class="text-xs text-opacity-70 mt-1">
-              This is the email the invitation was sent to, and cannot be changed.
-            </p>
-          </div>
+          </FormField>
 
           <!-- Password Input -->
-          <div class="form-control">
-            <label class="label">
-              <span class="label-text">Password</span>
-            </label>
+          <FormField label="Password">
             <input
               v-model="signupForm.password"
               type="password"
               placeholder="At least 8 characters"
               class="input input-bordered"
             >
-          </div>
+          </FormField>
 
           <!-- Confirm password Input -->
-          <div class="form-control">
-            <label class="label">
-              <span class="label-text">Confirm password</span>
-            </label>
+          <FormField label="Confirm password">
             <input
               v-model="signupForm.confirmPassword"
               type="password"
               placeholder="Confirm your password"
               class="input input-bordered"
             >
-          </div>
+          </FormField>
 
           <!-- Signup Button -->
           <button

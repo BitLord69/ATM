@@ -4,10 +4,47 @@
  * Accessible to everyone including guests
  */
 
+import { useAuthStore } from "~/stores/auth";
+
+type TournamentDetail = {
+  id: number;
+  name: string;
+  slug: string;
+  description: string | null;
+  country: string | null;
+  city: string | null;
+  lat: number;
+  long: number;
+  contactName: string | null;
+  contactEmail: string | null;
+  contactPhone: string | null;
+  startDate: number | null;
+  endDate: number | null;
+  hasGolf: boolean;
+  hasAccuracy: boolean;
+  hasDistance: boolean;
+  hasSCF: boolean;
+  hasDiscathon: boolean;
+  hasDDC: boolean;
+  hasFreestyle: boolean;
+  organizationId: string;
+  status: "active" | "future" | "past";
+  isActive: boolean;
+  venues: Array<{
+    id: number;
+    name: string;
+    description: string | null;
+    facilities: string | null;
+    lat: number;
+    long: number;
+  }>;
+};
+
 const route = useRoute();
 const slug = route.params.slug as string;
+const authStore = useAuthStore();
 
-const { data: tournament, pending, error } = await useFetch(`/api/tournaments/${slug}`);
+const { data: tournament, pending, error } = await useFetch<TournamentDetail>(`/api/tournaments/${slug}`);
 
 if (error.value) {
   throw createError({
@@ -52,9 +89,9 @@ function formatDateRange(start: number | null | undefined, end: number | null | 
     </div>
 
     <!-- Tournament Details -->
-    <div v-else-if="tournament && !Array.isArray(tournament)">
-      <!-- Back Button -->
-      <div class="mb-4">
+    <div v-else-if="tournament">
+      <!-- Back Button and Edit Button -->
+      <div class="mb-4 flex flex-wrap items-center gap-2 justify-between">
         <NuxtLink
           to="/tournaments"
           class="btn btn-ghost btn-sm gap-2"
@@ -64,6 +101,17 @@ function formatDateRange(start: number | null | undefined, end: number | null | 
             size="18"
           />
           Back to Tournaments
+        </NuxtLink>
+        <NuxtLink
+          v-if="authStore.isSignedIn"
+          :to="`/dashboard/tournaments/${slug}/edit`"
+          class="btn btn-primary btn-sm gap-2"
+        >
+          <Icon
+            name="tabler:edit"
+            size="18"
+          />
+          Edit Tournament
         </NuxtLink>
       </div>
 

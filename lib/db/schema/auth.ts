@@ -3,6 +3,8 @@ import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 import type { UserRole } from "#shared/types/auth";
 
+import { tournamentMembership } from "./tournament-membership";
+
 export const user = sqliteTable("user", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
@@ -74,7 +76,7 @@ export const verification = sqliteTable(
 export const userRelations = relations(user, ({ many }) => ({
   sessions: many(session),
   accounts: many(account),
-  tournamentMemberships: many(() => import("./tournament-membership").then(m => m.tournamentMembership)),
+  tournamentMemberships: many(tournamentMembership),
 }));
 
 export const sessionRelations = relations(session, ({ one }) => ({

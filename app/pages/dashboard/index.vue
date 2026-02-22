@@ -105,10 +105,7 @@ onMounted(async () => {
 
             <!-- Sort Dropdown -->
             <div class="flex gap-2 items-end">
-              <div class="form-control">
-                <label class="label">
-                  <span class="label-text text-sm">Sort by</span>
-                </label>
+              <FormField label="Sort by">
                 <select
                   v-model="sortBy"
                   class="select select-bordered select-sm"
@@ -126,7 +123,7 @@ onMounted(async () => {
                     City
                   </option>
                 </select>
-              </div>
+              </FormField>
               <button
                 class="btn btn-sm btn-square"
                 :title="sortDirection === 'asc' ? 'Ascending' : 'Descending'"
@@ -267,6 +264,17 @@ onMounted(async () => {
                   type="freestyle"
                   size="md"
                 />
+              </div>
+
+              <div class="pt-3 border-t border-base-300 mt-3 flex justify-end">
+                <NuxtLink
+                  v-if="['owner', 'admin', 'td'].includes(tournament.role)"
+                  :to="`/dashboard/tournaments/${tournament.tournamentSlug}/edit`"
+                  class="btn btn-xs btn-outline"
+                  @click.stop
+                >
+                  Edit Tournament
+                </NuxtLink>
               </div>
             </div>
           </div>

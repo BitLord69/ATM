@@ -2,6 +2,8 @@ import { relations } from "drizzle-orm";
 import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 import { user } from "./auth";
+import { tournament } from "./tournament";
+import { tournamentMembership } from "./tournament-membership";
 
 export const organization = sqliteTable("organization", {
   id: text("id").primaryKey(),
@@ -61,8 +63,8 @@ export const invitation = sqliteTable(
 export const organizationRelations = relations(organization, ({ many }) => ({
   members: many(member),
   invitations: many(invitation),
-  tournaments: many(() => import("./tournament").then(m => m.tournament)),
-  tournamentMemberships: many(() => import("./tournament-membership").then(m => m.tournamentMembership)),
+  tournaments: many(tournament),
+  tournamentMemberships: many(tournamentMembership),
 }));
 
 export const memberRelations = relations(member, ({ one }) => ({
