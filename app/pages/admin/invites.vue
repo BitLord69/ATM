@@ -1,13 +1,24 @@
 <script setup lang="ts">
 import type { UserRole } from "#shared/types/auth";
+import type { AdminInvitesTabId } from "~/schemas/ui/admin-invites-tabs";
 
 import { USER_ROLES } from "#shared/types/auth";
+import { adminInvitesFieldToTab, adminInvitesTabs } from "~/schemas/ui/admin-invites-tabs";
 import { useAuthClient } from "~/stores/auth";
 
 const authClient = useAuthClient();
+const route = useRoute();
 const email = ref("");
 const role = ref<UserRole>("guest");
 const selectedOrganizations = ref<string[]>([]);
+const {
+  activeTab,
+  openTabForField,
+} = useSchemaTabs<AdminInvitesTabId>({
+  tabs: adminInvitesTabs,
+  defaultTab: "general",
+  fieldToTab: adminInvitesFieldToTab,
+});
 const orgRole = computed<"admin" | "member" | "owner">(() => {
   // Adjust this mapping if you want different org role rules.
   if (role.value === "admin") {
@@ -65,8 +76,30 @@ function confirmNo() {
 // Fetch organizations
 const { data: organizations, pending } = await useFetch("/api/organizations");
 
+watch(
+  () => [organizations.value, route.query.organizationId],
+  () => {
+    const orgId = route.query.organizationId;
+    if (typeof orgId !== "string" || !organizations.value?.some((org: any) => org.id === orgId)) {
+      return;
+    }
+
+    if (!selectedOrganizations.value.includes(orgId)) {
+      selectedOrganizations.value = [orgId];
+    }
+  },
+  { immediate: true },
+);
+
 async function handleInvite() {
+  if (!email.value.trim()) {
+    openTabForField("email");
+    status.value = { type: "error", message: "Please enter a recipient email." };
+    return;
+  }
+
   if (selectedOrganizations.value.length === 0) {
+    openTabForField("selectedOrganizations");
     status.value = { type: "error", message: "Please select at least one tournament." };
     return;
   }
@@ -193,14 +226,16 @@ async function handleInvite() {
 <template>
   <div class="flex justify-center items-center min-h-screen bg-base-200 p-4">
     <!-- DaisyUI Card Component -->
-    <div class="card w-full max-w-md bg-base-100 shadow-xl">
+    <div class="card w-full max-w-4xl bg-base-100 shadow-xl">
       <div class="card-body">
-        <h2 class="card-title text-2xl font-bold mb-4">
-          Invite Team Member
-        </h2>
-        <p class="text-sm opacity-70 mb-4">
-          Send an invitation to join your tournament staff.
-        </p>
+        <FormHeader
+          title="Invite Team Member"
+          description="Send an invitation to join your tournament staff."
+          title-tag="h2"
+          title-class="card-title text-2xl font-bold"
+          description-max-width-class="md:max-w-md"
+          wrapper-class="mb-1"
+        />
 
         <!-- Status Alerts -->
         <div
@@ -238,58 +273,70 @@ async function handleInvite() {
           </button>
         </div>
 
-        <FormField
-          label="Recipient Email"
-          wrapper-class="w-full"
+        <VerticalTabsLayout
+          v-model="activeTab"
+          :tabs="adminInvitesTabs"
+          session-state-key="admin-invites"
         >
-          <input
-            v-model="email"
-            type="email"
-            placeholder="staff@example.com"
-            class="input input-bordered w-full"
-            :disabled="isSubmitting"
-          >
-        </FormField>
+          <template #general>
+            <div class="grid grid-cols-1 gap-3">
+              <FormField
+                label="Recipient Email"
+                wrapper-class="w-full"
+              >
+                <input
+                  v-model="email"
+                  type="email"
+                  placeholder="staff@example.com"
+                  class="input input-bordered w-full"
+                  :disabled="isSubmitting"
+                >
+              </FormField>
 
-        <FormField
-          label="Assigned Role"
-          wrapper-class="w-full mt-2"
-        >
-          <select
-            v-model="role"
-            class="select select-bordered w-full"
-            :disabled="isSubmitting"
-          >
-            <option
-              v-for="r in USER_ROLES"
-              :key="r"
-              :value="r"
+              <FormField
+                label="Assigned Role"
+                wrapper-class="w-full"
+              >
+                <select
+                  v-model="role"
+                  class="select select-bordered w-full"
+                  :disabled="isSubmitting"
+                >
+                  <option
+                    v-for="r in USER_ROLES"
+                    :key="r"
+                    :value="r"
+                  >
+                    {{ r.charAt(0).toUpperCase() + r.slice(1) }}
+                  </option>
+                </select>
+              </FormField>
+            </div>
+          </template>
+
+          <template #tournaments>
+            <FormField
+              label="Tournaments (select multiple)"
+              wrapper-class="w-full"
             >
-              {{ r.charAt(0).toUpperCase() + r.slice(1) }}
-            </option>
-          </select>
-        </FormField>
-
-        <FormField
-          label="Tournaments (select multiple)"
-          wrapper-class="w-full mt-2"
-        >
-          <div v-if="pending" class="loading loading-spinner" />
-          <div v-else-if="!organizations || organizations.length === 0" class="text-sm opacity-70">
-            No tournaments available.
-          </div>
-          <div v-else class="flex flex-col gap-3 max-h-48 overflow-y-auto border border-base-300 rounded-lg p-3">
-            <ToggleField
-              v-for="org in organizations"
-              :key="org.id"
-              v-model="selectedOrganizations"
-              :value="org.id"
-              :label="org.name"
-              :disabled="isSubmitting"
-              :stacked="false"
-            />
-          </div>
-        </FormField>
+              <div v-if="pending" class="loading loading-spinner" />
+              <div v-else-if="!organizations || organizations.length === 0" class="text-sm opacity-70">
+                No tournaments available.
+              </div>
+              <div v-else class="flex flex-col gap-3 max-h-64 overflow-y-auto border border-base-300 rounded-lg p-3">
+                <ToggleField
+                  v-for="org in organizations"
+                  :key="org.id"
+                  v-model="selectedOrganizations"
+                  :value="org.id"
+                  :label="org.name"
+                  :disabled="isSubmitting"
+                  :stacked="false"
+                />
+              </div>
+            </FormField>
+          </template>
+        </VerticalTabsLayout>
 
         <div class="card-actions justify-end mt-6">
           <!-- DaisyUI Button with Loading State -->

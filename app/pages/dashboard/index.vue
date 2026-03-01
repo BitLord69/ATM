@@ -56,12 +56,7 @@ onMounted(async () => {
       </div>
 
       <!-- Loading State -->
-      <div
-        v-if="tournamentStore.loading"
-        class="flex justify-center items-center py-12"
-      >
-        <span class="loading loading-spinner loading-lg" />
-      </div>
+      <PageLoadingState v-if="tournamentStore.loading" />
 
       <!-- Tournament List -->
       <div v-else>
@@ -139,51 +134,51 @@ onMounted(async () => {
         </div>
 
         <!-- Tournament Cards -->
-        <div
+        <EmptyStateAlert
           v-if="filteredTournaments.length === 0"
-          class="alert alert-info"
-        >
-          <Icon
-            name="tabler:info-circle"
-            size="24"
-          />
-          <span>No tournaments found for this filter.</span>
-        </div>
+          message="No tournaments found for this filter."
+        />
 
         <div
           v-else
           class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6"
         >
-          <div
+          <TournamentCard
             v-for="tournament in filteredTournaments"
             :key="tournament.tournamentId"
-            class="card bg-base-100 border border-base-300 shadow-lg hover:shadow-xl transition-all duration-200 cursor-pointer hover:scale-105"
+            :title="tournament.tournamentName"
+            :description="tournament.tournamentDescription"
+            :date-text="tournament.startDate && tournament.endDate ? `${new Date(tournament.startDate).toLocaleDateString()} - ${new Date(tournament.endDate).toLocaleDateString()}` : ''"
+            :location-text="[tournament.city, tournament.country].filter(Boolean).join(', ')"
+            :is-active="tournament.isActive"
+            :show-status-badge="false"
+            card-class="cursor-pointer"
             :class="{
               'ring-2 ring-primary ring-offset-2 ring-offset-base-100': tournament.tournamentId === tournamentStore.activeTournament?.tournamentId,
             }"
+            description-class="text-sm opacity-70 line-clamp-2 mb-3"
+            meta-class="text-xs opacity-70 space-y-1.5 mb-3"
+            :icon-size="14"
+            :has-golf="tournament.hasGolf"
+            :has-accuracy="tournament.hasAccuracy"
+            :has-distance="tournament.hasDistance"
+            :has-scf="tournament.hasSCF"
+            :has-discathon="tournament.hasDiscathon"
+            :has-ddc="tournament.hasDDC"
+            :has-freestyle="tournament.hasFreestyle"
             @click="tournamentStore.selectTournament(tournament)"
           >
-            <div class="card-body p-5">
-              <div class="flex items-start justify-between gap-2 mb-2">
-                <h3 class="card-title text-lg flex-1">
-                  {{ tournament.tournamentName }}
-                </h3>
-                <span
-                  v-if="tournament.isActive"
-                  class="badge badge-success badge-sm gap-1 shrink-0"
-                >
-                  <span class="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
-                  Live
-                </span>
-              </div>
-
-              <p
-                v-if="tournament.tournamentDescription"
-                class="text-sm opacity-70 line-clamp-2 mb-3"
+            <template #title-right>
+              <span
+                v-if="tournament.isActive"
+                class="badge badge-success badge-sm gap-1 shrink-0"
               >
-                {{ tournament.tournamentDescription }}
-              </p>
+                <span class="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
+                Live
+              </span>
+            </template>
 
+            <template #meta-top>
               <div class="flex items-center gap-2 mb-3">
                 <span
                   class="badge badge-sm font-medium"
@@ -197,87 +192,24 @@ onMounted(async () => {
                 >{{ tournament.role }}</span>
                 <span class="badge badge-outline badge-sm">{{ tournament.tournamentStatus }}</span>
               </div>
+            </template>
 
-              <div class="text-xs opacity-70 space-y-1.5 mb-3">
-                <div
-                  v-if="tournament.startDate && tournament.endDate"
-                  class="flex items-center gap-1.5"
-                >
-                  <Icon
-                    name="tabler:calendar"
-                    size="14"
-                  />
-                  <span>
-                    {{ new Date(tournament.startDate).toLocaleDateString() }} -
-                    {{ new Date(tournament.endDate).toLocaleDateString() }}
-                  </span>
-                </div>
-                <div
-                  v-if="tournament.city || tournament.country"
-                  class="flex items-center gap-1.5"
-                >
-                  <Icon
-                    name="tabler:map-pin"
-                    size="14"
-                  />
-                  <span>{{ [tournament.city, tournament.country].filter(Boolean).join(", ") }}</span>
-                </div>
-              </div>
-
-              <!-- Event Types -->
-              <div
-                v-if="tournament.hasGolf || tournament.hasAccuracy || tournament.hasDistance || tournament.hasSCF || tournament.hasDiscathon || tournament.hasDDC || tournament.hasFreestyle"
-                class="flex flex-wrap gap-1.5 pt-3 border-t border-base-300"
+            <template #actions>
+              <TournamentActionsRow
+                justify="end"
+                margin-top="sm"
               >
-                <EventTypeBadge
-                  v-if="tournament.hasGolf"
-                  type="golf"
-                  size="md"
-                />
-                <EventTypeBadge
-                  v-if="tournament.hasAccuracy"
-                  type="accuracy"
-                  size="md"
-                />
-                <EventTypeBadge
-                  v-if="tournament.hasDistance"
-                  type="distance"
-                  size="md"
-                />
-                <EventTypeBadge
-                  v-if="tournament.hasSCF"
-                  type="scf"
-                  size="md"
-                />
-                <EventTypeBadge
-                  v-if="tournament.hasDiscathon"
-                  type="discathon"
-                  size="md"
-                />
-                <EventTypeBadge
-                  v-if="tournament.hasDDC"
-                  type="ddc"
-                  size="md"
-                />
-                <EventTypeBadge
-                  v-if="tournament.hasFreestyle"
-                  type="freestyle"
-                  size="md"
-                />
-              </div>
-
-              <div class="pt-3 border-t border-base-300 mt-3 flex justify-end">
                 <NuxtLink
-                  v-if="['owner', 'admin', 'td'].includes(tournament.role)"
+                  v-if="tournament.canEdit"
                   :to="`/dashboard/tournaments/${tournament.tournamentSlug}/edit`"
                   class="btn btn-xs btn-outline"
                   @click.stop
                 >
                   Edit Tournament
                 </NuxtLink>
-              </div>
-            </div>
-          </div>
+              </TournamentActionsRow>
+            </template>
+          </TournamentCard>
         </div>
       </div>
     </ClientOnly>

@@ -14,7 +14,10 @@
     "lint:fix": "eslint . --fix",
     "typecheck": "nuxi typecheck",
     "prepare": "husky",
-    "center-logos": "node scripts/center-logos.js"
+    "center-logos": "node scripts/center-logos.js",
+    "db:seed-nearby-venues": "tsx scripts/seed-nearby-venues.ts",
+    "db:ensure-distance-unit": "tsx scripts/ensure-distance-unit-column.ts",
+    "db:ensure-latest-schema": "tsx scripts/ensure-latest-schema-columns.ts"
   },
   "dependencies": {
     "@iconify-json/tabler": "^1.2.26",

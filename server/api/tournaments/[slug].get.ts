@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 
 import db from "../../../lib/db";
 import { tournament, tournamentVenue, venue } from "../../../lib/db/schema";
-import { getTournamentStatus } from "../../utils/authorization.ts";
+import { getTournamentStatus } from "../../utils/authorization";
 
 /**
  * Public API endpoint - returns tournament details by slug
@@ -31,8 +31,12 @@ export default defineEventHandler(async (event) => {
       contactName: tournament.contactName,
       contactEmail: tournament.contactEmail,
       contactPhone: tournament.contactPhone,
+      directorName: tournament.directorName,
+      directorEmail: tournament.directorEmail,
+      directorPhone: tournament.directorPhone,
       startDate: tournament.startDate,
       endDate: tournament.endDate,
+      closedAt: tournament.closedAt,
       hasGolf: tournament.hasGolf,
       hasAccuracy: tournament.hasAccuracy,
       hasDistance: tournament.hasDistance,

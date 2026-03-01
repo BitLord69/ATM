@@ -216,12 +216,11 @@ onMounted(() => {
         </h2>
 
         <!-- Loading State -->
-        <div v-if="isLoading" class="flex flex-col items-center gap-4">
-          <span class="loading loading-spinner loading-lg" />
-          <p class="text-sm opacity-70">
-            Loading invitation details...
-          </p>
-        </div>
+        <PageLoadingState
+          v-if="isLoading"
+          text="Loading invitation details..."
+          wrapper-class="py-0"
+        />
 
         <!-- Error State -->
         <div

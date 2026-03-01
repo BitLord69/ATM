@@ -16,7 +16,7 @@ const props = withDefaults(defineProps<Props>(), {
 });
 
 const eventInfo: Record<EventType, { label: string; slug: string }> = {
-  golf: { label: "Golf", slug: "golf" },
+  golf: { label: "Disc golf", slug: "golf" },
   accuracy: { label: "Accuracy", slug: "accuracy" },
   distance: { label: "Distance", slug: "distance" },
   scf: { label: "SCF", slug: "self-caught-flight" },

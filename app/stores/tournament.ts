@@ -17,6 +17,7 @@ export type TournamentMembership = {
   contactUserId: string | null;
   startDate: number | null;
   endDate: number | null;
+  closedAt: number | null;
   hasGolf: boolean | null;
   hasAccuracy: boolean | null;
   hasDistance: boolean | null;
@@ -26,6 +27,9 @@ export type TournamentMembership = {
   hasFreestyle: boolean | null;
   tournamentStatus: "active" | "future" | "past";
   isActive: boolean;
+  isClosed: boolean;
+  canEdit: boolean;
+  canInvite: boolean;
 };
 
 export const useTournamentStore = defineStore("tournament", () => {

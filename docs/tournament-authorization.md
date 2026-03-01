@@ -57,7 +57,15 @@ Returns all tournaments the user is a member of, enriched with:
 - Tournament details
 - User's role and status
 - Computed `tournamentStatus` (active/coming/past)
+- Permission flags: `canEdit`, `canInvite`
 - `isSysadmin` flag
+
+### Permission check endpoints
+
+- `GET /api/tournaments/:slug/check-edit-permission` → `{ canEdit: boolean }`
+- `GET /api/tournaments/:slug/check-invite-permission` → `{ canInvite: boolean }`
+
+Use these endpoints as the source of truth for UI gating of management actions.
 
 ## Frontend Components
 
@@ -125,6 +133,39 @@ if (tournamentStore.activeTournament) {
 </script>
 
 \`\`\`
+
+### Recommended UI pattern (all current and future pages)
+
+Use backend permission flags for management buttons, not client-only role checks.
+
+\`\`\`vue
+
+<script setup lang="ts">
+const slug = useRoute().params.slug as string;
+const { canEditTournament, canInviteMembers } = useTournamentPermissions(slug);
+</script>
+
+<template>
+  <NuxtLink
+    v-if="canEditTournament"
+    :to="`/dashboard/tournaments/${slug}/edit`"
+  >
+    Edit Tournament
+  </NuxtLink>
+
+<NuxtLink
+v-if="canInviteMembers"
+:to="`/admin/invites?organizationId=${encodeURIComponent(tournament.organizationId)}`"
+
+>
+
+    Invite Member
+
+  </NuxtLink>
+</template>
+\`\`\`
+
+For tournament lists and dashboard cards, prefer API-provided booleans (`canEdit`, `canInvite`) from server routes.
 
 ## Next Steps
 

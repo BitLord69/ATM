@@ -15,7 +15,7 @@ const props = withDefaults(defineProps<{
 
 <template>
   <label class="form-control w-full" :class="[props.wrapperClass]">
-    <span class="label-text min-h-6">
+    <span class="label-text min-h-5">
       {{ props.label }}
       <span
         v-if="props.required"

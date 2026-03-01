@@ -32,10 +32,14 @@ async function handleLogout() {
         <span>{{ user.email }}</span>
       </li>
       <li>
-        <a href="/dashboard">Dashboard</a>
+        <NuxtLink to="/dashboard">
+          Dashboard
+        </NuxtLink>
       </li>
       <li>
-        <a href="/admin/invites">Send Invitations</a>
+        <NuxtLink to="/admin/invites">
+          Send Invitations
+        </NuxtLink>
       </li>
       <li>
         <button :disabled="authStore.loading" @click="handleLogout">

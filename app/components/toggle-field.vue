@@ -5,6 +5,7 @@ type Props = {
   value?: string | number;
   disabled?: boolean;
   tooltip?: string;
+  labelClass?: string;
   size?: "sm" | "md" | "lg";
   stacked?: boolean;
 };
@@ -16,6 +17,7 @@ type Emits = {
 const props = withDefaults(defineProps<Props>(), {
   disabled: false,
   tooltip: "",
+  labelClass: "",
   size: "sm",
   stacked: true,
 });
@@ -23,7 +25,9 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<Emits>();
 
 const layoutClass = computed(() => (props.stacked ? "flex-col items-start" : "flex-row items-center justify-between"));
+const spacingClass = computed(() => (props.stacked ? "gap-1" : "gap-2"));
 const sizeClass = computed(() => `toggle-${props.size}`);
+const toneClass = "bg-error/20 border-error/40 checked:bg-success/25 checked:border-success/40 before:bg-error/50 checked:before:bg-success/70";
 
 const checked = computed(() => {
   if (Array.isArray(props.modelValue)) {
@@ -62,15 +66,15 @@ function onChange(event: Event) {
 
 <template>
   <label
-    class="label cursor-pointer gap-3"
-    :class="[layoutClass, disabled ? 'opacity-50' : '']"
+    class="label cursor-pointer py-0.5"
+    :class="[layoutClass, spacingClass, disabled ? 'opacity-50' : '']"
     :title="tooltip || undefined"
   >
-    <span class="label-text">{{ label }}</span>
+    <span class="label-text" :class="labelClass">{{ label }}</span>
     <input
       type="checkbox"
       class="toggle"
-      :class="sizeClass"
+      :class="[sizeClass, toneClass]"
       :checked="checked"
       :disabled="disabled"
       @change="onChange"

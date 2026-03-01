@@ -14,6 +14,7 @@ export const user = sqliteTable("user", {
     .notNull(),
   image: text("image"),
   country: text("country"), // User's country for map centering
+  distanceUnit: text("distance_unit").notNull().default("km"),
   pdgaNumber: text("pdga_number"),
   homeClub: text("home_club"),
   createdAt: integer("created_at").notNull().$default(() => Date.now()),

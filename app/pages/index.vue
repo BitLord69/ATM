@@ -62,15 +62,12 @@ const tournamentsWithCoordinates = computed(() =>
   <div class="hero bg-base-300 container mx-auto my-6">
     <div class="hero-content text-center min-h-100">
       <!-- Loading State -->
-      <div
+      <PageLoadingState
         v-if="isLoading"
-        class="flex flex-col items-center justify-center py-20"
-      >
-        <span class="loading loading-spinner loading-lg mb-4" />
-        <p class="text-lg opacity-70">
-          Loading tournaments...
-        </p>
-      </div>
+        text="Loading tournaments..."
+        wrapper-class="py-20"
+        text-class="text-lg opacity-70"
+      />
 
       <!-- Main Content -->
       <div
@@ -246,7 +243,7 @@ const tournamentsWithCoordinates = computed(() =>
                 Multi-Event Support
               </h3>
               <p class="text-sm opacity-70">
-                Manage Golf, Accuracy, Distance, SCF, Discathon, DDC, and Freestyle events all in one place
+                Manage Disc golf, Accuracy, Distance, SCF, Discathon, DDC, and Freestyle events all in one place
               </p>
             </div>
           </div>

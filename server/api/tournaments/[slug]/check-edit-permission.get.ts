@@ -9,7 +9,7 @@ import { can } from "../../../utils/authorization";
 
 /**
  * Check if the current user can edit a tournament
- * Returns { canEdit: boolean }
+ * Returns { canEdit: boolean; isSysadmin: boolean }
  */
 export default defineEventHandler(async (event) => {
   const slug = getRouterParam(event, "slug");
@@ -23,7 +23,7 @@ export default defineEventHandler(async (event) => {
 
   // Get the tournament
   const tournaments = await db
-    .select({ id: tournament.id })
+    .select({ id: tournament.id, endDate: tournament.endDate, closedAt: tournament.closedAt })
     .from(tournament)
     .where(eq(tournament.slug, slug))
     .limit(1);
@@ -36,19 +36,25 @@ export default defineEventHandler(async (event) => {
   }
 
   const tournamentId = tournaments[0].id;
+  const isClosed = tournaments[0].closedAt != null;
+  const hasEnded = typeof tournaments[0].endDate === "number" ? tournaments[0].endDate < Date.now() : false;
 
   // Get authenticated user
   const session = await auth.api.getSession({ headers: event.headers });
 
   if (!session?.user) {
-    return { canEdit: false };
+    return { canEdit: false, isSysadmin: false };
   }
 
   const user = session.user;
 
   // Sysadmins can always edit
   if (user.role === "admin") {
-    return { canEdit: true };
+    return { canEdit: true, isSysadmin: true };
+  }
+
+  if (isClosed || hasEnded) {
+    return { canEdit: false, isSysadmin: false };
   }
 
   // Check if user is a member of this tournament
@@ -68,14 +74,14 @@ export default defineEventHandler(async (event) => {
     .limit(1);
 
   if (memberships.length === 0) {
-    return { canEdit: false };
+    return { canEdit: false, isSysadmin: false };
   }
 
   const membership = memberships[0];
 
   // Check if membership is active
   if (membership.status !== "active") {
-    return { canEdit: false };
+    return { canEdit: false, isSysadmin: false };
   }
 
   const tournamentContext: TournamentContext = {
@@ -87,5 +93,5 @@ export default defineEventHandler(async (event) => {
 
   const canEdit = can({ id: user.id, email: user.email || "", role: user.role as any }, "tournament:edit", tournamentContext);
 
-  return { canEdit };
+  return { canEdit, isSysadmin: false };
 });

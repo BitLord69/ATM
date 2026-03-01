@@ -26,6 +26,43 @@ const mapCenter = ref<[number, number]>(props.center);
 const mapZoom = ref(2); // Zoomed out to show global view
 const mapViewKey = computed(() => `${mapCenter.value[0]}:${mapCenter.value[1]}:${mapZoom.value}`);
 const normalizedUserCountry = computed(() => props.userCountry?.trim() || null);
+const mappableTournaments = computed(() =>
+  props.tournaments.filter(tournament =>
+    Number.isFinite(tournament.lat) && Number.isFinite(tournament.long) && !(tournament.lat === 0 && tournament.long === 0),
+  ),
+);
+const mapBounds = computed<[[number, number], [number, number]] | null>(() => {
+  if (mappableTournaments.value.length === 0) {
+    return null;
+  }
+
+  const [first] = mappableTournaments.value;
+  if (!first) {
+    return null;
+  }
+
+  let minLat = first.lat;
+  let maxLat = first.lat;
+  let minLong = first.long;
+  let maxLong = first.long;
+
+  for (const tournament of mappableTournaments.value) {
+    if (tournament.lat < minLat) {
+      minLat = tournament.lat;
+    }
+    if (tournament.lat > maxLat) {
+      maxLat = tournament.lat;
+    }
+    if (tournament.long < minLong) {
+      minLong = tournament.long;
+    }
+    if (tournament.long > maxLong) {
+      maxLong = tournament.long;
+    }
+  }
+
+  return [[minLat, minLong], [maxLat, maxLong]];
+});
 
 // Calculate distance between two coordinates in kilometers (Haversine formula)
 function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -91,6 +128,8 @@ watch(
         :key="mapViewKey"
         :zoom="mapZoom"
         :center="mapCenter"
+        :bounds="mapBounds || undefined"
+        :bounds-options="{ padding: [28, 28] }"
         style="height: 500px; z-index: 0;"
       >
         <LTileLayer
@@ -101,21 +140,16 @@ watch(
           v-for="tournament in tournaments"
           :key="tournament.id"
           :lat-lng="[tournament.lat, tournament.long]"
+          :options="{ title: tournament.name }"
         >
           <LPopup>
-            <div class="min-w-50">
-              <NuxtLink
-                :to="`/tournaments/${tournament.slug}`"
-                class="font-semibold hover:text-primary"
-              >
-                {{ tournament.name }}
-              </NuxtLink>
-              <p class="text-sm mt-1">
-                {{ [tournament.city, tournament.country].filter(Boolean).join(", ") }}
-              </p>
-              <p class="text-xs opacity-70 mt-1">
-                {{ tournament.startDate ? new Date(tournament.startDate).toLocaleDateString() : 'TBD' }}
-              </p>
+            <MapLocationPopup
+              :title="tournament.name"
+              :title-to="`/tournaments/${tournament.slug}`"
+              :subtitle="[tournament.city, tournament.country].filter(Boolean).join(', ')"
+              :description="tournament.startDate ? new Date(tournament.startDate).toLocaleDateString() : 'TBD'"
+              :centered="false"
+            >
               <span
                 v-if="tournament.isActive"
                 class="badge badge-success badge-xs mt-2"
@@ -128,7 +162,7 @@ watch(
               >
                 Upcoming
               </span>
-            </div>
+            </MapLocationPopup>
           </LPopup>
         </LMarker>
       </LMap>

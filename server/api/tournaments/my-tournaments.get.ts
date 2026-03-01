@@ -38,6 +38,7 @@ export default defineEventHandler(async (event) => {
       contactUserId: tournament.contactUserId,
       startDate: tournament.startDate,
       endDate: tournament.endDate,
+      closedAt: tournament.closedAt,
       hasGolf: tournament.hasGolf,
       hasAccuracy: tournament.hasAccuracy,
       hasDistance: tournament.hasDistance,
@@ -53,10 +54,20 @@ export default defineEventHandler(async (event) => {
   // Enrich with computed status
   const enrichedTournaments = memberships.map((m) => {
     const tournamentStatus = getTournamentStatus(m.startDate, m.endDate);
+    const isClosed = m.closedAt != null;
+    const hasEnded = typeof m.endDate === "number" ? m.endDate < Date.now() : false;
+    const isActiveMembership = m.status === "active";
+    const isPrivilegedMember = m.role === "owner" || m.role === "admin";
+    const canEdit = userRole === "admin" || (isActiveMembership && !isClosed && !hasEnded && (m.role === "owner" || m.role === "admin" || m.role === "td"));
+    const canInvite = !isClosed && !hasEnded && (userRole === "admin" || (isActiveMembership && isPrivilegedMember));
+
     return {
       ...m,
       tournamentStatus,
       isActive: tournamentStatus === "active",
+      isClosed,
+      canEdit,
+      canInvite,
     };
   });
 

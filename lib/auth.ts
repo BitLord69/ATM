@@ -30,6 +30,12 @@ export const auth = betterAuth({
         required: false,
         input: true,
       },
+      distanceUnit: {
+        type: "string",
+        required: false,
+        input: true,
+        defaultValue: "km",
+      },
       pdgaNumber: {
         type: "string",
         required: false,

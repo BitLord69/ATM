@@ -4,9 +4,6 @@
  * Accessible to everyone including guests
  */
 
-import { useAuthStore } from "~/stores/auth";
-
-const authStore = useAuthStore();
 const filter = ref<"upcoming" | "active" | "finished" | "all">("upcoming");
 const { data: tournaments, pending } = await useFetch("/api/tournaments/public", {
   query: { filter },
@@ -17,7 +14,7 @@ const editPermissions = ref<Record<number, boolean>>({});
 
 // Load edit permissions for all tournaments when list changes
 async function loadPermissions() {
-  if (!tournaments.value || !authStore.isSignedIn) {
+  if (!tournaments.value) {
     return;
   }
 
@@ -115,132 +112,38 @@ function formatDateRange(start: number | null | undefined, end: number | null | 
     </div>
 
     <!-- Loading State -->
-    <div
-      v-if="pending"
-      class="flex justify-center items-center py-12"
-    >
-      <span class="loading loading-spinner loading-lg" />
-    </div>
+    <PageLoadingState v-if="pending" />
 
     <!-- Empty State -->
-    <div
+    <EmptyStateAlert
       v-else-if="!tournaments || tournaments.length === 0"
-      class="alert alert-info"
-    >
-      <Icon
-        name="tabler:info-circle"
-        size="24"
-      />
-      <span>No tournaments found for this filter.</span>
-    </div>
+      message="No tournaments found for this filter."
+    />
 
     <!-- Tournament Grid -->
     <div
       v-else
       class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6"
     >
-      <div
+      <TournamentCard
         v-for="tournament in tournaments"
         :key="tournament.id"
-        class="card bg-base-100 border border-base-300 shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105"
+        :title="tournament.name"
+        :description="tournament.description"
+        :date-text="formatDateRange(tournament.startDate, tournament.endDate)"
+        :location-text="[tournament.city, tournament.country].filter(Boolean).join(', ')"
+        :is-active="tournament.isActive"
+        :status="tournament.status"
+        :has-golf="tournament.hasGolf"
+        :has-accuracy="tournament.hasAccuracy"
+        :has-distance="tournament.hasDistance"
+        :has-scf="tournament.hasSCF"
+        :has-discathon="tournament.hasDiscathon"
+        :has-ddc="tournament.hasDDC"
+        :has-freestyle="tournament.hasFreestyle"
       >
-        <div class="card-body p-5 flex flex-col h-full">
-          <div class="flex items-start justify-between gap-2 mb-2">
-            <h3 class="card-title text-lg flex-1">
-              {{ tournament.name }}
-            </h3>
-            <span
-              v-if="tournament.isActive"
-              class="badge badge-success badge-sm gap-1 shrink-0"
-            >
-              <span class="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
-              Live
-            </span>
-            <span
-              v-else-if="tournament.status === 'future'"
-              class="badge badge-info badge-sm shrink-0"
-            >
-              Upcoming
-            </span>
-            <span
-              v-else
-              class="badge badge-ghost badge-sm shrink-0"
-            >
-              Past
-            </span>
-          </div>
-
-          <p
-            v-if="tournament.description"
-            class="text-base opacity-70 line-clamp-2 mb-3"
-          >
-            {{ tournament.description }}
-          </p>
-
-          <div class="text-sm opacity-70 space-y-1.5 mb-3">
-            <div class="flex items-center gap-1.5">
-              <Icon
-                name="tabler:calendar"
-                size="16"
-              />
-              <span>{{ formatDateRange(tournament.startDate, tournament.endDate) }}</span>
-            </div>
-            <div
-              v-if="tournament.city || tournament.country"
-              class="flex items-center gap-1.5"
-            >
-              <Icon
-                name="tabler:map-pin"
-                size="16"
-              />
-              <span>{{ [tournament.city, tournament.country].filter(Boolean).join(", ") }}</span>
-            </div>
-          </div>
-
-          <!-- Event Types -->
-          <div
-            v-if="tournament.hasGolf || tournament.hasAccuracy || tournament.hasDistance || tournament.hasSCF || tournament.hasDiscathon || tournament.hasDDC || tournament.hasFreestyle"
-            class="flex flex-wrap gap-1.5 pt-3 border-t border-base-300"
-          >
-            <EventTypeBadge
-              v-if="tournament.hasGolf"
-              type="golf"
-              size="md"
-            />
-            <EventTypeBadge
-              v-if="tournament.hasAccuracy"
-              type="accuracy"
-              size="md"
-            />
-            <EventTypeBadge
-              v-if="tournament.hasDistance"
-              type="distance"
-              size="md"
-            />
-            <EventTypeBadge
-              v-if="tournament.hasSCF"
-              type="scf"
-              size="md"
-            />
-            <EventTypeBadge
-              v-if="tournament.hasDiscathon"
-              type="discathon"
-              size="md"
-            />
-            <EventTypeBadge
-              v-if="tournament.hasDDC"
-              type="ddc"
-              size="md"
-            />
-            <EventTypeBadge
-              v-if="tournament.hasFreestyle"
-              type="freestyle"
-              size="md"
-            />
-          </div>
-
-          <!-- Action Buttons -->
-          <div class="pt-3 border-t border-base-300 mt-auto flex gap-2 justify-between">
+        <template #actions>
+          <TournamentActionsRow>
             <NuxtLink
               :to="`/tournaments/${tournament.slug}`"
               class="btn btn-ghost btn-sm flex-1"
@@ -258,9 +161,9 @@ function formatDateRange(start: number | null | undefined, end: number | null | 
               />
               Edit
             </NuxtLink>
-          </div>
-        </div>
-      </div>
+          </TournamentActionsRow>
+        </template>
+      </TournamentCard>
     </div>
   </div>
 </template>

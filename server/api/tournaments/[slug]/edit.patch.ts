@@ -39,7 +39,7 @@ export default defineEventHandler(async (event) => {
   const body = bodyResult.data;
 
   const rows = await db
-    .select({ id: tournament.id })
+    .select({ id: tournament.id, endDate: tournament.endDate, closedAt: tournament.closedAt })
     .from(tournament)
     .where(eq(tournament.slug, slug))
     .limit(1);
@@ -49,6 +49,25 @@ export default defineEventHandler(async (event) => {
   }
 
   const tournamentId = rows[0].id;
+  const now = Date.now();
+
+  if (rows[0].closedAt && session.user.role !== "admin") {
+    throw createError({ statusCode: 403, message: "Closed tournaments can only be edited by sysadmin" });
+  }
+
+  if (body.closeTournament) {
+    if (rows[0].closedAt) {
+      throw createError({ statusCode: 400, message: "Tournament is already closed" });
+    }
+
+    if (!rows[0].endDate) {
+      throw createError({ statusCode: 400, message: "Tournament must have an end date before it can be closed" });
+    }
+
+    if (now < rows[0].endDate) {
+      throw createError({ statusCode: 400, message: "Tournament can only be closed on or after the end date" });
+    }
+  }
 
   const membershipRows = await db
     .select({ role: tournamentMembership.role, status: tournamentMembership.status })
@@ -68,7 +87,8 @@ export default defineEventHandler(async (event) => {
 
   const changedBy = session.user.id as any;
 
-  const effectiveEndDate = body.closeTournament ? Date.now() : (body.endDate ?? null);
+  const effectiveEndDate = body.endDate ?? null;
+  const effectiveClosedAt = body.closeTournament ? now : rows[0].closedAt;
 
   await db
     .update(tournament)
@@ -80,10 +100,14 @@ export default defineEventHandler(async (event) => {
       contactName: body.contactName ?? null,
       contactEmail: body.contactEmail ?? null,
       contactPhone: body.contactPhone ?? null,
+      directorName: body.directorName ?? null,
+      directorEmail: body.directorEmail ?? null,
+      directorPhone: body.directorPhone ?? null,
       lat: body.lat,
       long: body.long,
       startDate: body.startDate ?? null,
       endDate: effectiveEndDate,
+      closedAt: effectiveClosedAt,
       hasGolf: !!body.hasGolf,
       hasAccuracy: !!body.hasAccuracy,
       hasDistance: !!body.hasDistance,
@@ -97,6 +121,28 @@ export default defineEventHandler(async (event) => {
     .where(eq(tournament.id, tournamentId));
 
   const inputVenues = body.venues || [];
+  const venueFlagsById = new Map<number, {
+    hasGolf: boolean;
+    hasAccuracy: boolean;
+    hasDistance: boolean;
+    hasSCF: boolean;
+    hasDiscathon: boolean;
+    hasDDC: boolean;
+    hasFreestyle: boolean;
+  }>();
+
+  function buildVenueFlags(inputVenue: typeof inputVenues[number]) {
+    return {
+      hasGolf: !!inputVenue.hasGolf,
+      hasAccuracy: !!inputVenue.hasAccuracy,
+      hasDistance: !!inputVenue.hasDistance,
+      hasSCF: !!inputVenue.hasSCF,
+      hasDiscathon: !!inputVenue.hasDiscathon,
+      hasDDC: !!inputVenue.hasDDC,
+      hasFreestyle: !!inputVenue.hasFreestyle,
+    };
+  }
+
   const linkedRows = await db
     .select({
       venueId: tournamentVenue.venueId,
@@ -118,19 +164,21 @@ export default defineEventHandler(async (event) => {
       if (existing.length > 0) {
         if (linkedVenueIds.includes(inputVenue.id)) {
           await db
-            .update(venue)
+            .update(tournamentVenue)
             .set({
-              name: inputVenue.name.trim(),
-              description: inputVenue.description ?? null,
-              facilities: inputVenue.facilities ?? null,
-              lat: inputVenue.lat,
-              long: inputVenue.long,
+              ...buildVenueFlags(inputVenue),
               changedBy,
               changedAt: Date.now(),
             })
-            .where(eq(venue.id, inputVenue.id));
+            .where(
+              and(
+                eq(tournamentVenue.tournamentId, tournamentId),
+                eq(tournamentVenue.venueId, inputVenue.id),
+              ),
+            );
         }
 
+        venueFlagsById.set(inputVenue.id, buildVenueFlags(inputVenue));
         finalVenueIds.push(inputVenue.id);
         continue;
       }
@@ -152,6 +200,13 @@ export default defineEventHandler(async (event) => {
         facilities: inputVenue.facilities ?? null,
         lat: inputVenue.lat,
         long: inputVenue.long,
+        hasGolf: !!inputVenue.hasGolf,
+        hasAccuracy: !!inputVenue.hasAccuracy,
+        hasDistance: !!inputVenue.hasDistance,
+        hasSCF: !!inputVenue.hasSCF,
+        hasDiscathon: !!inputVenue.hasDiscathon,
+        hasDDC: !!inputVenue.hasDDC,
+        hasFreestyle: !!inputVenue.hasFreestyle,
         changedBy,
         changedAt: Date.now(),
       })
@@ -159,6 +214,7 @@ export default defineEventHandler(async (event) => {
 
     if (inserted[0]?.id) {
       finalVenueIds.push(inserted[0].id);
+      venueFlagsById.set(inserted[0].id, buildVenueFlags(inputVenue));
     }
   }
 
@@ -184,6 +240,15 @@ export default defineEventHandler(async (event) => {
       missingLinks.map(id => ({
         tournamentId,
         venueId: id,
+        ...(venueFlagsById.get(id) || {
+          hasGolf: false,
+          hasAccuracy: false,
+          hasDistance: false,
+          hasSCF: false,
+          hasDiscathon: false,
+          hasDDC: false,
+          hasFreestyle: false,
+        }),
         changedBy,
         changedAt: Date.now(),
       })),

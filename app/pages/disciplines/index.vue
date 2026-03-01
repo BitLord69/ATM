@@ -6,7 +6,7 @@
 
 const disciplines = [
   {
-    name: "Disc Golf",
+    name: "Disc golf",
     slug: "golf",
     icon: "tabler:golf",
     description: "Throw discs at targets in the fewest throws possible, similar to traditional golf.",
