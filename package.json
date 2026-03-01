@@ -9,12 +9,21 @@
     "dev:db": "turso dev --db-file local.db",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
+    "deploy:vercel:preview": "vercel --yes",
+    "deploy:vercel:prod": "vercel --prod --yes",
     "postinstall": "nuxt prepare",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "typecheck": "nuxi typecheck",
     "prepare": "husky",
-    "center-logos": "node scripts/center-logos.js"
+    "center-logos": "node scripts/center-logos.js",
+    "db:seed-nearby-venues": "tsx scripts/seed-nearby-venues.ts",
+    "db:ensure-distance-unit": "tsx scripts/ensure-distance-unit-column.ts",
+    "db:ensure-latest-schema": "tsx scripts/ensure-latest-schema-columns.ts",
+    "db:sync-local-to-remote": "tsx scripts/sync-local-to-remote.ts",
+    "env:sync:cloud": "tsx scripts/sync-cloud-env.ts",
+    "env:sync:github": "tsx scripts/sync-cloud-env.ts --github-only",
+    "env:sync:vercel": "tsx scripts/sync-cloud-env.ts --vercel-only"
   },
   "dependencies": {
     "@iconify-json/tabler": "^1.2.26",
@@ -23,9 +32,15 @@
     "@nuxtjs/color-mode": "4.0.0",
     "@pinia/nuxt": "0.11.3",
     "@tailwindcss/vite": "^4.1.18",
+    "@vue-leaflet/vue-leaflet": "^0.10.1",
     "better-auth": "^1.4.10",
     "drizzle-orm": "^0.45.1",
+    "h3": "^1.15.4",
+    "leaflet": "^1.9.4",
+    "nitropack": "^2.12.9",
+    "nodemailer": "^8.0.1",
     "nuxt": "^4.2.2",
+    "ofetch": "^1.5.1",
     "pinia": "^3.0.4",
     "tailwindcss": "^4.1.18",
     "zod": "^4.3.5"
@@ -33,15 +48,20 @@
   "devDependencies": {
     "@antfu/eslint-config": "^6.7.3",
     "@nuxt/icon": "2.1.1",
+    "@types/leaflet": "^1.9.21",
+    "@types/nodemailer": "^7.0.9",
     "daisyui": "^5.5.14",
+    "dotenv": "^17.3.1",
     "drizzle-kit": "^0.31.8",
     "eslint": "^9.39.2",
     "eslint-plugin-format": "^1.1.0",
     "husky": "^9.1.7",
     "lint-staged": "^16.2.7",
-    "sharp": "^0.34.5"
+    "sharp": "^0.34.5",
+    "tsx": "^4.21.0",
+    "vite-tsconfig-paths": "^6.1.0"
   },
   "lint-staged": {
-    "*": "pnpm lint"
+    "*": "eslint --fix"
   }
 }

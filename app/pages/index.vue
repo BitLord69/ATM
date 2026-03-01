@@ -1,15 +1,92 @@
+<script setup lang="ts">
+import { getCountryCoordinates } from "~/utils/country-coordinates";
+
+const authStore = useAuthStore();
+const authUiReady = ref(false);
+
+onMounted(() => {
+  authUiReady.value = true;
+});
+
+const { data: activeTournaments, pending: activePending } = await useFetch("/api/tournaments/public", {
+  query: { filter: "active" },
+});
+
+const { data: upcomingTournaments, pending: upcomingPending } = await useFetch("/api/tournaments/public", {
+  query: { filter: "upcoming" },
+});
+
+// Fetch all tournaments for the map
+const { data: allTournaments } = await useFetch("/api/tournaments/public", {
+  query: { filter: "all" },
+});
+
+const isLoading = computed(() => activePending.value || upcomingPending.value);
+
+const featuredTournaments = computed(() =>
+  upcomingTournaments.value?.slice(0, 3) || [],
+);
+
+const fallbackMapCenter = computed<[number, number]>(() => {
+  const userCountry = authStore.currentUser?.country?.trim();
+  if (userCountry) {
+    const userCountryCoords = getCountryCoordinates(userCountry);
+    if (userCountryCoords) {
+      return userCountryCoords;
+    }
+  }
+  return [20, 0];
+});
+
+// Calculate map center based on all tournaments
+const mapCenter = computed<[number, number]>(() => {
+  if (!allTournaments.value || allTournaments.value.length === 0) {
+    return fallbackMapCenter.value;
+  }
+  const validTournaments = allTournaments.value.filter(t => t.lat && t.long && t.lat !== 0 && t.long !== 0);
+  if (validTournaments.length === 0) {
+    return fallbackMapCenter.value;
+  }
+  const avgLat = validTournaments.reduce((sum, t) => sum + t.lat!, 0) / validTournaments.length;
+  const avgLong = validTournaments.reduce((sum, t) => sum + t.long!, 0) / validTournaments.length;
+  return [avgLat, avgLong];
+});
+
+// Filter tournaments with valid coordinates for the map
+const tournamentsWithCoordinates = computed(() =>
+  allTournaments.value?.filter(t => t.lat && t.long && t.lat !== 0 && t.long !== 0) || [],
+);
+</script>
+
 <template>
   <div class="hero bg-base-300 container mx-auto my-6">
     <div class="hero-content text-center min-h-100">
-      <div class="max-w">
-        <h1 class="text-4xl font-bold my-2">
+      <!-- Loading State -->
+      <PageLoadingState
+        v-if="isLoading"
+        text="Loading tournaments..."
+        wrapper-class="py-20"
+        text-class="text-lg opacity-70"
+      />
+
+      <!-- Main Content -->
+      <div
+        v-else
+        class="max-w-4xl"
+      >
+        <h1 class="text-5xl font-bold my-4">
           Allround Tournament Manager
         </h1>
-        <div class="carousel w-full h-80">
+        <p class="text-xl mb-6 opacity-80">
+          Your complete platform for managing allround frisbee tournaments worldwide
+        </p>
+
+        <!-- Hero Carousel -->
+        <div class="carousel w-full h-64 mb-6 rounded-lg overflow-hidden">
           <div id="slide1" class="carousel-item relative w-full">
             <img
               src="https://img.daisyui.com/images/stock/photo-1625726411847-8cbb60cc71e6.webp"
-              class="w-full"
+              class="w-full object-cover"
             >
             <div class="absolute left-5 right-5 top-1/2 flex -translate-y-1/2 transform justify-between">
               <a href="#slide4" class="btn btn-circle">❮</a>
@@ -19,7 +96,7 @@
           <div id="slide2" class="carousel-item relative w-full">
             <img
               src="https://img.daisyui.com/images/stock/photo-1609621838510-5ad474b7d25d.webp"
-              class="w-full"
+              class="w-full object-cover"
             >
             <div class="absolute left-5 right-5 top-1/2 flex -translate-y-1/2 transform justify-between">
               <a href="#slide1" class="btn btn-circle">❮</a>
@@ -29,7 +106,7 @@
           <div id="slide3" class="carousel-item relative w-full">
             <img
               src="https://img.daisyui.com/images/stock/photo-1414694762283-acccc27bca85.webp"
-              class="w-full"
+              class="w-full object-cover"
             >
             <div class="absolute left-5 right-5 top-1/2 flex -translate-y-1/2 transform justify-between">
               <a href="#slide2" class="btn btn-circle">❮</a>
@@ -39,7 +116,7 @@
           <div id="slide4" class="carousel-item relative w-full">
             <img
               src="https://img.daisyui.com/images/stock/photo-1665553365602-b2fb8e5d1707.webp"
-              class="w-full"
+              class="w-full object-cover"
             >
             <div class="absolute left-5 right-5 top-1/2 flex -translate-y-1/2 transform justify-between">
               <a href="#slide3" class="btn btn-circle">❮</a>
@@ -47,9 +124,160 @@
             </div>
           </div>
         </div>
-        <NuxtLink to="/signin" class="btn btn-accent my-8">
-          Sign in
-        </NuxtLink>
+
+        <!-- Call to Action Buttons -->
+        <div class="flex flex-col sm:flex-row gap-4 justify-center my-8">
+          <NuxtLink
+            to="/tournaments"
+            class="btn btn-primary btn-lg gap-2"
+          >
+            <Icon
+              name="tabler:trophy"
+              size="24"
+            />
+            Browse Tournaments
+          </NuxtLink>
+          <NuxtLink
+            v-if="authUiReady && !authStore.isSignedIn"
+            to="/signin"
+            class="btn btn-accent btn-lg gap-2"
+          >
+            <Icon
+              name="tabler:login"
+              size="24"
+            />
+            Sign In
+          </NuxtLink>
+        </div>
+
+        <!-- Active Tournaments Alert -->
+        <div
+          v-if="activeTournaments && activeTournaments.length > 0"
+          class="alert alert-success mb-8"
+        >
+          <Icon
+            name="tabler:live-photo"
+            size="24"
+          />
+          <span class="font-semibold">
+            {{ activeTournaments.length }} tournament{{ activeTournaments.length !== 1 ? 's' : '' }} happening right now!
+          </span>
+          <NuxtLink
+            to="/tournaments?filter=active"
+            class="btn btn-sm btn-ghost"
+          >
+            View Live
+          </NuxtLink>
+        </div>
+
+        <!-- Featured Tournaments -->
+        <div
+          v-if="featuredTournaments.length > 0"
+          class="mb-12"
+        >
+          <h2 class="text-2xl font-bold mb-6">
+            Upcoming Tournaments
+          </h2>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <NuxtLink
+              v-for="tournament in featuredTournaments"
+              :key="tournament.id"
+              :to="`/tournaments/${tournament.slug}`"
+              class="card bg-base-100 shadow-xl hover:shadow-2xl transition-all hover:scale-105"
+            >
+              <div class="card-body p-4">
+                <h3 class="card-title text-base">
+                  {{ tournament.name }}
+                </h3>
+                <div class="text-xs opacity-70">
+                  <div class="flex items-center gap-1 mb-1">
+                    <Icon
+                      name="tabler:calendar"
+                      size="14"
+                    />
+                    <span>{{ tournament.startDate ? new Date(tournament.startDate).toLocaleDateString() : "TBD" }}</span>
+                  </div>
+                  <div
+                    v-if="tournament.city || tournament.country"
+                    class="flex items-center gap-1"
+                  >
+                    <Icon
+                      name="tabler:map-pin"
+                      size="14"
+                    />
+                    <span>{{ [tournament.city, tournament.country].filter(Boolean).join(", ") }}</span>
+                  </div>
+                </div>
+              </div>
+            </NuxtLink>
+          </div>
+        </div>
+
+        <!-- Tournaments Map -->
+        <div
+          v-if="tournamentsWithCoordinates.length > 0"
+          class="mt-12"
+        >
+          <h2 class="text-2xl font-bold mb-4">
+            Tournaments Worldwide
+          </h2>
+          <ClientOnly>
+            <TournamentsMap
+              :center="mapCenter"
+              :user-country="authStore.currentUser?.country"
+              :tournaments="tournamentsWithCoordinates"
+            />
+          </ClientOnly>
+        </div>
+
+        <!-- Features Section -->
+        <div class="mt-16 grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
+          <div class="card bg-base-100">
+            <div class="card-body">
+              <Icon
+                name="tabler:tournament"
+                size="32"
+                class="text-primary mb-2"
+              />
+              <h3 class="card-title text-lg">
+                Multi-Event Support
+              </h3>
+              <p class="text-sm opacity-70">
+                Manage Disc golf, Accuracy, Distance, SCF, Discathon, DDC, and Freestyle events all in one place
+              </p>
+            </div>
+          </div>
+          <div class="card bg-base-100">
+            <div class="card-body">
+              <Icon
+                name="tabler:users"
+                size="32"
+                class="text-primary mb-2"
+              />
+              <h3 class="card-title text-lg">
+                Team Collaboration
+              </h3>
+              <p class="text-sm opacity-70">
+                Invite tournament directors, scorers, and staff with role-based permissions
+              </p>
+            </div>
+          </div>
+          <div class="card bg-base-100">
+            <div class="card-body">
+              <Icon
+                name="tabler:chart-line"
+                size="32"
+                class="text-primary mb-2"
+              />
+              <h3 class="card-title text-lg">
+                Real-Time Scoring
+              </h3>
+              <p class="text-sm opacity-70">
+                Live score updates, leaderboards, and comprehensive reporting for participants and spectators
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>

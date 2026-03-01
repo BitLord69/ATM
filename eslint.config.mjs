@@ -15,7 +15,7 @@ export default withNuxt(antfu({
     semi: true,
     quotes: "double",
   },
-  ignores: [".pnpm-store/**", "**/migrations/*"],
+  ignores: [".pnpm-store/**", "**/migrations/*", "docs/**", "scripts/**"],
 }, {
   rules: {
     "vue/max-attributes-per-line": ["error", {
@@ -39,5 +39,10 @@ export default withNuxt(antfu({
       case: "kebabCase",
       ignore: ["README.md"],
     }],
+  },
+}, {
+  files: ["scripts/**/*.ts"],
+  rules: {
+    "no-console": "off",
   },
 }));

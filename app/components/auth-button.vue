@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import type { loginProviders } from "../stores/auth";
+import type { loginProviders } from "~/stores/auth";
 
-import { useAuthStore } from "../stores/auth";
+import { useAuthStore } from "~/stores/auth";
 
 type Props = {
   provider: loginProviders;
@@ -18,7 +18,7 @@ const authStore = useAuthStore();
     :disabled="authStore.loading"
     @click="authStore.signIn(props.provider)"
   >
-    <span v-if="authStore.loading" class="loading-spinner mr-2" />
+    <span v-if="authStore.loading" class="loading loading-spinner loading-sm" />
     <Icon
       v-else
       :name="props.icon"

@@ -1,16 +1,31 @@
+import { relations } from "drizzle-orm";
 import { int, integer, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 import { user } from "./auth";
+import { organization } from "./organization";
+import { tournamentMembership } from "./tournament-membership";
 
 export const tournament = sqliteTable("tournaments", {
   id: int().primaryKey({ autoIncrement: true }),
+  organizationId: text("organization_id")
+    .references(() => organization.id, { onDelete: "cascade" }),
   name: text().notNull().unique(),
   slug: text().notNull().unique(),
   description: text(),
+  country: text(),
+  city: text(),
+  contactName: text("contact_name"),
+  contactEmail: text("contact_email"),
+  contactPhone: text("contact_phone"),
+  directorName: text("director_name"),
+  directorEmail: text("director_email"),
+  directorPhone: text("director_phone"),
+  contactUserId: text("contact_user_id").references(() => user.id, { onDelete: "set null" }),
   lat: real().notNull(),
   long: real().notNull(),
   startDate: integer(),
   endDate: int(),
+  closedAt: int("closed_at"),
   hasGolf: int({ mode: "boolean" }),
   hasAccuracy: integer({ mode: "boolean" }),
   hasDistance: integer({ mode: "boolean" }),
@@ -22,3 +37,11 @@ export const tournament = sqliteTable("tournaments", {
   createdAt: int().notNull().$default(() => Date.now()),
   changedAt: int().notNull().$default(() => Date.now()).$onUpdate(() => Date.now()),
 });
+
+export const tournamentRelations = relations(tournament, ({ one, many }) => ({
+  organization: one(organization, {
+    fields: [tournament.organizationId],
+    references: [organization.id],
+  }),
+  memberships: many(tournamentMembership),
+}));
