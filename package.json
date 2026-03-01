@@ -9,6 +9,8 @@
     "dev:db": "turso dev --db-file local.db",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
+    "deploy:vercel:preview": "vercel --yes",
+    "deploy:vercel:prod": "vercel --prod --yes",
     "postinstall": "nuxt prepare",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
@@ -17,7 +19,11 @@
     "center-logos": "node scripts/center-logos.js",
     "db:seed-nearby-venues": "tsx scripts/seed-nearby-venues.ts",
     "db:ensure-distance-unit": "tsx scripts/ensure-distance-unit-column.ts",
-    "db:ensure-latest-schema": "tsx scripts/ensure-latest-schema-columns.ts"
+    "db:ensure-latest-schema": "tsx scripts/ensure-latest-schema-columns.ts",
+    "db:sync-local-to-remote": "tsx scripts/sync-local-to-remote.ts",
+    "env:sync:cloud": "tsx scripts/sync-cloud-env.ts",
+    "env:sync:github": "tsx scripts/sync-cloud-env.ts --github-only",
+    "env:sync:vercel": "tsx scripts/sync-cloud-env.ts --vercel-only"
   },
   "dependencies": {
     "@iconify-json/tabler": "^1.2.26",
