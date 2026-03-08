@@ -17,4 +17,6 @@ export type CustomUser = {
   distanceUnit?: "km" | "mi" | null;
   pdgaNumber?: string | null;
   homeClub?: string | null;
+  dateOfBirth?: string | null;
+  genderCategory?: string | null;
 };

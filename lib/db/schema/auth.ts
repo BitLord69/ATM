@@ -3,6 +3,7 @@ import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 import type { UserRole } from "#shared/types/auth";
 
+import { player } from "./player";
 import { tournamentMembership } from "./tournament-membership";
 
 export const user = sqliteTable("user", {
@@ -17,6 +18,8 @@ export const user = sqliteTable("user", {
   distanceUnit: text("distance_unit").notNull().default("km"),
   pdgaNumber: text("pdga_number"),
   homeClub: text("home_club"),
+  dateOfBirth: text("date_of_birth"),
+  genderCategory: text("gender_category"),
   createdAt: integer("created_at").notNull().$default(() => Date.now()),
   updatedAt: integer("updated_at").notNull().$default(() => Date.now()).$onUpdate(() => Date.now()),
   role: text("role").$type<UserRole>().notNull().default("guest"),
@@ -74,9 +77,13 @@ export const verification = sqliteTable(
   table => [index("verification_identifier_idx").on(table.identifier)],
 );
 
-export const userRelations = relations(user, ({ many }) => ({
+export const userRelations = relations(user, ({ many, one }) => ({
   sessions: many(session),
   accounts: many(account),
+  playerProfile: one(player, {
+    fields: [user.id],
+    references: [player.userId],
+  }),
   tournamentMemberships: many(tournamentMembership),
 }));
 
