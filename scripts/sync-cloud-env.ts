@@ -21,16 +21,22 @@ const REQUIRED_KEYS = [
   "BREVO_FROM_EMAIL",
 ] as const;
 
+const VERCEL_DEFAULT_KEYS = REQUIRED_KEYS.filter(
+  key => key !== "TURSO_DATABASE_URL" && key !== "TURSO_AUTH_TOKEN",
+);
+
 const GITHUB_SECRET_KEYS = [
   "TURSO_DATABASE_URL",
   "TURSO_AUTH_TOKEN",
 ] as const;
 
-const VERCEL_ENVIRONMENTS = ["preview", "production"] as const;
+const VERCEL_BASE_ENVIRONMENTS = ["production", "development"] as const;
 
 type Args = {
   githubOnly: boolean;
   vercelOnly: boolean;
+  includePreview: boolean;
+  includeTurso: boolean;
   repo?: string;
 };
 
@@ -39,6 +45,8 @@ function parseArgs(): Args {
 
   const githubOnly = args.includes("--github-only");
   const vercelOnly = args.includes("--vercel-only");
+  const includePreview = args.includes("--include-preview");
+  const includeTurso = args.includes("--include-turso");
 
   if (githubOnly && vercelOnly) {
     throw new Error("Use only one of --github-only or --vercel-only.");
@@ -49,6 +57,8 @@ function parseArgs(): Args {
   return {
     githubOnly,
     vercelOnly,
+    includePreview,
+    includeTurso,
     repo: repoArg ? repoArg.slice("--repo=".length) : undefined,
   };
 }
@@ -61,6 +71,7 @@ function run(
   const result = spawnSync(command, args, {
     encoding: "utf8",
     input: options?.input,
+    shell: process.platform === "win32",
   });
 
   if (result.status !== 0 && !options?.allowFailure) {
@@ -140,7 +151,17 @@ async function main() {
     ...cloudEnv,
   } as Record<string, string>;
 
-  for (const key of REQUIRED_KEYS) {
+  const vercelKeys = args.includeTurso ? [...REQUIRED_KEYS] : [...VERCEL_DEFAULT_KEYS];
+  const vercelEnvironments = args.includePreview
+    ? [...VERCEL_BASE_ENVIRONMENTS, "preview"]
+    : [...VERCEL_BASE_ENVIRONMENTS];
+
+  const keysToValidate = new Set<string>([
+    ...GITHUB_SECRET_KEYS,
+    ...vercelKeys,
+  ]);
+
+  for (const key of Array.from(keysToValidate)) {
     requireValue(merged, key);
   }
 
@@ -162,17 +183,61 @@ async function main() {
 
   if (shouldSyncVercel) {
     console.log("Syncing Vercel environment variables...");
+    if (!args.includePreview) {
+      console.log("  (Preview skipped by default. Use --include-preview to include it.)");
+    }
+    if (!args.includeTurso) {
+      console.log("  (Turso keys skipped by default. Use --include-turso to include them.)");
+    }
 
-    for (const environment of VERCEL_ENVIRONMENTS) {
+    const failures: string[] = [];
+
+    for (const environment of vercelEnvironments) {
       console.log(`  ${environment}:`);
 
-      for (const key of REQUIRED_KEYS) {
+      for (const key of vercelKeys) {
         const value = requireValue(merged, key);
 
-        run("vercel", ["env", "rm", key, environment, "--yes"], { allowFailure: true });
-        run("vercel", ["env", "add", key, environment], { input: `${value}\n` });
+        let result = run("vercel", [
+          "env",
+          "update",
+          key,
+          environment,
+          "--value",
+          value,
+          "--yes",
+          "--non-interactive",
+        ], { allowFailure: true });
 
-        console.log(`    ✓ ${key} (${mask(value)})`);
+        if (result.status !== 0) {
+          result = run("vercel", [
+            "env",
+            "add",
+            key,
+            environment,
+            "--value",
+            value,
+            "--yes",
+            "--non-interactive",
+          ], { allowFailure: true });
+        }
+
+        if (result.status === 0) {
+          console.log(`    ✓ ${key} (${mask(value)})`);
+          continue;
+        }
+
+        failures.push(`${environment}/${key}`);
+        const errorText = result.error?.message || "";
+        const message = result.stderr?.trim() || result.stdout?.trim() || errorText || "Unknown error";
+        console.log(`    ⚠ ${key} failed: ${message}`);
+      }
+    }
+
+    if (failures.length > 0) {
+      console.log("\n⚠ Some Vercel vars failed to sync:");
+      for (const item of failures) {
+        console.log(`  - ${item}`);
       }
     }
   }

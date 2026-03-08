@@ -1,5 +1,8 @@
 import "dotenv/config";
+import { existsSync, readFileSync } from "node:fs";
+
 import { createClient } from "@libsql/client";
+import { parse } from "dotenv";
 
 type TableSummary = {
   table: string;
@@ -20,6 +23,29 @@ function getRequiredEnv(name: string) {
     throw new Error(`Missing required env var: ${name}`);
   }
   return value;
+}
+
+function parseEnvFile(filePath: string) {
+  if (!existsSync(filePath)) {
+    return {};
+  }
+  return parse(readFileSync(filePath, "utf8"));
+}
+
+function normalizeTursoToken(token: string) {
+  const prefix = "TURSO_AUTH_TOKEN=";
+  return token.startsWith(prefix) ? token.slice(prefix.length) : token;
+}
+
+function getConfigFromEnvFiles() {
+  const base = parseEnvFile(".env") as Record<string, string>;
+  const cloud = parseEnvFile(".env.cloud") as Record<string, string>;
+
+  return {
+    localUrl: base.LOCAL_TURSO_DATABASE_URL || base.TURSO_DATABASE_URL || DEFAULT_LOCAL_URL,
+    remoteUrl: cloud.REMOTE_TURSO_DATABASE_URL || cloud.TURSO_DATABASE_URL,
+    remoteToken: normalizeTursoToken(cloud.REMOTE_TURSO_AUTH_TOKEN || cloud.TURSO_AUTH_TOKEN || ""),
+  };
 }
 
 async function getTables(client: ReturnType<typeof createClient>) {
@@ -68,12 +94,19 @@ async function copyTable(
 }
 
 async function main() {
-  // eslint-disable-next-line node/no-process-env
-  const localUrl = process.env.LOCAL_TURSO_DATABASE_URL || DEFAULT_LOCAL_URL;
-  const remoteUrl = getRequiredEnv("REMOTE_TURSO_DATABASE_URL");
+  const fileConfig = getConfigFromEnvFiles();
 
   // eslint-disable-next-line node/no-process-env
-  const remoteAuthToken = process.env.REMOTE_TURSO_AUTH_TOKEN;
+  const localUrl = process.env.LOCAL_TURSO_DATABASE_URL || fileConfig.localUrl || DEFAULT_LOCAL_URL;
+  // eslint-disable-next-line node/no-process-env
+  const remoteUrl = process.env.REMOTE_TURSO_DATABASE_URL || fileConfig.remoteUrl || getRequiredEnv("REMOTE_TURSO_DATABASE_URL");
+
+  // eslint-disable-next-line node/no-process-env
+  const remoteAuthToken = normalizeTursoToken(process.env.REMOTE_TURSO_AUTH_TOKEN || fileConfig.remoteToken || "");
+
+  if (remoteUrl.startsWith("libsql://") && !remoteAuthToken) {
+    throw new Error("Missing remote Turso auth token. Set REMOTE_TURSO_AUTH_TOKEN or TURSO_AUTH_TOKEN in .env.cloud.");
+  }
 
   const local = createClient({ url: localUrl });
   const remote = createClient({
@@ -103,7 +136,6 @@ async function main() {
   console.log(`Copying ${tables.length} table(s)...`);
 
   await remote.execute("PRAGMA foreign_keys = OFF");
-  await remote.execute("BEGIN");
 
   try {
     for (const table of tables) {
@@ -118,15 +150,12 @@ async function main() {
       console.log(`✓ ${table}: ${rowsCopied} row(s)`);
     }
 
-    await remote.execute("COMMIT");
-
     const totalRows = summary.reduce((sum, item) => sum + item.rowsCopied, 0);
     console.log("\n✅ Sync complete");
     console.log(`Tables copied: ${summary.length}`);
     console.log(`Rows copied: ${totalRows}`);
   }
   catch (error) {
-    await remote.execute("ROLLBACK");
     throw error;
   }
   finally {

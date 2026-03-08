@@ -29,6 +29,17 @@ To sync vars directly from local files:
 - GitHub only: `pnpm env:sync:github`
 - Vercel only: `pnpm env:sync:vercel`
 
+Default behavior for `pnpm env:sync:vercel`:
+
+- Synces **non-Turso** keys only
+- Targets **production** and **development**
+- Skips preview to avoid branch prompt issues in non-interactive CLI mode
+
+Optional flags:
+
+- Include preview: `pnpm exec tsx scripts/sync-cloud-env.ts --vercel-only --include-preview`
+- Include Turso keys: `pnpm exec tsx scripts/sync-cloud-env.ts --vercel-only --include-turso`
+
 Use these environments:
 
 - **Production**: always required
@@ -123,16 +134,29 @@ Use your deployed domain callback URLs (and preview URL patterns if needed).
 
 If you need to seed cloud data from your local database state, use:
 
-1. Ensure remote schema is up to date first (apply migrations / schema scripts).
-2. Set environment variables for sync (PowerShell):
+1. Ensure remote schema is up to date first.
 
+```bash
+pnpm db:migrate:cloud
+```
+
+This command reads `.env` + `.env.cloud`, forces `NODE_ENV=production`, validates cloud-safe Turso settings, and runs `drizzle-kit migrate` against your remote DB.
+
+2. (Optional) run compatibility scripts after migration:
+
+```bash
+pnpm db:ensure-latest-schema
+pnpm db:ensure-distance-unit
+```
+
+3. Set environment variables for sync (PowerShell):
 ```powershell
 $env:LOCAL_TURSO_DATABASE_URL="file:local.db"
 $env:REMOTE_TURSO_DATABASE_URL="libsql://<your-remote-db>.turso.io"
 $env:REMOTE_TURSO_AUTH_TOKEN="<your-remote-token>"
 ```
 
-3. Run:
+4. Run:
 
 ```bash
 pnpm db:sync-local-to-remote

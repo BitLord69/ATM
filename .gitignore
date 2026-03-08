@@ -13,6 +13,14 @@ node_modules
 logs
 *.log
 
+# Local database files
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+*.db-wal
+*.db-shm
+
 # Misc
 .DS_Store
 .fleet
@@ -24,3 +32,5 @@ logs
 !.env.example
 !.env.cloud.example
 lib/db/migrations/
+.vercel
+.env*.local

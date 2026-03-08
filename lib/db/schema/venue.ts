@@ -2,8 +2,6 @@ import { int, integer, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 import { user } from "./auth";
 
-import { user } from "./auth";
-
 export const venue = sqliteTable("venues", {
   id: int().primaryKey({ autoIncrement: true }),
   name: text().notNull().unique(),
