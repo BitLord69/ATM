@@ -46,6 +46,16 @@ export const auth = betterAuth({
         required: false,
         input: true,
       },
+      dateOfBirth: {
+        type: "string",
+        required: false,
+        input: true,
+      },
+      genderCategory: {
+        type: "string",
+        required: false,
+        input: true,
+      },
     },
   },
   baseURL: env.BETTER_AUTH_URL,

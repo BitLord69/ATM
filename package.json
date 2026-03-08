@@ -17,6 +17,7 @@
     "typecheck": "nuxi typecheck",
     "prepare": "husky",
     "center-logos": "node scripts/center-logos.js",
+    "db:seed-divisions": "tsx scripts/seed-divisions.ts",
     "db:seed-nearby-venues": "tsx scripts/seed-nearby-venues.ts",
     "db:ensure-distance-unit": "tsx scripts/ensure-distance-unit-column.ts",
     "db:ensure-latest-schema": "tsx scripts/ensure-latest-schema-columns.ts",
@@ -60,7 +61,8 @@
     "lint-staged": "^16.2.7",
     "sharp": "^0.34.5",
     "tsx": "^4.21.0",
-    "vite-tsconfig-paths": "^6.1.0"
+    "vite-tsconfig-paths": "^6.1.0",
+    "vue-tsc": "3.2.5"
   },
   "lint-staged": {
     "*": "eslint --fix"
