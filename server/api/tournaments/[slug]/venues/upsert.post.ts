@@ -83,6 +83,20 @@ export default defineEventHandler(async (event) => {
     if (existing.length === 0) {
       throw createError({ statusCode: 404, message: "Venue not found" });
     }
+
+    // Update the global venue record with new values
+    await db
+      .update(venue)
+      .set({
+        name: body.name.trim(),
+        description: body.description ?? null,
+        facilities: body.facilities ?? null,
+        lat: body.lat,
+        long: body.long,
+        changedBy,
+        changedAt: Date.now(),
+      })
+      .where(eq(venue.id, venueId));
   }
   else {
     const inserted = await db

@@ -7,7 +7,8 @@ const TOURNAMENT_EDIT_TABS = [
   { id: "contacts", label: "Contacts" },
   { id: "disciplines", label: "Disciplines" },
   { id: "map", label: "Map" },
-  { id: "venues", label: "Venues" },
+  { id: "venue-actions", label: "Venue Actions" },
+  { id: "venue-list", label: "Venue List" },
 ] as const satisfies readonly VerticalTabConfig[];
 
 export type TournamentEditTabId = (typeof TOURNAMENT_EDIT_TABS)[number]["id"];
@@ -64,7 +65,7 @@ export const TOURNAMENT_EDIT_TAB_SCHEME = buildTabScheme({
     hasFreestyle: "disciplines",
     lat: "map",
     long: "map",
-    venues: "venues",
+    venues: "venue-actions",
   },
 });
 

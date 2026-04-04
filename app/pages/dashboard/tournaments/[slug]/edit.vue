@@ -1,15 +1,17 @@
 <script setup lang="ts">
-import { LMap, LMarker, LPopup, LTileLayer } from "@vue-leaflet/vue-leaflet";
-import { divIcon } from "leaflet";
-import "leaflet/dist/leaflet.css";
-
 import type { TournamentEditTabId } from "~/schemas/ui/tournament-edit-tabs";
 
 import { cloneTournamentBodySchema, editTournamentBodySchema } from "#shared/schemas/tournament-edit";
 import { tournamentEditFieldToTab, tournamentEditTabs } from "~/schemas/ui/tournament-edit-tabs";
 
+const LMap = defineAsyncComponent(() => import("@vue-leaflet/vue-leaflet").then(module => module.LMap));
+const LMarker = defineAsyncComponent(() => import("@vue-leaflet/vue-leaflet").then(module => module.LMarker));
+const LPopup = defineAsyncComponent(() => import("@vue-leaflet/vue-leaflet").then(module => module.LPopup));
+const LTileLayer = defineAsyncComponent(() => import("@vue-leaflet/vue-leaflet").then(module => module.LTileLayer));
+
 definePageMeta({
   ssr: false,
+  layout: "tournament-admin",
 });
 
 type EditableVenue = {
@@ -219,6 +221,47 @@ function getDisciplineToggleLabelClass(key: DisciplineKey) {
   return "";
 }
 
+function toDateInput(value: number | null | undefined) {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return "";
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(date.getUTCDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function fromDateInput(value: string) {
+  if (!value) {
+    return null;
+  }
+
+  const parts = value.split("-");
+  if (parts.length !== 3) {
+    return null;
+  }
+
+  const year = Number(parts[0]);
+  const month = Number(parts[1]);
+  const day = Number(parts[2]);
+
+  if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day)) {
+    return null;
+  }
+
+  if (month < 1 || month > 12 || day < 1 || day > 31) {
+    return null;
+  }
+
+  return Date.UTC(year, month - 1, day);
+}
+
 const venueDisciplineFilterOptions = computed(() =>
   allVenueDisciplineFilterOptions.filter(option => form[option.key]),
 );
@@ -300,77 +343,6 @@ const {
   confirmLeavePage,
   cancelLeavePage,
 } = useUnsavedChangesGuard(hasUnsavedChanges);
-
-function toDateInput(timestamp: number | null | undefined) {
-  if (!timestamp) {
-    return "";
-  }
-  const date = new Date(timestamp);
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
-function fromDateInput(value: string): number | null {
-  if (!value) {
-    return null;
-  }
-  const date = new Date(`${value}T00:00:00`);
-  return Number.isNaN(date.getTime()) ? null : date.getTime();
-}
-
-const isTournamentClosed = computed(() => {
-  if (!data.value || Array.isArray(data.value)) {
-    return false;
-  }
-  return !!data.value.closedAt;
-});
-
-const canCloseTournament = computed(() => {
-  if (isTournamentClosed.value) {
-    return false;
-  }
-
-  const endDateTimestamp = fromDateInput(form.endDate);
-  if (!endDateTimestamp) {
-    return false;
-  }
-
-  return Date.now() >= endDateTimestamp;
-});
-
-function requestCloseTournament() {
-  if (!canCloseTournament.value || saving.value) {
-    return;
-  }
-  showCloseTournamentModal.value = true;
-}
-
-function cancelCloseTournament() {
-  showCloseTournamentModal.value = false;
-}
-
-async function confirmCloseTournament() {
-  showCloseTournamentModal.value = false;
-  await saveTournament(true);
-}
-
-function roundCoord(value: number) {
-  return Number(value.toFixed(6));
-}
-
-function markTouched(path: string) {
-  touchedFields.value[path] = true;
-}
-
-function shouldShowFieldError(path: string) {
-  return !!fieldErrors.value[path] && (submitAttempted.value || touchedFields.value[path]);
-}
-
-function getFieldError(path: string) {
-  return shouldShowFieldError(path) ? fieldErrors.value[path] : "";
-}
 
 function setTournamentDiscipline(key: DisciplineKey, value: boolean) {
   form[key] = value;
@@ -893,6 +865,31 @@ onMounted(() => {
   void consumeCloneSuccessFlag();
 });
 
+function requestCloseTournament() {
+  if (saving.value || deletingTournament.value || cloningTournament.value) {
+    return;
+  }
+
+  showCloseTournamentModal.value = true;
+}
+
+function cancelCloseTournament() {
+  if (saving.value) {
+    return;
+  }
+
+  showCloseTournamentModal.value = false;
+}
+
+async function confirmCloseTournament() {
+  if (saving.value) {
+    return;
+  }
+
+  showCloseTournamentModal.value = false;
+  await saveTournament(true);
+}
+
 function requestDeleteTournament() {
   if (saving.value || deletingTournament.value) {
     return;
@@ -946,8 +943,30 @@ function hasMapCoordinates(lat: number, long: number) {
   return Number.isFinite(lat) && Number.isFinite(long) && !(lat === 0 && long === 0);
 }
 
+const leafletDivIcon = shallowRef<((options: {
+  className?: string;
+  html?: string;
+  iconSize?: [number, number];
+  iconAnchor?: [number, number];
+  popupAnchor?: [number, number];
+}) => any) | null>(null);
+
+if (import.meta.client) {
+  import("leaflet")
+    .then(({ divIcon }) => {
+      leafletDivIcon.value = divIcon;
+    })
+    .catch(() => {
+      leafletDivIcon.value = null;
+    });
+}
+
 function getVenueNumberedIcon(index: number) {
-  return divIcon({
+  if (!leafletDivIcon.value) {
+    return undefined;
+  }
+
+  return leafletDivIcon.value({
     className: "venue-numbered-icon",
     html: `<div class="w-7 h-7 rounded-full bg-primary text-primary-content border border-base-100 shadow flex items-center justify-center text-xs font-semibold leading-none">${index + 1}</div>`,
     iconSize: [28, 28],
@@ -1056,6 +1075,21 @@ watch(
   { immediate: true },
 );
 
+const isTournamentClosed = computed(() => data.value && !Array.isArray(data.value) ? data.value.closedAt != null : false);
+const canCloseTournament = computed(() => !isTournamentClosed.value);
+
+function markTouched(field: string) {
+  touchedFields.value[field] = true;
+}
+
+function getFieldError(field: string) {
+  return fieldErrors.value[field] || "";
+}
+
+function shouldShowFieldError(field: string) {
+  return !!getFieldError(field) && (submitAttempted.value || !!touchedFields.value[field]);
+}
+
 async function saveTournament(closeTournament = false) {
   saveError.value = null;
   saveSuccess.value = null;
@@ -1150,6 +1184,7 @@ async function saveTournament(closeTournament = false) {
       await router.replace(`/dashboard/tournaments/${result.slug}/edit`);
     }
     await refresh();
+    await refreshNuxtData();
   }
   catch (err: any) {
     saveError.value = err?.data?.message || err?.message || "Failed to save tournament";
@@ -1161,34 +1196,38 @@ async function saveTournament(closeTournament = false) {
 </script>
 
 <template>
-  <div class="container mx-auto max-w-6xl p-4 md:p-6">
-    <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
-      <NuxtLink
-        to="/dashboard"
-        class="btn btn-ghost btn-sm"
+  <div>
+    <div class="mb-4 flex flex-wrap items-center justify-end gap-2">
+      <button
+        class="btn btn-primary btn-sm"
+        type="button"
+        :disabled="saving"
+        @click="saveTournament(false)"
       >
-        ← Back to Dashboard
+        <span
+          v-if="saving"
+          class="loading loading-spinner loading-xs"
+        />
+        <span v-else>Save Tournament</span>
+      </button>
+      <button
+        class="btn btn-outline btn-sm"
+        type="button"
+        :disabled="cloningTournament || saving"
+        @click="requestCloneTournament"
+      >
+        <span
+          v-if="cloningTournament"
+          class="loading loading-spinner loading-xs"
+        />
+        <span v-else>Clone Tournament</span>
+      </button>
+      <NuxtLink
+        :to="`/tournaments/${form.slug || slug}`"
+        class="btn btn-outline btn-sm"
+      >
+        View Public Page
       </NuxtLink>
-      <div class="flex flex-wrap items-center gap-2">
-        <button
-          class="btn btn-outline btn-sm"
-          type="button"
-          :disabled="cloningTournament"
-          @click="requestCloneTournament"
-        >
-          <span
-            v-if="cloningTournament"
-            class="loading loading-spinner loading-xs"
-          />
-          <span v-else>Clone Tournament</span>
-        </button>
-        <NuxtLink
-          :to="`/tournaments/${form.slug || slug}`"
-          class="btn btn-outline btn-sm"
-        >
-          View Public Page
-        </NuxtLink>
-      </div>
     </div>
 
     <PageLoadingState
@@ -1261,7 +1300,7 @@ async function saveTournament(closeTournament = false) {
           <VerticalTabsLayout
             v-model="activeDetailsTab"
             :tabs="tournamentEditTabs"
-            :initial-open-tab-ids="['general', 'map', 'venues']"
+            :initial-open-tab-ids="['general', 'map', 'venue-actions', 'venue-list']"
             :session-state-key="`tournament-edit:${slug}`"
           >
             <template #general>
@@ -1526,11 +1565,11 @@ async function saveTournament(closeTournament = false) {
               </div>
             </template>
 
-            <template #venues>
+            <template #venue-actions>
               <div class="space-y-4">
                 <div class="space-y-3">
                   <h2 class="card-title">
-                    Venues
+                    Manage Venues
                   </h2>
 
                   <div class="flex items-center justify-between gap-2">
@@ -1616,15 +1655,16 @@ async function saveTournament(closeTournament = false) {
                     </button>
                   </div>
                 </div>
+              </div>
+            </template>
 
-                <div
-                  v-if="venues.length === 0"
-                  class="alert"
-                >
+            <template #venue-list>
+              <div class="space-y-4">
+                <div v-if="venues.length === 0" class="alert">
                   <span>No venues yet.</span>
                 </div>
 
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div v-else class="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   <div
                     v-for="(venue, index) in venues"
                     :key="venue.key"
@@ -1865,7 +1905,7 @@ async function saveTournament(closeTournament = false) {
         class="modal"
         :class="{ 'modal-open': isVenueModalOpen }"
       >
-        <div class="modal-box max-w-5xl py-4">
+        <div class="modal-box w-full max-w-6xl py-4">
           <FormHeader
             :title="venueModalTitle"
             :description="venueModalDescription"

@@ -47,6 +47,7 @@ export const startingListEntry = sqliteTable(
     discipline: text("discipline").notNull().default("overall"),
     roundNumber: integer("round_number").notNull().default(1),
     position: integer("position").notNull(),
+    startNumber: integer("start_number"),
     activeCompetitiveDivisionSnapshot: text("active_competitive_division_snapshot").notNull(),
     createdAt: integer("created_at").notNull().$default(() => Date.now()),
     updatedAt: integer("updated_at").notNull().$default(() => Date.now()).$onUpdate(() => Date.now()),
@@ -55,6 +56,7 @@ export const startingListEntry = sqliteTable(
     index("starting_list_entry_event_entry_id_idx").on(table.eventEntryId),
     index("starting_list_entry_tournament_id_idx").on(table.tournamentId),
     uniqueIndex("starting_list_entry_round_position_unique").on(table.tournamentId, table.discipline, table.roundNumber, table.position),
+    uniqueIndex("starting_list_entry_round_start_number_unique").on(table.tournamentId, table.discipline, table.roundNumber, table.startNumber),
     uniqueIndex("starting_list_entry_round_event_entry_unique").on(table.roundNumber, table.eventEntryId),
   ],
 );

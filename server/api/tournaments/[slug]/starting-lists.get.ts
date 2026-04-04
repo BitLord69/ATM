@@ -69,6 +69,7 @@ export default defineEventHandler(async (event) => {
       discipline: startingListEntry.discipline,
       roundNumber: startingListEntry.roundNumber,
       position: startingListEntry.position,
+      startNumber: startingListEntry.startNumber,
       activeCompetitiveDivisionSnapshot: startingListEntry.activeCompetitiveDivisionSnapshot,
       entryDiscipline: eventEntry.discipline,
       majorDivision: eventEntry.majorDivision,
@@ -80,6 +81,7 @@ export default defineEventHandler(async (event) => {
       playerName: player.displayName,
       userName: user.name,
       userEmail: user.email,
+      userCountry: user.country,
     })
     .from(startingListEntry)
     .innerJoin(eventEntry, eq(eventEntry.id, startingListEntry.eventEntryId))

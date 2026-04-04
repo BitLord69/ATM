@@ -50,5 +50,8 @@
     "scss",
     "pcss",
     "postcss"
-  ]
+  ],
+  "chat.tools.terminal.autoApprove": {
+    ".env.cloud.example": true
+  }
 }

@@ -17,6 +17,23 @@ function toggleSortDirection() {
   sortDirection.value = sortDirection.value === "asc" ? "desc" : "asc";
 }
 
+async function openTournamentEdit(tournamentSlug: string) {
+  if (!tournamentSlug) {
+    return;
+  }
+
+  const target = `/dashboard/tournaments/${tournamentSlug}/edit`;
+
+  try {
+    await navigateTo(target);
+  }
+  catch {
+    if (import.meta.client) {
+      window.location.assign(target);
+    }
+  }
+}
+
 onMounted(async () => {
   // Only load if not already loaded (plugin may have already loaded on app init)
   if (tournamentStore.tournaments.length === 0 && !tournamentStore.loading) {
@@ -199,14 +216,14 @@ onMounted(async () => {
                 justify="end"
                 margin-top="sm"
               >
-                <NuxtLink
+                <button
                   v-if="tournament.canEdit"
-                  :to="`/dashboard/tournaments/${tournament.tournamentSlug}/edit`"
+                  type="button"
                   class="btn btn-xs btn-outline"
-                  @click.stop
+                  @click.stop.prevent="openTournamentEdit(tournament.tournamentSlug)"
                 >
                   Edit Tournament
-                </NuxtLink>
+                </button>
               </TournamentActionsRow>
             </template>
           </TournamentCard>
