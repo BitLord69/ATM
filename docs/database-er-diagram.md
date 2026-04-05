@@ -136,7 +136,6 @@ erDiagram
     text discipline
     int round_number
     int position
-    int start_number
     text active_competitive_division_snapshot
   }
 
@@ -156,16 +155,6 @@ erDiagram
     int is_locked
     text locked_by
     int locked_at
-  }
-
-  tournament_player_number {
-    text id PK
-    int tournament_id FK
-    text player_id FK
-    int player_number
-    text assignment_mode
-    text assigned_by
-    int assigned_at
   }
 
   user ||--o{ session : has
@@ -192,9 +181,7 @@ erDiagram
   tournaments ||--o{ starting_list_entry : has_starting_lists
   tournaments ||--o{ starting_list_lock : has_starting_list_locks
   tournaments ||--o| tournament_registration_lock : has_registration_lock
-  tournaments ||--o{ tournament_player_number : has_player_numbers
 
   player ||--o{ event_entry : registers
-  player ||--o{ tournament_player_number : assigned_number
   event_entry ||--o{ starting_list_entry : ordered_as
 ```
