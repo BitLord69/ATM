@@ -133,7 +133,8 @@ watch(
         style="height: 500px; z-index: 0;"
       >
         <LTileLayer
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+          :options="{ referrerPolicy: 'origin' }"
           attribution="&copy; <a href='https://www.openstreetmap.org/copyright'>OpenStreetMap</a> contributors"
         />
         <LMarker
