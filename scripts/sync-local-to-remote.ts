@@ -62,6 +62,76 @@ async function getTables(client: ReturnType<typeof createClient>) {
     .filter(name => !INTERNAL_TABLES.has(name));
 }
 
+async function getReferencedTables(
+  client: ReturnType<typeof createClient>,
+  table: string,
+) {
+  const result = await client.execute(`PRAGMA foreign_key_list(${quoteIdentifier(table)})`);
+  const referenced = new Set<string>();
+
+  for (const row of result.rows) {
+    const parent = String((row as Record<string, unknown>).table || "").trim();
+    if (parent) {
+      referenced.add(parent);
+    }
+  }
+
+  return referenced;
+}
+
+function resolveTableOrder(
+  tables: string[],
+  dependencies: Map<string, Set<string>>,
+) {
+  const tableSet = new Set(tables);
+  const inDegree = new Map<string, number>();
+  const dependents = new Map<string, Set<string>>();
+
+  for (const table of tables) {
+    inDegree.set(table, 0);
+    dependents.set(table, new Set());
+  }
+
+  for (const table of tables) {
+    const deps = dependencies.get(table) || new Set<string>();
+    for (const dep of deps) {
+      if (!tableSet.has(dep)) {
+        continue;
+      }
+
+      inDegree.set(table, (inDegree.get(table) || 0) + 1);
+      dependents.get(dep)?.add(table);
+    }
+  }
+
+  const queue: string[] = tables.filter(table => (inDegree.get(table) || 0) === 0);
+  const ordered: string[] = [];
+
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+    ordered.push(current);
+
+    for (const child of dependents.get(current) || []) {
+      const next = (inDegree.get(child) || 0) - 1;
+      inDegree.set(child, next);
+      if (next === 0) {
+        queue.push(child);
+      }
+    }
+  }
+
+  // Fallback: keep remaining tables in original order if there is a cycle.
+  if (ordered.length < tables.length) {
+    for (const table of tables) {
+      if (!ordered.includes(table)) {
+        ordered.push(table);
+      }
+    }
+  }
+
+  return ordered;
+}
+
 async function copyTable(
   table: string,
   local: ReturnType<typeof createClient>,
@@ -135,16 +205,25 @@ async function main() {
   console.log(`Remote DB: ${remoteUrl}`);
   console.log(`Copying ${tables.length} table(s)...`);
 
+  const dependencies = new Map<string, Set<string>>();
+  for (const table of tables) {
+    const deps = await getReferencedTables(remote, table);
+    dependencies.set(table, deps);
+  }
+
+  const insertOrder = resolveTableOrder(tables, dependencies);
+  const deleteOrder = [...insertOrder].reverse();
+
   await remote.execute("PRAGMA foreign_keys = OFF");
 
   try {
-    for (const table of tables) {
+    for (const table of deleteOrder) {
       await remote.execute(`DELETE FROM ${quoteIdentifier(table)}`);
     }
 
     const summary: TableSummary[] = [];
 
-    for (const table of tables) {
+    for (const table of insertOrder) {
       const rowsCopied = await copyTable(table, local, remote);
       summary.push({ table, rowsCopied });
       console.log(`✓ ${table}: ${rowsCopied} row(s)`);

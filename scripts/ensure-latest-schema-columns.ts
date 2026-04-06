@@ -34,6 +34,41 @@ const REQUIRED_COLUMNS: ColumnSpec[] = [
     ddl: "ALTER TABLE tournaments ADD COLUMN director_phone TEXT",
   },
   {
+    table: "tournaments",
+    name: "has_golf",
+    ddl: "ALTER TABLE tournaments ADD COLUMN has_golf INTEGER NOT NULL DEFAULT false",
+  },
+  {
+    table: "tournaments",
+    name: "has_accuracy",
+    ddl: "ALTER TABLE tournaments ADD COLUMN has_accuracy INTEGER NOT NULL DEFAULT false",
+  },
+  {
+    table: "tournaments",
+    name: "has_distance",
+    ddl: "ALTER TABLE tournaments ADD COLUMN has_distance INTEGER NOT NULL DEFAULT false",
+  },
+  {
+    table: "tournaments",
+    name: "has_scf",
+    ddl: "ALTER TABLE tournaments ADD COLUMN has_scf INTEGER NOT NULL DEFAULT false",
+  },
+  {
+    table: "tournaments",
+    name: "has_discathon",
+    ddl: "ALTER TABLE tournaments ADD COLUMN has_discathon INTEGER NOT NULL DEFAULT false",
+  },
+  {
+    table: "tournaments",
+    name: "has_ddc",
+    ddl: "ALTER TABLE tournaments ADD COLUMN has_ddc INTEGER NOT NULL DEFAULT false",
+  },
+  {
+    table: "tournaments",
+    name: "has_freestyle",
+    ddl: "ALTER TABLE tournaments ADD COLUMN has_freestyle INTEGER NOT NULL DEFAULT false",
+  },
+  {
     table: "venues",
     name: "has_golf",
     ddl: "ALTER TABLE venues ADD COLUMN has_golf INTEGER NOT NULL DEFAULT false",

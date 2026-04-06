@@ -97,6 +97,28 @@ function parseEnvFile(filePath: string) {
   return parse(content);
 }
 
+function normalizeEnvValue(key: string, value: string) {
+  let normalized = value.trim();
+  const keyPrefix = `${key}=`;
+
+  // Guard against accidental paste like: KEY=KEY=actual_value
+  while (normalized.startsWith(keyPrefix)) {
+    normalized = normalized.slice(keyPrefix.length).trim();
+  }
+
+  return normalized;
+}
+
+function normalizeEnvMap(values: Record<string, string>) {
+  const normalized: Record<string, string> = {};
+
+  for (const [key, value] of Object.entries(values)) {
+    normalized[key] = normalizeEnvValue(key, value);
+  }
+
+  return normalized;
+}
+
 function requireValue(values: Record<string, string>, key: string) {
   const value = values[key];
   if (!value || value.trim().length === 0) {
@@ -146,10 +168,11 @@ async function main() {
   const baseEnv = parseEnvFile(".env");
   const cloudEnv = parseEnvFile(".env.cloud");
 
-  const merged = {
+  const mergedRaw = {
     ...baseEnv,
     ...cloudEnv,
   } as Record<string, string>;
+  const merged = normalizeEnvMap(mergedRaw);
 
   const vercelKeys = args.includeTurso ? [...REQUIRED_KEYS] : [...VERCEL_DEFAULT_KEYS];
   const vercelEnvironments = args.includePreview
