@@ -6,7 +6,6 @@ const authStore = useAuthStore();
 const authUiReady = ref(false);
 
 onMounted(() => {
-  void authStore.checkSession();
   authUiReady.value = true;
 });
 </script>
