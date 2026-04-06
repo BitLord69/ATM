@@ -15,7 +15,7 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "typecheck": "nuxi typecheck",
-    "prepare": "husky",
+    "prepare": "husky || echo \"husky skipped\"",
     "center-logos": "node scripts/center-logos.js",
     "db:seed-divisions": "tsx scripts/seed-divisions.ts",
     "db:seed-nearby-venues": "tsx scripts/seed-nearby-venues.ts",
