@@ -71,11 +71,15 @@ export default defineEventHandler(async (event) => {
   const whereFinished = sql`${tournament.endDate} < ${now}`;
 
   const fetchTournaments = async (selectMode: "full" | "base" | "core") => {
-    const select = selectMode === "full"
-      ? selectWithDisciplines
-      : selectMode === "base"
-        ? selectBase
-        : selectCore;
+    if (selectMode === "core") {
+      // Last-resort fallback: avoid optional/migrated columns entirely.
+      return db
+        .select(selectCore)
+        .from(tournament)
+        .orderBy(tournament.id);
+    }
+
+    const select = selectMode === "full" ? selectWithDisciplines : selectBase;
 
     if (filter === "all") {
       return db
