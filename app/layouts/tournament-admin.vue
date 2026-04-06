@@ -1,8 +1,5 @@
 <script setup lang="ts">
 import type { WorkspaceNavItem } from "~/components/workspace-shell.vue";
-import type { DisciplineKey } from "~/composables/use-discipline-catalog";
-
-import { disciplineByKey } from "~/composables/use-discipline-catalog";
 
 const route = useRoute();
 
@@ -10,26 +7,25 @@ const slug = computed(() => route.params.slug as string);
 const { data: tournamentData } = await useFetch(() => `/api/tournaments/${slug.value}/edit`);
 
 const disciplineConfig = [
-  { key: "hasGolf", slug: "golf" },
-  { key: "hasAccuracy", slug: "accuracy" },
-  { key: "hasDistance", slug: "distance" },
-  { key: "hasSCF", slug: "scf" },
-  { key: "hasDiscathon", slug: "discathon" },
-  { key: "hasDDC", slug: "ddc" },
-  { key: "hasFreestyle", slug: "freestyle" },
-] as const satisfies ReadonlyArray<{ key: DisciplineKey; slug: string }>;
+  { key: "hasGolf", slug: "golf", label: "Disc golf" },
+  { key: "hasAccuracy", slug: "accuracy", label: "Accuracy" },
+  { key: "hasDistance", slug: "distance", label: "Distance" },
+  { key: "hasSCF", slug: "scf", label: "SCF" },
+  { key: "hasDiscathon", slug: "discathon", label: "Discathon" },
+  { key: "hasDDC", slug: "ddc", label: "DDC" },
+  { key: "hasFreestyle", slug: "freestyle", label: "Freestyle" },
+] as const;
 
 const enabledDisciplineLinks = computed(() => {
   if (!tournamentData.value || Array.isArray(tournamentData.value)) {
-    return [] as Array<{ id: string; label: string; icon: string; to: string; indented: true }>;
+    return [] as Array<{ id: string; label: string; to: string; indented: true }>;
   }
 
   return disciplineConfig
     .filter(item => !!(tournamentData.value as any)[item.key])
     .map(item => ({
       id: `discipline:${item.slug}`,
-      label: disciplineByKey[item.key].label,
-      icon: disciplineByKey[item.key].icon,
+      label: item.label,
       to: `/dashboard/tournaments/${slug.value}/disciplines/${item.slug}`,
       indented: true as const,
     }));
