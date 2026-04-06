@@ -5,12 +5,26 @@ withDefaults(defineProps<{
   subtitle?: string | null;
   description?: string | null;
   facilities?: string | null;
+  hasGolf?: boolean;
+  hasAccuracy?: boolean;
+  hasDistance?: boolean;
+  hasSCF?: boolean;
+  hasDiscathon?: boolean;
+  hasDDC?: boolean;
+  hasFreestyle?: boolean;
   centered?: boolean;
 }>(), {
   titleTo: null,
   subtitle: null,
   description: null,
   facilities: null,
+  hasGolf: false,
+  hasAccuracy: false,
+  hasDistance: false,
+  hasSCF: false,
+  hasDiscathon: false,
+  hasDDC: false,
+  hasFreestyle: false,
   centered: true,
 });
 </script>
@@ -48,6 +62,19 @@ withDefaults(defineProps<{
     >
       {{ facilities }}
     </p>
+    <div :class="centered ? 'flex justify-center mt-2' : 'mt-2'">
+      <DisciplineIcons
+        :has-golf="hasGolf"
+        :has-accuracy="hasAccuracy"
+        :has-distance="hasDistance"
+        :has-scf="hasSCF"
+        :has-discathon="hasDiscathon"
+        :has-ddc="hasDDC"
+        :has-freestyle="hasFreestyle"
+        :icon-size="16"
+        gap-class="gap-1"
+      />
+    </div>
     <slot />
   </div>
 </template>

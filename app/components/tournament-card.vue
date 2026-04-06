@@ -62,20 +62,20 @@ defineEmits<{
         <slot name="title-right">
           <span
             v-if="showStatusBadge && isActive"
-            class="badge badge-success badge-sm gap-1 shrink-0"
+            class="badge badge-success badge-sm gap-1 shrink-0 inline-flex items-center justify-center whitespace-nowrap align-middle"
           >
             <span class="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
             Live
           </span>
           <span
             v-else-if="showStatusBadge && status === 'future'"
-            class="badge badge-info badge-sm shrink-0"
+            class="badge badge-info badge-sm shrink-0 inline-flex items-center justify-center whitespace-nowrap align-middle"
           >
             Upcoming
           </span>
           <span
             v-else-if="showStatusBadge && status === 'past'"
-            class="badge badge-ghost badge-sm shrink-0"
+            class="badge badge-ghost badge-sm shrink-0 inline-flex items-center justify-center whitespace-nowrap align-middle"
           >
             Past
           </span>

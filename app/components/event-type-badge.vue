@@ -4,10 +4,12 @@
  * Displays badges for different disc sport disciplines
  */
 
-type EventType = "golf" | "accuracy" | "distance" | "scf" | "discathon" | "ddc" | "freestyle";
+import type { DisciplineType } from "~/composables/use-discipline-catalog";
+
+import { disciplineByType } from "~/composables/use-discipline-catalog";
 
 type Props = {
-  type: EventType;
+  type: DisciplineType;
   size?: "xs" | "sm" | "md" | "lg";
 };
 
@@ -15,29 +17,32 @@ const props = withDefaults(defineProps<Props>(), {
   size: "xs",
 });
 
-const eventInfo: Record<EventType, { label: string; slug: string }> = {
-  golf: { label: "Disc golf", slug: "golf" },
-  accuracy: { label: "Accuracy", slug: "accuracy" },
-  distance: { label: "Distance", slug: "distance" },
-  scf: { label: "SCF", slug: "self-caught-flight" },
-  discathon: { label: "Discathon", slug: "discathon" },
-  ddc: { label: "DDC", slug: "ddc" },
-  freestyle: { label: "Freestyle", slug: "freestyle" },
-};
-
-const info = computed(() => eventInfo[props.type]);
+const info = computed(() => disciplineByType[props.type]);
+const iconSize = computed(() => {
+  if (props.size === "xs") {
+    return 12;
+  }
+  if (props.size === "sm") {
+    return 14;
+  }
+  if (props.size === "md") {
+    return 16;
+  }
+  return 18;
+});
 
 function handleClick() {
-  navigateTo(`/disciplines/${info.value.slug}`);
+  navigateTo(`/disciplines/${info.value.publicSlug}`);
 }
 </script>
 
 <template>
   <span
-    class="badge badge-neutral cursor-pointer hover:badge-primary transition-colors"
+    class="badge badge-neutral cursor-pointer hover:badge-primary transition-colors gap-1"
     :class="`badge-${size}`"
     @click="handleClick"
   >
-    {{ info.label }}
+    <Icon :name="info.icon" :size="iconSize" />
+    <span>{{ info.label }}</span>
   </span>
 </template>

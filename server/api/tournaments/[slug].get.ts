@@ -69,6 +69,13 @@ export default defineEventHandler(async (event) => {
       facilities: venue.facilities,
       lat: venue.lat,
       long: venue.long,
+      hasGolf: tournamentVenue.hasGolf,
+      hasAccuracy: tournamentVenue.hasAccuracy,
+      hasDistance: tournamentVenue.hasDistance,
+      hasSCF: tournamentVenue.hasSCF,
+      hasDiscathon: tournamentVenue.hasDiscathon,
+      hasDDC: tournamentVenue.hasDDC,
+      hasFreestyle: tournamentVenue.hasFreestyle,
     })
     .from(tournamentVenue)
     .innerJoin(venue, eq(tournamentVenue.venueId, venue.id))

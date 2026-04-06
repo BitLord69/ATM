@@ -188,7 +188,7 @@ onMounted(async () => {
             <template #title-right>
               <span
                 v-if="tournament.isActive"
-                class="badge badge-success badge-sm gap-1 shrink-0"
+                class="badge badge-success badge-sm gap-1 shrink-0 inline-flex items-center justify-center whitespace-nowrap align-middle"
               >
                 <span class="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
                 Live
@@ -198,16 +198,16 @@ onMounted(async () => {
             <template #meta-top>
               <div class="flex items-center gap-2 mb-3">
                 <span
-                  class="badge badge-sm font-medium"
+                  class="badge badge-sm font-medium inline-flex items-center justify-center whitespace-nowrap align-middle"
                   :class="{
                     'badge-primary': tournament.role === 'owner',
                     'badge-secondary': tournament.role === 'admin',
                     'badge-accent': tournament.role === 'td',
                     'badge-info': tournament.role === 'scorer',
-                    'badge-ghost': tournament.role === 'viewer',
+                    'badge-neutral': tournament.role === 'viewer',
                   }"
                 >{{ tournament.role }}</span>
-                <span class="badge badge-outline badge-sm">{{ tournament.tournamentStatus }}</span>
+                <span class="badge badge-outline badge-sm font-medium inline-flex items-center justify-center whitespace-nowrap align-middle">{{ tournament.tournamentStatus }}</span>
               </div>
             </template>
 
