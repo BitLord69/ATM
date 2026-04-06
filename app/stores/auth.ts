@@ -4,13 +4,37 @@ import { inferAdditionalFields, organizationClient } from "better-auth/client/pl
 let authClientInstance: ReturnType<typeof createAuthClient> | null = null;
 let authConfigLogged = false;
 
+function resolveAuthBaseURL(rawValue: unknown) {
+  const raw = String(rawValue ?? "").trim();
+  if (!raw) {
+    return undefined;
+  }
+
+  // Vercel variable placeholders must be resolved before runtime; if not,
+  // treat as invalid and fallback to same-origin behavior.
+  const bracedVercelToken = "$" + "{VERCEL_URL}";
+  if (raw.includes("$VERCEL.URL") || raw.includes("$VERCEL_URL") || raw.includes(bracedVercelToken)) {
+    if (import.meta.client && window.location?.origin) {
+      return window.location.origin;
+    }
+    return undefined;
+  }
+
+  // Support domain-only values by normalizing to https.
+  if (!/^https?:\/\//i.test(raw) && !raw.startsWith("/")) {
+    return `https://${raw}`;
+  }
+
+  return raw;
+}
+
 export function useAuthClient() {
   if (authClientInstance) {
     return authClientInstance;
   }
 
   const config = useRuntimeConfig();
-  const baseURL = config.public.betterAuthUrl || undefined;
+  const baseURL = resolveAuthBaseURL(config.public.betterAuthUrl);
 
   if (!authConfigLogged) {
     const target = baseURL || "(same-origin default)";
