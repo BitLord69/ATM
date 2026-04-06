@@ -1,13 +1,14 @@
 <script setup lang="ts">
+import type { DisciplineKey } from "~/composables/use-discipline-catalog";
 import type { TournamentEditTabId } from "~/schemas/ui/tournament-edit-tabs";
 
 import { cloneTournamentBodySchema, editTournamentBodySchema } from "#shared/schemas/tournament-edit";
+import { disciplineByKey, disciplineKeyOrder } from "~/composables/use-discipline-catalog";
+import {
+  hasValidCoordinates,
+  parseCoordinate,
+} from "~/composables/use-leaflet-map";
 import { tournamentEditFieldToTab, tournamentEditTabs } from "~/schemas/ui/tournament-edit-tabs";
-
-const LMap = defineAsyncComponent(() => import("@vue-leaflet/vue-leaflet").then(module => module.LMap));
-const LMarker = defineAsyncComponent(() => import("@vue-leaflet/vue-leaflet").then(module => module.LMarker));
-const LPopup = defineAsyncComponent(() => import("@vue-leaflet/vue-leaflet").then(module => module.LPopup));
-const LTileLayer = defineAsyncComponent(() => import("@vue-leaflet/vue-leaflet").then(module => module.LTileLayer));
 
 definePageMeta({
   ssr: false,
@@ -46,15 +47,6 @@ type ExistingVenue = {
   hasDDC: boolean;
   hasFreestyle: boolean;
 };
-
-type DisciplineKey
-  = | "hasGolf"
-    | "hasAccuracy"
-    | "hasDistance"
-    | "hasSCF"
-    | "hasDiscathon"
-    | "hasDDC"
-    | "hasFreestyle";
 
 const route = useRoute();
 const router = useRouter();
@@ -174,15 +166,11 @@ const venueModalPrimaryActionLabel = computed(() => {
 });
 const pendingDeleteVenue = ref<{ id: number; name: string; index: number } | null>(null);
 const selectedVenueDisciplineFilters = ref<DisciplineKey[]>([]);
-const allVenueDisciplineFilterOptions: Array<{ key: DisciplineKey; label: string }> = [
-  { key: "hasGolf", label: "Disc golf" },
-  { key: "hasAccuracy", label: "Accuracy" },
-  { key: "hasDistance", label: "Distance" },
-  { key: "hasSCF", label: "SCF" },
-  { key: "hasDiscathon", label: "Discathon" },
-  { key: "hasDDC", label: "DDC" },
-  { key: "hasFreestyle", label: "Freestyle" },
-];
+const allVenueDisciplineFilterOptions = disciplineKeyOrder.map(key => ({
+  key,
+  label: disciplineByKey[key].label,
+  icon: disciplineByKey[key].icon,
+}));
 const disciplineCoverageByVenue = computed<Record<DisciplineKey, boolean>>(() => ({
   hasGolf: venues.value.some(venue => venue.hasGolf),
   hasAccuracy: venues.value.some(venue => venue.hasAccuracy),
@@ -939,88 +927,36 @@ function onVenueModalMapClick(event: any) {
   venueDraft.value.long = roundCoord(lng);
 }
 
-function hasMapCoordinates(lat: number, long: number) {
-  return Number.isFinite(lat) && Number.isFinite(long) && !(lat === 0 && long === 0);
-}
+const toCoordinate = parseCoordinate;
+const hasMapCoordinates = hasValidCoordinates;
 
-const leafletDivIcon = shallowRef<((options: {
-  className?: string;
-  html?: string;
-  iconSize?: [number, number];
-  iconAnchor?: [number, number];
-  popupAnchor?: [number, number];
-}) => any) | null>(null);
-
-if (import.meta.client) {
-  import("leaflet")
-    .then(({ divIcon }) => {
-      leafletDivIcon.value = divIcon;
-    })
-    .catch(() => {
-      leafletDivIcon.value = null;
-    });
-}
-
-function getVenueNumberedIcon(index: number) {
-  if (!leafletDivIcon.value) {
-    return undefined;
-  }
-
-  return leafletDivIcon.value({
-    className: "venue-numbered-icon",
-    html: `<div class="w-7 h-7 rounded-full bg-primary text-primary-content border border-base-100 shadow flex items-center justify-center text-xs font-semibold leading-none">${index + 1}</div>`,
-    iconSize: [28, 28],
-    iconAnchor: [14, 28],
-    popupAnchor: [0, -26],
-  });
-}
+const tournamentMapVenues = computed(() =>
+  venues.value.map((venue, index) => ({
+    id: typeof venue.id === "number" ? venue.id : -(index + 1),
+    lat: toCoordinate(venue.lat),
+    long: toCoordinate(venue.long),
+    name: venue.name || `Venue ${index + 1}`,
+    description: venue.description || null,
+    facilities: venue.facilities || null,
+    hasGolf: venue.hasGolf,
+    hasAccuracy: venue.hasAccuracy,
+    hasDistance: venue.hasDistance,
+    hasSCF: venue.hasSCF,
+    hasDiscathon: venue.hasDiscathon,
+    hasDDC: venue.hasDDC,
+    hasFreestyle: venue.hasFreestyle,
+  })),
+);
 
 const tournamentCenter = computed<[number, number]>(() => {
-  if (typeof form.lat === "number" && typeof form.long === "number" && form.lat !== 0 && form.long !== 0) {
-    return [form.lat, form.long];
+  const lat = toCoordinate(form.lat);
+  const long = toCoordinate(form.long);
+
+  if (hasMapCoordinates(lat, long)) {
+    return [lat, long];
   }
+
   return [59.67497, 12.85981];
-});
-
-const tournamentMapBounds = computed<[[number, number], [number, number]] | null>(() => {
-  const points: Array<[number, number]> = [];
-
-  if (hasMapCoordinates(form.lat, form.long)) {
-    points.push([form.lat, form.long]);
-  }
-
-  for (const venue of venues.value) {
-    if (hasMapCoordinates(venue.lat, venue.long)) {
-      points.push([venue.lat, venue.long]);
-    }
-  }
-
-  if (points.length === 0) {
-    return null;
-  }
-
-  const [firstLat, firstLong] = points[0]!;
-  let minLat = firstLat;
-  let maxLat = firstLat;
-  let minLong = firstLong;
-  let maxLong = firstLong;
-
-  for (const [lat, long] of points) {
-    if (lat < minLat) {
-      minLat = lat;
-    }
-    if (lat > maxLat) {
-      maxLat = lat;
-    }
-    if (long < minLong) {
-      minLong = long;
-    }
-    if (long > maxLong) {
-      maxLong = long;
-    }
-  }
-
-  return [[minLat, minLong], [maxLat, maxLong]];
 });
 
 watch(
@@ -1274,8 +1210,8 @@ async function saveTournament(closeTournament = false) {
           </p>
           <ul class="list-disc list-inside text-sm">
             <li
-              v-for="(message, index) in validationMessages"
-              :key="index"
+              v-for="message in validationMessages"
+              :key="message"
             >
               {{ message }}
             </li>
@@ -1297,469 +1233,467 @@ async function saveTournament(closeTournament = false) {
 
       <div class="card bg-base-200 shadow-sm border border-base-300/60">
         <div class="card-body">
-          <VerticalTabsLayout
-            v-model="activeDetailsTab"
-            :tabs="tournamentEditTabs"
-            :initial-open-tab-ids="['general', 'map', 'venue-actions', 'venue-list']"
-            :session-state-key="`tournament-edit:${slug}`"
-          >
-            <template #general>
-              <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-x-4 gap-y-3">
-                <FormField
-                  label="Tournament Name"
-                  required
-                  wrapper-class="xl:col-span-2"
-                  :error="getFieldError('name')"
-                >
-                  <input
-                    v-model="form.name"
-                    class="input input-bordered w-full"
-                    :class="{ 'input-error': shouldShowFieldError('name') }"
-                    type="text"
-                    required
-                    :aria-invalid="shouldShowFieldError('name')"
-                    @blur="markTouched('name')"
-                  >
-                </FormField>
-                <FormField label="Slug">
-                  <input
-                    v-model="form.slug"
-                    class="input input-bordered w-full bg-base-300 text-base-content cursor-not-allowed opacity-70"
-                    type="text"
-                    readonly
-                    title="Slug cannot be changed"
-                  >
-                </FormField>
-                <FormField
-                  label="Description"
-                  wrapper-class="xl:col-span-3"
-                >
-                  <textarea
-                    v-model="form.description"
-                    class="textarea textarea-bordered w-full"
-                    rows="3"
-                  />
-                </FormField>
-                <FormField label="Country">
-                  <CountrySelect v-model="form.country" />
-                </FormField>
-                <FormField label="City">
-                  <input
-                    v-model="form.city"
-                    class="input input-bordered w-full"
-                    type="text"
-                  >
-                </FormField>
-                <div class="grid grid-cols-2 gap-3">
-                  <FormField label="Start Date">
-                    <input
-                      v-model="form.startDate"
-                      class="input input-bordered w-full"
-                      type="date"
-                    >
-                  </FormField>
-                  <FormField label="End Date">
-                    <input
-                      v-model="form.endDate"
-                      class="input input-bordered w-full"
-                      type="date"
-                    >
-                  </FormField>
-                </div>
-              </div>
-            </template>
-
-            <template #contacts>
-              <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                <div class="rounded-box border border-base-300/50 p-3">
-                  <h3 class="font-semibold mb-3">
-                    Contact Person
-                  </h3>
-                  <div class="grid grid-cols-1 gap-3">
-                    <FormField label="Name">
-                      <input
-                        v-model="form.contactName"
-                        class="input input-bordered w-full"
-                        type="text"
-                      >
-                    </FormField>
-                    <FormField label="Email">
-                      <input
-                        v-model="form.contactEmail"
-                        class="input input-bordered w-full"
-                        type="email"
-                      >
-                    </FormField>
-                    <FormField label="Phone">
-                      <input
-                        v-model="form.contactPhone"
-                        class="input input-bordered w-full"
-                        type="text"
-                      >
-                    </FormField>
-                  </div>
-                </div>
-
-                <div class="rounded-box border border-base-300/50 p-3">
-                  <h3 class="font-semibold mb-3">
-                    Tournament Director
-                  </h3>
-                  <div class="grid grid-cols-1 gap-3">
-                    <FormField label="Name">
-                      <input
-                        v-model="form.directorName"
-                        class="input input-bordered w-full"
-                        type="text"
-                      >
-                    </FormField>
-                    <FormField label="Email">
-                      <input
-                        v-model="form.directorEmail"
-                        class="input input-bordered w-full"
-                        type="email"
-                      >
-                    </FormField>
-                    <FormField label="Phone">
-                      <input
-                        v-model="form.directorPhone"
-                        class="input input-bordered w-full"
-                        type="text"
-                      >
-                    </FormField>
-                  </div>
-                </div>
-              </div>
-            </template>
-
-            <template #disciplines>
-              <div class="space-y-1">
-                <div class="rounded-box bg-base-100 p-3 md:p-4 grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 border border-base-300/50">
-                  <ToggleField
-                    :model-value="form.hasGolf"
-                    :label="getDisciplineToggleLabel('hasGolf', 'Disc golf')"
-                    :tooltip="getDisciplineToggleTooltip('hasGolf', 'Disc golf')"
-                    :label-class="getDisciplineToggleLabelClass('hasGolf')"
-                    @update:model-value="onTournamentDisciplineToggle('hasGolf', 'Disc golf', $event as boolean)"
-                  />
-                  <ToggleField
-                    :model-value="form.hasAccuracy"
-                    :label="getDisciplineToggleLabel('hasAccuracy', 'Accuracy')"
-                    :tooltip="getDisciplineToggleTooltip('hasAccuracy', 'Accuracy')"
-                    :label-class="getDisciplineToggleLabelClass('hasAccuracy')"
-                    @update:model-value="onTournamentDisciplineToggle('hasAccuracy', 'Accuracy', $event as boolean)"
-                  />
-                  <ToggleField
-                    :model-value="form.hasDistance"
-                    :label="getDisciplineToggleLabel('hasDistance', 'Distance')"
-                    :tooltip="getDisciplineToggleTooltip('hasDistance', 'Distance')"
-                    :label-class="getDisciplineToggleLabelClass('hasDistance')"
-                    @update:model-value="onTournamentDisciplineToggle('hasDistance', 'Distance', $event as boolean)"
-                  />
-                  <ToggleField
-                    :model-value="form.hasSCF"
-                    :label="getDisciplineToggleLabel('hasSCF', 'SCF')"
-                    :tooltip="getDisciplineToggleTooltip('hasSCF', 'SCF')"
-                    :label-class="getDisciplineToggleLabelClass('hasSCF')"
-                    @update:model-value="onTournamentDisciplineToggle('hasSCF', 'SCF', $event as boolean)"
-                  />
-                  <ToggleField
-                    :model-value="form.hasDiscathon"
-                    :label="getDisciplineToggleLabel('hasDiscathon', 'Discathon')"
-                    :tooltip="getDisciplineToggleTooltip('hasDiscathon', 'Discathon')"
-                    :label-class="getDisciplineToggleLabelClass('hasDiscathon')"
-                    @update:model-value="onTournamentDisciplineToggle('hasDiscathon', 'Discathon', $event as boolean)"
-                  />
-                  <ToggleField
-                    :model-value="form.hasDDC"
-                    :label="getDisciplineToggleLabel('hasDDC', 'DDC')"
-                    :tooltip="getDisciplineToggleTooltip('hasDDC', 'DDC')"
-                    :label-class="getDisciplineToggleLabelClass('hasDDC')"
-                    @update:model-value="onTournamentDisciplineToggle('hasDDC', 'DDC', $event as boolean)"
-                  />
-                  <ToggleField
-                    :model-value="form.hasFreestyle"
-                    :label="getDisciplineToggleLabel('hasFreestyle', 'Freestyle')"
-                    :tooltip="getDisciplineToggleTooltip('hasFreestyle', 'Freestyle')"
-                    :label-class="getDisciplineToggleLabelClass('hasFreestyle')"
-                    @update:model-value="onTournamentDisciplineToggle('hasFreestyle', 'Freestyle', $event as boolean)"
-                  />
-                </div>
-                <p class="text-xs opacity-70 leading-tight">
-                  * No venue assigned yet
-                </p>
-              </div>
-            </template>
-
-            <template #map>
-              <div class="space-y-4">
-                <h2 class="card-title">
-                  Tournament Location (click map to set)
-                </h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <ClientOnly>
+            <VerticalTabsLayout
+              v-model="activeDetailsTab"
+              :tabs="tournamentEditTabs"
+              :initial-open-tab-ids="['general', 'map', 'venue-actions', 'venue-list']"
+              :session-state-key="`tournament-edit:${slug}`"
+            >
+              <template #general>
+                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-x-4 gap-y-3">
                   <FormField
-                    label="Latitude"
+                    label="Tournament Name"
                     required
-                    :error="getFieldError('lat')"
+                    wrapper-class="xl:col-span-2"
+                    :error="getFieldError('name')"
                   >
                     <input
-                      v-model.number="form.lat"
+                      v-model="form.name"
                       class="input input-bordered w-full"
-                      :class="{ 'input-error': shouldShowFieldError('lat') }"
-                      type="number"
-                      step="0.000001"
+                      :class="{ 'input-error': shouldShowFieldError('name') }"
+                      type="text"
                       required
-                      :aria-invalid="shouldShowFieldError('lat')"
-                      @blur="markTouched('lat')"
+                      :aria-invalid="shouldShowFieldError('name')"
+                      @blur="markTouched('name')"
+                    >
+                  </FormField>
+                  <FormField label="Slug">
+                    <input
+                      v-model="form.slug"
+                      class="input input-bordered w-full bg-base-300 text-base-content cursor-not-allowed opacity-70"
+                      type="text"
+                      readonly
+                      title="Slug cannot be changed"
                     >
                   </FormField>
                   <FormField
-                    label="Longitude"
-                    required
-                    :error="getFieldError('long')"
+                    label="Description"
+                    wrapper-class="xl:col-span-3"
                   >
-                    <input
-                      v-model.number="form.long"
-                      class="input input-bordered w-full"
-                      :class="{ 'input-error': shouldShowFieldError('long') }"
-                      type="number"
-                      step="0.000001"
-                      required
-                      :aria-invalid="shouldShowFieldError('long')"
-                      @blur="markTouched('long')"
-                    >
-                  </FormField>
-                </div>
-
-                <ClientOnly>
-                  <LMap
-                    :zoom="form.lat && form.long ? 10 : 4"
-                    :center="tournamentCenter"
-                    :bounds="tournamentMapBounds || undefined"
-                    :bounds-options="{ padding: [28, 28] }"
-                    style="height: 360px; z-index: 0;"
-                    @click="onTournamentMapClick"
-                  >
-                    <LTileLayer
-                      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                      attribution="&copy; <a href='https://www.openstreetmap.org/copyright'>OpenStreetMap</a> contributors"
+                    <textarea
+                      v-model="form.description"
+                      class="textarea textarea-bordered w-full"
+                      rows="3"
                     />
-                    <LMarker
-                      :lat-lng="[form.lat, form.long]"
-                      :options="{ title: 'Tournament location' }"
+                  </FormField>
+                  <FormField label="Country">
+                    <CountrySelect v-model="form.country" />
+                  </FormField>
+                  <FormField label="City">
+                    <input
+                      v-model="form.city"
+                      class="input input-bordered w-full"
+                      type="text"
                     >
-                      <LPopup>Tournament location</LPopup>
-                    </LMarker>
-                    <LMarker
+                  </FormField>
+                  <div class="grid grid-cols-2 gap-3">
+                    <FormField label="Start Date">
+                      <input
+                        v-model="form.startDate"
+                        class="input input-bordered w-full"
+                        type="date"
+                      >
+                    </FormField>
+                    <FormField label="End Date">
+                      <input
+                        v-model="form.endDate"
+                        class="input input-bordered w-full"
+                        type="date"
+                      >
+                    </FormField>
+                  </div>
+                </div>
+              </template>
+
+              <template #contacts>
+                <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                  <div class="rounded-box border border-base-300/50 p-3">
+                    <h3 class="font-semibold mb-3">
+                      Contact Person
+                    </h3>
+                    <div class="grid grid-cols-1 gap-3">
+                      <FormField label="Name">
+                        <input
+                          v-model="form.contactName"
+                          class="input input-bordered w-full"
+                          type="text"
+                        >
+                      </FormField>
+                      <FormField label="Email">
+                        <input
+                          v-model="form.contactEmail"
+                          class="input input-bordered w-full"
+                          type="email"
+                        >
+                      </FormField>
+                      <FormField label="Phone">
+                        <input
+                          v-model="form.contactPhone"
+                          class="input input-bordered w-full"
+                          type="text"
+                        >
+                      </FormField>
+                    </div>
+                  </div>
+
+                  <div class="rounded-box border border-base-300/50 p-3">
+                    <h3 class="font-semibold mb-3">
+                      Tournament Director
+                    </h3>
+                    <div class="grid grid-cols-1 gap-3">
+                      <FormField label="Name">
+                        <input
+                          v-model="form.directorName"
+                          class="input input-bordered w-full"
+                          type="text"
+                        >
+                      </FormField>
+                      <FormField label="Email">
+                        <input
+                          v-model="form.directorEmail"
+                          class="input input-bordered w-full"
+                          type="email"
+                        >
+                      </FormField>
+                      <FormField label="Phone">
+                        <input
+                          v-model="form.directorPhone"
+                          class="input input-bordered w-full"
+                          type="text"
+                        >
+                      </FormField>
+                    </div>
+                  </div>
+                </div>
+              </template>
+
+              <template #disciplines>
+                <div class="space-y-1">
+                  <div class="rounded-box bg-base-100 p-3 md:p-4 grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 border border-base-300/50">
+                    <ToggleField
+                      :model-value="form.hasGolf"
+                      :label="getDisciplineToggleLabel('hasGolf', disciplineByKey.hasGolf.label)"
+                      :icon="disciplineByKey.hasGolf.icon"
+                      :desktop-inline="true"
+                      :tooltip="getDisciplineToggleTooltip('hasGolf', disciplineByKey.hasGolf.label)"
+                      :label-class="getDisciplineToggleLabelClass('hasGolf')"
+                      @update:model-value="onTournamentDisciplineToggle('hasGolf', disciplineByKey.hasGolf.label, $event as boolean)"
+                    />
+                    <ToggleField
+                      :model-value="form.hasAccuracy"
+                      :label="getDisciplineToggleLabel('hasAccuracy', disciplineByKey.hasAccuracy.label)"
+                      :icon="disciplineByKey.hasAccuracy.icon"
+                      :desktop-inline="true"
+                      :tooltip="getDisciplineToggleTooltip('hasAccuracy', disciplineByKey.hasAccuracy.label)"
+                      :label-class="getDisciplineToggleLabelClass('hasAccuracy')"
+                      @update:model-value="onTournamentDisciplineToggle('hasAccuracy', disciplineByKey.hasAccuracy.label, $event as boolean)"
+                    />
+                    <ToggleField
+                      :model-value="form.hasDistance"
+                      :label="getDisciplineToggleLabel('hasDistance', disciplineByKey.hasDistance.label)"
+                      :icon="disciplineByKey.hasDistance.icon"
+                      :desktop-inline="true"
+                      :tooltip="getDisciplineToggleTooltip('hasDistance', disciplineByKey.hasDistance.label)"
+                      :label-class="getDisciplineToggleLabelClass('hasDistance')"
+                      @update:model-value="onTournamentDisciplineToggle('hasDistance', disciplineByKey.hasDistance.label, $event as boolean)"
+                    />
+                    <ToggleField
+                      :model-value="form.hasSCF"
+                      :label="getDisciplineToggleLabel('hasSCF', disciplineByKey.hasSCF.label)"
+                      :icon="disciplineByKey.hasSCF.icon"
+                      :desktop-inline="true"
+                      :tooltip="getDisciplineToggleTooltip('hasSCF', disciplineByKey.hasSCF.label)"
+                      :label-class="getDisciplineToggleLabelClass('hasSCF')"
+                      @update:model-value="onTournamentDisciplineToggle('hasSCF', disciplineByKey.hasSCF.label, $event as boolean)"
+                    />
+                    <ToggleField
+                      :model-value="form.hasDiscathon"
+                      :label="getDisciplineToggleLabel('hasDiscathon', disciplineByKey.hasDiscathon.label)"
+                      :icon="disciplineByKey.hasDiscathon.icon"
+                      :desktop-inline="true"
+                      :tooltip="getDisciplineToggleTooltip('hasDiscathon', disciplineByKey.hasDiscathon.label)"
+                      :label-class="getDisciplineToggleLabelClass('hasDiscathon')"
+                      @update:model-value="onTournamentDisciplineToggle('hasDiscathon', disciplineByKey.hasDiscathon.label, $event as boolean)"
+                    />
+                    <ToggleField
+                      :model-value="form.hasDDC"
+                      :label="getDisciplineToggleLabel('hasDDC', disciplineByKey.hasDDC.label)"
+                      :icon="disciplineByKey.hasDDC.icon"
+                      :desktop-inline="true"
+                      :tooltip="getDisciplineToggleTooltip('hasDDC', disciplineByKey.hasDDC.label)"
+                      :label-class="getDisciplineToggleLabelClass('hasDDC')"
+                      @update:model-value="onTournamentDisciplineToggle('hasDDC', disciplineByKey.hasDDC.label, $event as boolean)"
+                    />
+                    <ToggleField
+                      :model-value="form.hasFreestyle"
+                      :label="getDisciplineToggleLabel('hasFreestyle', disciplineByKey.hasFreestyle.label)"
+                      :icon="disciplineByKey.hasFreestyle.icon"
+                      :desktop-inline="true"
+                      :tooltip="getDisciplineToggleTooltip('hasFreestyle', disciplineByKey.hasFreestyle.label)"
+                      :label-class="getDisciplineToggleLabelClass('hasFreestyle')"
+                      @update:model-value="onTournamentDisciplineToggle('hasFreestyle', disciplineByKey.hasFreestyle.label, $event as boolean)"
+                    />
+                  </div>
+                  <p class="text-xs opacity-70 leading-tight">
+                    * No venue assigned yet
+                  </p>
+                </div>
+              </template>
+
+              <template #map>
+                <div class="space-y-4">
+                  <h2 class="card-title">
+                    Tournament Location (click map to set)
+                  </h2>
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <FormField
+                      label="Latitude"
+                      required
+                      :error="getFieldError('lat')"
+                    >
+                      <input
+                        v-model.number="form.lat"
+                        class="input input-bordered w-full"
+                        :class="{ 'input-error': shouldShowFieldError('lat') }"
+                        type="number"
+                        step="0.000001"
+                        required
+                        :aria-invalid="shouldShowFieldError('lat')"
+                        @blur="markTouched('lat')"
+                      >
+                    </FormField>
+                    <FormField
+                      label="Longitude"
+                      required
+                      :error="getFieldError('long')"
+                    >
+                      <input
+                        v-model.number="form.long"
+                        class="input input-bordered w-full"
+                        :class="{ 'input-error': shouldShowFieldError('long') }"
+                        type="number"
+                        step="0.000001"
+                        required
+                        :aria-invalid="shouldShowFieldError('long')"
+                        @blur="markTouched('long')"
+                      >
+                    </FormField>
+                  </div>
+
+                  <ClientOnly>
+                    <TournamentMap
+                      :lat="tournamentCenter[0]"
+                      :long="tournamentCenter[1]"
+                      :name="form.name || 'Tournament'"
+                      :city="form.city || null"
+                      :country="form.country || null"
+                      :venues="tournamentMapVenues"
+                      height="360px"
+                      @map-click="onTournamentMapClick"
+                    />
+                  </ClientOnly>
+                </div>
+              </template>
+
+              <template #venue-actions>
+                <div class="space-y-4">
+                  <div class="space-y-3">
+                    <h2 class="card-title">
+                      Manage Venues
+                    </h2>
+
+                    <div class="flex items-center justify-between gap-2">
+                      <p class="text-xs font-semibold uppercase tracking-wide opacity-70">
+                        Filters
+                      </p>
+                      <p class="text-xs opacity-70">
+                        {{ filteredAvailableVenues.length }} matching existing venues
+                      </p>
+                    </div>
+
+                    <div class="flex flex-wrap md:flex-nowrap items-end gap-2">
+                      <RadiusControl
+                        v-model="selectedVenueRadiusKm"
+                        v-model:display-unit="venueDistanceUnit"
+                        label="Nearby radius"
+                        :show-unit-toggle="true"
+                      />
+                      <div class="flex flex-wrap items-center gap-2 self-end w-full md:w-auto md:ml-auto md:justify-end md:shrink-0">
+                        <button
+                          type="button"
+                          class="btn btn-xs"
+                          :class="selectedVenueDisciplineFilters.length === 0 ? 'btn-primary' : 'btn-outline'"
+                          @click="clearVenueDisciplineFilters"
+                        >
+                          All venue types
+                        </button>
+                        <button
+                          v-for="option in venueDisciplineFilterOptions"
+                          :key="option.key"
+                          type="button"
+                          class="btn btn-xs"
+                          :class="isVenueDisciplineFilterActive(option.key) ? 'btn-primary' : 'btn-outline'"
+                          @click="toggleVenueDisciplineFilter(option.key)"
+                        >
+                          <Icon
+                            :name="option.icon"
+                            size="14"
+                            class="opacity-85"
+                          />
+                          <span>{{ option.label }}</span>
+                        </button>
+                        <span
+                          v-if="venueDisciplineFilterOptions.length === 0"
+                          class="text-xs opacity-70"
+                        >
+                          Enable tournament disciplines to filter venue types.
+                        </span>
+                      </div>
+                    </div>
+
+                    <p class="text-xs font-semibold uppercase tracking-wide opacity-70">
+                      Actions
+                    </p>
+
+                    <div class="flex flex-wrap items-center gap-2">
+                      <div class="flex items-center gap-2">
+                        <select
+                          v-model="selectedExistingVenueId"
+                          class="select select-bordered select-sm min-w-65"
+                        >
+                          <option value="">
+                            Use existing venue
+                          </option>
+                          <option
+                            v-for="existing in filteredAvailableVenues"
+                            :key="existing.id"
+                            :value="String(existing.id)"
+                          >
+                            {{ existing.name }} ({{ existing.lat.toFixed(3) }}, {{ existing.long.toFixed(3) }})
+                          </option>
+                        </select>
+                        <button
+                          class="btn btn-sm btn-outline"
+                          type="button"
+                          :disabled="!selectedExistingVenueId"
+                          @click="addExistingVenue"
+                        >
+                          Add existing
+                        </button>
+                      </div>
+                      <button
+                        class="btn btn-sm btn-primary"
+                        type="button"
+                        @click="openAddVenueModal()"
+                      >
+                        Create new venue
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </template>
+
+              <template #venue-list>
+                <div class="space-y-4">
+                  <div v-if="venues.length === 0" class="alert">
+                    <span>No venues yet.</span>
+                  </div>
+
+                  <div v-else class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <div
                       v-for="(venue, index) in venues"
                       :key="venue.key"
-                      :lat-lng="[venue.lat, venue.long]"
-                      :icon="getVenueNumberedIcon(index)"
-                      :options="{ title: venue.name || `Venue ${index + 1}` }"
+                      class="card bg-base-100 border border-base-300 h-full"
                     >
-                      <LPopup>
-                        <MapLocationPopup :title="venue.name || `Venue ${index + 1}`" :centered="false" />
-                      </LPopup>
-                    </LMarker>
-                  </LMap>
-                </ClientOnly>
-              </div>
-            </template>
-
-            <template #venue-actions>
-              <div class="space-y-4">
-                <div class="space-y-3">
-                  <h2 class="card-title">
-                    Manage Venues
-                  </h2>
-
-                  <div class="flex items-center justify-between gap-2">
-                    <p class="text-xs font-semibold uppercase tracking-wide opacity-70">
-                      Filters
-                    </p>
-                    <p class="text-xs opacity-70">
-                      {{ filteredAvailableVenues.length }} matching existing venues
-                    </p>
-                  </div>
-
-                  <div class="flex flex-wrap md:flex-nowrap items-end gap-2">
-                    <RadiusControl
-                      v-model="selectedVenueRadiusKm"
-                      v-model:display-unit="venueDistanceUnit"
-                      label="Nearby radius"
-                      :show-unit-toggle="true"
-                    />
-                    <div class="flex flex-wrap items-center gap-2 self-end w-full md:w-auto md:ml-auto md:justify-end md:shrink-0">
-                      <button
-                        type="button"
-                        class="btn btn-xs"
-                        :class="selectedVenueDisciplineFilters.length === 0 ? 'btn-primary' : 'btn-outline'"
-                        @click="clearVenueDisciplineFilters"
-                      >
-                        All venue types
-                      </button>
-                      <button
-                        v-for="option in venueDisciplineFilterOptions"
-                        :key="option.key"
-                        type="button"
-                        class="btn btn-xs"
-                        :class="isVenueDisciplineFilterActive(option.key) ? 'btn-primary' : 'btn-outline'"
-                        @click="toggleVenueDisciplineFilter(option.key)"
-                      >
-                        {{ option.label }}
-                      </button>
-                      <span
-                        v-if="venueDisciplineFilterOptions.length === 0"
-                        class="text-xs opacity-70"
-                      >
-                        Enable tournament disciplines to filter venue types.
-                      </span>
-                    </div>
-                  </div>
-
-                  <p class="text-xs font-semibold uppercase tracking-wide opacity-70">
-                    Actions
-                  </p>
-
-                  <div class="flex flex-wrap items-center gap-2">
-                    <div class="flex items-center gap-2">
-                      <select
-                        v-model="selectedExistingVenueId"
-                        class="select select-bordered select-sm min-w-65"
-                      >
-                        <option value="">
-                          Use existing venue
-                        </option>
-                        <option
-                          v-for="existing in filteredAvailableVenues"
-                          :key="existing.id"
-                          :value="String(existing.id)"
-                        >
-                          {{ existing.name }} ({{ existing.lat.toFixed(3) }}, {{ existing.long.toFixed(3) }})
-                        </option>
-                      </select>
-                      <button
-                        class="btn btn-sm btn-outline"
-                        type="button"
-                        :disabled="!selectedExistingVenueId"
-                        @click="addExistingVenue"
-                      >
-                        Add existing
-                      </button>
-                    </div>
-                    <button
-                      class="btn btn-sm btn-primary"
-                      type="button"
-                      @click="openAddVenueModal()"
-                    >
-                      Create new venue
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </template>
-
-            <template #venue-list>
-              <div class="space-y-4">
-                <div v-if="venues.length === 0" class="alert">
-                  <span>No venues yet.</span>
-                </div>
-
-                <div v-else class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  <div
-                    v-for="(venue, index) in venues"
-                    :key="venue.key"
-                    class="card bg-base-100 border border-base-300 h-full"
-                  >
-                    <div class="card-body p-4">
-                      <div class="flex justify-between items-start">
-                        <h3 class="text-lg font-semibold leading-tight">
-                          Venue {{ index + 1 }}
-                        </h3>
-                        <div class="flex items-center gap-2">
-                          <button
-                            class="btn btn-sm btn-outline"
-                            type="button"
-                            @click="openEditVenueModal(index)"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            class="btn btn-sm btn-outline"
-                            type="button"
-                            @click="removeVenue(index)"
-                          >
-                            Remove
-                          </button>
-                          <button
-                            v-if="venue.id"
-                            class="btn btn-sm btn-error btn-outline"
-                            type="button"
-                            :disabled="deletingVenueId === venue.id"
-                            @click="requestDeleteVenue(index)"
-                          >
-                            <span
-                              v-if="deletingVenueId === venue.id"
-                              class="loading loading-spinner loading-xs"
-                            />
-                            <span v-else>Delete Venue</span>
-                          </button>
-                        </div>
-                      </div>
-                      <div class="grid grid-cols-1 xl:grid-cols-3 gap-4 mt-2">
-                        <div class="xl:col-span-2">
-                          <VenueListItem
-                            :venue="venue"
-                            :title="venue.name || `Venue ${index + 1}`"
-                            title-class="text-base font-semibold leading-tight"
-                          >
-                            <div class="flex flex-wrap gap-2 mt-2">
-                              <span v-if="venue.hasGolf" class="badge badge-outline">Disc golf</span>
-                              <span v-if="venue.hasAccuracy" class="badge badge-outline">Accuracy</span>
-                              <span v-if="venue.hasDistance" class="badge badge-outline">Distance</span>
-                              <span v-if="venue.hasSCF" class="badge badge-outline">SCF</span>
-                              <span v-if="venue.hasDiscathon" class="badge badge-outline">Discathon</span>
-                              <span v-if="venue.hasDDC" class="badge badge-outline">DDC</span>
-                              <span v-if="venue.hasFreestyle" class="badge badge-outline">Freestyle</span>
-                              <span
-                                v-if="!venue.hasGolf && !venue.hasAccuracy && !venue.hasDistance && !venue.hasSCF && !venue.hasDiscathon && !venue.hasDDC && !venue.hasFreestyle"
-                                class="badge badge-ghost"
-                              >
-                                No disciplines selected
-                              </span>
-                            </div>
-                          </VenueListItem>
-                        </div>
-
-                        <div class="xl:col-span-1">
-                          <ClientOnly>
-                            <LMap
-                              :zoom="venue.lat && venue.long ? 12 : 5"
-                              :center="(venue.lat && venue.long) ? [venue.lat, venue.long] : tournamentCenter"
-                              style="height: 160px; z-index: 0;"
+                      <div class="card-body p-4">
+                        <div class="flex justify-between items-start">
+                          <h3 class="text-lg font-semibold leading-tight">
+                            Venue {{ index + 1 }}
+                          </h3>
+                          <div class="flex items-center gap-2">
+                            <button
+                              class="btn btn-sm btn-outline"
+                              type="button"
+                              @click="openEditVenueModal(index)"
                             >
-                              <LTileLayer
-                                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                                attribution="&copy; <a href='https://www.openstreetmap.org/copyright'>OpenStreetMap</a> contributors"
+                              Edit
+                            </button>
+                            <button
+                              class="btn btn-sm btn-outline"
+                              type="button"
+                              @click="removeVenue(index)"
+                            >
+                              Remove
+                            </button>
+                            <button
+                              v-if="venue.id"
+                              class="btn btn-sm btn-error btn-outline"
+                              type="button"
+                              :disabled="deletingVenueId === venue.id"
+                              @click="requestDeleteVenue(index)"
+                            >
+                              <span
+                                v-if="deletingVenueId === venue.id"
+                                class="loading loading-spinner loading-xs"
                               />
-                              <LMarker
-                                :lat-lng="[venue.lat, venue.long]"
-                                :icon="getVenueNumberedIcon(index)"
-                                :options="{ title: venue.name || `Venue ${index + 1}` }"
-                              >
-                                <LPopup>
-                                  <MapLocationPopup :title="venue.name || `Venue ${index + 1}`" :centered="false" />
-                                </LPopup>
-                              </LMarker>
-                            </LMap>
-                          </ClientOnly>
+                              <span v-else>Delete Venue</span>
+                            </button>
+                          </div>
+                        </div>
+                        <div class="grid grid-cols-1 xl:grid-cols-3 gap-4 mt-2">
+                          <div class="xl:col-span-2">
+                            <VenueListItem
+                              :venue="venue"
+                              :title="venue.name || `Venue ${index + 1}`"
+                              title-class="text-base font-semibold leading-tight"
+                            >
+                              <div class="flex flex-wrap gap-2 mt-2">
+                                <span v-if="venue.hasGolf" class="badge badge-outline">Disc golf</span>
+                                <span v-if="venue.hasAccuracy" class="badge badge-outline">Accuracy</span>
+                                <span v-if="venue.hasDistance" class="badge badge-outline">Distance</span>
+                                <span v-if="venue.hasSCF" class="badge badge-outline">SCF</span>
+                                <span v-if="venue.hasDiscathon" class="badge badge-outline">Discathon</span>
+                                <span v-if="venue.hasDDC" class="badge badge-outline">DDC</span>
+                                <span v-if="venue.hasFreestyle" class="badge badge-outline">Freestyle</span>
+                                <span
+                                  v-if="!venue.hasGolf && !venue.hasAccuracy && !venue.hasDistance && !venue.hasSCF && !venue.hasDiscathon && !venue.hasDDC && !venue.hasFreestyle"
+                                  class="badge badge-ghost"
+                                >
+                                  No disciplines selected
+                                </span>
+                              </div>
+                            </VenueListItem>
+                          </div>
+
+                          <div class="xl:col-span-1">
+                            <ClientOnly>
+                              <VenueMap
+                                :lat="venue.lat"
+                                :long="venue.long"
+                                :title="venue.name || `Venue ${index + 1}`"
+                                :has-golf="venue.hasGolf"
+                                :has-accuracy="venue.hasAccuracy"
+                                :has-distance="venue.hasDistance"
+                                :has-scf="venue.hasSCF"
+                                :has-discathon="venue.hasDiscathon"
+                                :has-ddc="venue.hasDDC"
+                                :has-freestyle="venue.hasFreestyle"
+                                :fallback-center="tournamentCenter"
+                                height="160px"
+                                :numbered-marker="true"
+                                :marker-index="index"
+                              />
+                            </ClientOnly>
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            </template>
-          </VerticalTabsLayout>
+              </template>
+            </VerticalTabsLayout>
+          </ClientOnly>
         </div>
       </div>
 
@@ -2022,45 +1956,59 @@ async function saveTournament(closeTournament = false) {
               <div class="rounded-box bg-base-100 p-2 md:p-3 grid grid-cols-3 md:grid-cols-4 gap-2 md:gap-3 border border-base-300/50">
                 <ToggleField
                   v-model="venueDraft.hasGolf"
-                  label="Disc golf"
+                  :label="disciplineByKey.hasGolf.label"
+                  :icon="disciplineByKey.hasGolf.icon"
+                  :desktop-inline="true"
                   :disabled="!form.hasGolf"
-                  :tooltip="!form.hasGolf ? 'Enable Disc golf at tournament level first.' : ''"
+                  :tooltip="!form.hasGolf ? `Enable ${disciplineByKey.hasGolf.label} at tournament level first.` : ''"
                 />
                 <ToggleField
                   v-model="venueDraft.hasAccuracy"
-                  label="Accuracy"
+                  :label="disciplineByKey.hasAccuracy.label"
+                  :icon="disciplineByKey.hasAccuracy.icon"
+                  :desktop-inline="true"
                   :disabled="!form.hasAccuracy"
-                  :tooltip="!form.hasAccuracy ? 'Enable Accuracy at tournament level first.' : ''"
+                  :tooltip="!form.hasAccuracy ? `Enable ${disciplineByKey.hasAccuracy.label} at tournament level first.` : ''"
                 />
                 <ToggleField
                   v-model="venueDraft.hasDistance"
-                  label="Distance"
+                  :label="disciplineByKey.hasDistance.label"
+                  :icon="disciplineByKey.hasDistance.icon"
+                  :desktop-inline="true"
                   :disabled="!form.hasDistance"
-                  :tooltip="!form.hasDistance ? 'Enable Distance at tournament level first.' : ''"
+                  :tooltip="!form.hasDistance ? `Enable ${disciplineByKey.hasDistance.label} at tournament level first.` : ''"
                 />
                 <ToggleField
                   v-model="venueDraft.hasSCF"
-                  label="SCF"
+                  :label="disciplineByKey.hasSCF.label"
+                  :icon="disciplineByKey.hasSCF.icon"
+                  :desktop-inline="true"
                   :disabled="!form.hasSCF"
-                  :tooltip="!form.hasSCF ? 'Enable SCF at tournament level first.' : ''"
+                  :tooltip="!form.hasSCF ? `Enable ${disciplineByKey.hasSCF.label} at tournament level first.` : ''"
                 />
                 <ToggleField
                   v-model="venueDraft.hasDiscathon"
-                  label="Discathon"
+                  :label="disciplineByKey.hasDiscathon.label"
+                  :icon="disciplineByKey.hasDiscathon.icon"
+                  :desktop-inline="true"
                   :disabled="!form.hasDiscathon"
-                  :tooltip="!form.hasDiscathon ? 'Enable Discathon at tournament level first.' : ''"
+                  :tooltip="!form.hasDiscathon ? `Enable ${disciplineByKey.hasDiscathon.label} at tournament level first.` : ''"
                 />
                 <ToggleField
                   v-model="venueDraft.hasDDC"
-                  label="DDC"
+                  :label="disciplineByKey.hasDDC.label"
+                  :icon="disciplineByKey.hasDDC.icon"
+                  :desktop-inline="true"
                   :disabled="!form.hasDDC"
-                  :tooltip="!form.hasDDC ? 'Enable DDC at tournament level first.' : ''"
+                  :tooltip="!form.hasDDC ? `Enable ${disciplineByKey.hasDDC.label} at tournament level first.` : ''"
                 />
                 <ToggleField
                   v-model="venueDraft.hasFreestyle"
-                  label="Freestyle"
+                  :label="disciplineByKey.hasFreestyle.label"
+                  :icon="disciplineByKey.hasFreestyle.icon"
+                  :desktop-inline="true"
                   :disabled="!form.hasFreestyle"
-                  :tooltip="!form.hasFreestyle ? 'Enable Freestyle at tournament level first.' : ''"
+                  :tooltip="!form.hasFreestyle ? `Enable ${disciplineByKey.hasFreestyle.label} at tournament level first.` : ''"
                 />
               </div>
             </div>
@@ -2091,25 +2039,22 @@ async function saveTournament(closeTournament = false) {
                 {{ shouldLockGlobalVenueFields ? 'Location is managed in global mode.' : 'Click map to set this venue location' }}
               </p>
               <ClientOnly>
-                <LMap
-                  :zoom="venueDraft.lat && venueDraft.long ? 12 : 5"
-                  :center="(venueDraft.lat && venueDraft.long) ? [venueDraft.lat, venueDraft.long] : tournamentCenter"
-                  style="height: 220px; z-index: 0;"
-                  @click="onVenueModalMapClick"
-                >
-                  <LTileLayer
-                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                    attribution="&copy; <a href='https://www.openstreetmap.org/copyright'>OpenStreetMap</a> contributors"
-                  />
-                  <LMarker
-                    :lat-lng="[venueDraft.lat, venueDraft.long]"
-                    :options="{ title: venueDraft.name || 'Venue' }"
-                  >
-                    <LPopup>
-                      <MapLocationPopup :title="venueDraft.name || 'Venue'" :centered="false" />
-                    </LPopup>
-                  </LMarker>
-                </LMap>
+                <VenueMap
+                  :lat="venueDraft.lat"
+                  :long="venueDraft.long"
+                  :title="venueDraft.name || 'Venue'"
+                  :has-golf="venueDraft.hasGolf"
+                  :has-accuracy="venueDraft.hasAccuracy"
+                  :has-distance="venueDraft.hasDistance"
+                  :has-scf="venueDraft.hasSCF"
+                  :has-discathon="venueDraft.hasDiscathon"
+                  :has-ddc="venueDraft.hasDDC"
+                  :has-freestyle="venueDraft.hasFreestyle"
+                  :fallback-center="tournamentCenter"
+                  height="220px"
+                  :clickable="true"
+                  @map-click="onVenueModalMapClick"
+                />
               </ClientOnly>
             </div>
           </div>

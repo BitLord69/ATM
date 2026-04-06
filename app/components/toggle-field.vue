@@ -2,12 +2,14 @@
 type Props = {
   modelValue: boolean | Array<string | number>;
   label: string;
+  icon?: string;
   value?: string | number;
   disabled?: boolean;
   tooltip?: string;
   labelClass?: string;
   size?: "sm" | "md" | "lg";
   stacked?: boolean;
+  desktopInline?: boolean;
 };
 
 type Emits = {
@@ -15,17 +17,34 @@ type Emits = {
 };
 
 const props = withDefaults(defineProps<Props>(), {
+  icon: "",
   disabled: false,
   tooltip: "",
   labelClass: "",
   size: "sm",
   stacked: true,
+  desktopInline: false,
 });
 
 const emit = defineEmits<Emits>();
 
-const layoutClass = computed(() => (props.stacked ? "flex-col items-start" : "flex-row items-center justify-between"));
-const spacingClass = computed(() => (props.stacked ? "gap-1" : "gap-2"));
+const layoutClass = computed(() => {
+  if (props.desktopInline && props.stacked) {
+    return "flex-col items-start md:flex-row md:items-center md:justify-start";
+  }
+
+  return props.stacked ? "flex-col items-start" : "flex-row items-center justify-between";
+});
+
+const spacingClass = computed(() => {
+  if (props.desktopInline && props.stacked) {
+    return "gap-1 md:gap-2";
+  }
+
+  return props.stacked ? "gap-1" : "gap-2";
+});
+
+const widthClass = computed(() => (props.desktopInline ? "md:w-auto" : ""));
 const sizeClass = computed(() => `toggle-${props.size}`);
 const toneClass = "bg-error/20 border-error/40 checked:bg-success/25 checked:border-success/40 before:bg-error/50 checked:before:bg-success/70";
 
@@ -67,10 +86,18 @@ function onChange(event: Event) {
 <template>
   <label
     class="label cursor-pointer py-0.5"
-    :class="[layoutClass, spacingClass, disabled ? 'opacity-50' : '']"
+    :class="[layoutClass, spacingClass, widthClass, disabled ? 'opacity-50' : '']"
     :title="tooltip || undefined"
   >
-    <span class="label-text" :class="labelClass">{{ label }}</span>
+    <span class="label-text inline-flex items-center gap-1.5" :class="labelClass">
+      <Icon
+        v-if="icon"
+        :name="icon"
+        size="15"
+        class="opacity-85"
+      />
+      <span>{{ label }}</span>
+    </span>
     <input
       type="checkbox"
       class="toggle"

@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { LMap, LMarker, LPopup, LTileLayer } from "@vue-leaflet/vue-leaflet";
-import "leaflet/dist/leaflet.css";
+import { LMarker, LPopup } from "@vue-leaflet/vue-leaflet";
 
+import { calculateBounds, hasValidCoordinates, parseCoordinate } from "~/composables/use-leaflet-map";
 import { getCountryCoordinates } from "~/utils/country-coordinates";
 
 const props = defineProps<{
@@ -18,6 +18,13 @@ const props = defineProps<{
     startDate?: number | null;
     isActive?: boolean;
     status?: string;
+    hasGolf?: boolean;
+    hasAccuracy?: boolean;
+    hasDistance?: boolean;
+    hasSCF?: boolean;
+    hasDiscathon?: boolean;
+    hasDDC?: boolean;
+    hasFreestyle?: boolean;
   }>;
 }>();
 
@@ -26,42 +33,24 @@ const mapCenter = ref<[number, number]>(props.center);
 const mapZoom = ref(2); // Zoomed out to show global view
 const mapViewKey = computed(() => `${mapCenter.value[0]}:${mapCenter.value[1]}:${mapZoom.value}`);
 const normalizedUserCountry = computed(() => props.userCountry?.trim() || null);
-const mappableTournaments = computed(() =>
-  props.tournaments.filter(tournament =>
-    Number.isFinite(tournament.lat) && Number.isFinite(tournament.long) && !(tournament.lat === 0 && tournament.long === 0),
-  ),
-);
+const mappableTournaments = computed(() => {
+  return props.tournaments
+    .map((tournament) => {
+      const lat = parseCoordinate(tournament.lat);
+      const long = parseCoordinate(tournament.long);
+
+      return {
+        tournament,
+        lat,
+        long,
+      };
+    })
+    .filter(item => hasValidCoordinates(item.lat, item.long));
+});
+
+const mappableTournamentData = computed(() => mappableTournaments.value.map(item => item.tournament));
 const mapBounds = computed<[[number, number], [number, number]] | null>(() => {
-  if (mappableTournaments.value.length === 0) {
-    return null;
-  }
-
-  const [first] = mappableTournaments.value;
-  if (!first) {
-    return null;
-  }
-
-  let minLat = first.lat;
-  let maxLat = first.lat;
-  let minLong = first.long;
-  let maxLong = first.long;
-
-  for (const tournament of mappableTournaments.value) {
-    if (tournament.lat < minLat) {
-      minLat = tournament.lat;
-    }
-    if (tournament.lat > maxLat) {
-      maxLat = tournament.lat;
-    }
-    if (tournament.long < minLong) {
-      minLong = tournament.long;
-    }
-    if (tournament.long > maxLong) {
-      maxLong = tournament.long;
-    }
-  }
-
-  return [[minLat, minLong], [maxLat, maxLong]];
+  return calculateBounds(mappableTournaments.value.map(item => [item.lat, item.long]));
 });
 
 // Calculate distance between two coordinates in kilometers (Haversine formula)
@@ -79,20 +68,9 @@ function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
 
 // Check if there are tournaments within a certain radius (500km)
 function hasNearbyTournaments(userLat: number, userLon: number, radius = 500): boolean {
-  return props.tournaments.some(tournament =>
-    calculateDistance(userLat, userLon, tournament.lat, tournament.long) <= radius,
+  return mappableTournaments.value.some(item =>
+    calculateDistance(userLat, userLon, item.lat, item.long) <= radius,
   );
-}
-
-// Fix Leaflet default icon paths
-if (typeof window !== "undefined") {
-  const L = await import("leaflet");
-  delete (L.Icon.Default.prototype as any)._getIconUrl;
-  L.Icon.Default.mergeOptions({
-    iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-    iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-    shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-  });
 }
 
 watch(
@@ -122,50 +100,49 @@ watch(
 </script>
 
 <template>
-  <div class="card bg-base-200">
-    <div class="card-body p-0">
-      <LMap
-        :key="mapViewKey"
-        :zoom="mapZoom"
-        :center="mapCenter"
-        :bounds="mapBounds || undefined"
-        :bounds-options="{ padding: [28, 28] }"
-        style="height: 500px; z-index: 0;"
-      >
-        <LTileLayer
-          url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}"
-          attribution="Tiles &copy; <a href='https://www.esri.com/'>Esri</a>"
-        />
-        <LMarker
-          v-for="tournament in tournaments"
-          :key="tournament.id"
-          :lat-lng="[tournament.lat, tournament.long]"
-          :options="{ title: tournament.name }"
+  <BaseMap
+    :map-key="mapViewKey"
+    :zoom="mapZoom"
+    :center="mapCenter"
+    :bounds="mapBounds || undefined"
+    :bounds-options="{ padding: [28, 28] }"
+    height="500px"
+  >
+    <LMarker
+      v-for="tournament in mappableTournamentData"
+      :key="tournament.id"
+      :lat-lng="[tournament.lat, tournament.long]"
+      :options="{ title: tournament.name }"
+    >
+      <LPopup>
+        <MapLocationPopup
+          :title="tournament.name"
+          :title-to="`/tournaments/${tournament.slug}`"
+          :subtitle="[tournament.city, tournament.country].filter(Boolean).join(', ')"
+          :description="tournament.startDate ? new Date(tournament.startDate).toLocaleDateString() : 'TBD'"
+          :has-golf="tournament.hasGolf"
+          :has-accuracy="tournament.hasAccuracy"
+          :has-distance="tournament.hasDistance"
+          :has-scf="tournament.hasSCF"
+          :has-discathon="tournament.hasDiscathon"
+          :has-ddc="tournament.hasDDC"
+          :has-freestyle="tournament.hasFreestyle"
+          :centered="false"
         >
-          <LPopup>
-            <MapLocationPopup
-              :title="tournament.name"
-              :title-to="`/tournaments/${tournament.slug}`"
-              :subtitle="[tournament.city, tournament.country].filter(Boolean).join(', ')"
-              :description="tournament.startDate ? new Date(tournament.startDate).toLocaleDateString() : 'TBD'"
-              :centered="false"
-            >
-              <span
-                v-if="tournament.isActive"
-                class="badge badge-success badge-xs mt-2"
-              >
-                Live Now
-              </span>
-              <span
-                v-else-if="tournament.status === 'future'"
-                class="badge badge-info badge-xs mt-2"
-              >
-                Upcoming
-              </span>
-            </MapLocationPopup>
-          </LPopup>
-        </LMarker>
-      </LMap>
-    </div>
-  </div>
+          <span
+            v-if="tournament.isActive"
+            class="badge badge-success badge-xs mt-2"
+          >
+            Live Now
+          </span>
+          <span
+            v-else-if="tournament.status === 'future'"
+            class="badge badge-info badge-xs mt-2"
+          >
+            Upcoming
+          </span>
+        </MapLocationPopup>
+      </LPopup>
+    </LMarker>
+  </BaseMap>
 </template>

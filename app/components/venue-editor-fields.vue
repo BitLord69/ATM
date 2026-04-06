@@ -1,5 +1,7 @@
 <script setup lang="ts">
-const props = withDefaults(defineProps<{
+import { disciplineByKey } from "~/composables/use-discipline-catalog";
+
+withDefaults(defineProps<{
   tournamentDisciplineEnabled: DisciplineEnabledState;
   disableGlobalFields?: boolean;
   mapHint?: string;
@@ -12,10 +14,6 @@ const props = withDefaults(defineProps<{
 const emit = defineEmits<{
   (event: "mapClick", value: any): void;
 }>();
-const LMap = defineAsyncComponent(() => import("@vue-leaflet/vue-leaflet").then(module => module.LMap));
-const LMarker = defineAsyncComponent(() => import("@vue-leaflet/vue-leaflet").then(module => module.LMarker));
-const LPopup = defineAsyncComponent(() => import("@vue-leaflet/vue-leaflet").then(module => module.LPopup));
-const LTileLayer = defineAsyncComponent(() => import("@vue-leaflet/vue-leaflet").then(module => module.LTileLayer));
 
 type VenueEditorModel = {
   name: string;
@@ -43,13 +41,6 @@ type DisciplineEnabledState = {
 };
 
 const model = defineModel<VenueEditorModel>({ required: true });
-
-const mapCenter = computed<[number, number]>(() => {
-  if (model.value.lat && model.value.long) {
-    return [model.value.lat, model.value.long];
-  }
-  return props.fallbackCenter;
-});
 </script>
 
 <template>
@@ -95,45 +86,59 @@ const mapCenter = computed<[number, number]>(() => {
       <div class="rounded-box bg-base-100 p-2 md:p-3 grid grid-cols-3 md:grid-cols-4 gap-2 md:gap-3 border border-base-300/50">
         <ToggleField
           v-model="model.hasGolf"
-          label="Disc golf"
+          :label="disciplineByKey.hasGolf.label"
+          :icon="disciplineByKey.hasGolf.icon"
+          :desktop-inline="true"
           :disabled="!tournamentDisciplineEnabled.hasGolf"
-          :tooltip="!tournamentDisciplineEnabled.hasGolf ? 'Enable Disc golf at tournament level first.' : ''"
+          :tooltip="!tournamentDisciplineEnabled.hasGolf ? `Enable ${disciplineByKey.hasGolf.label} at tournament level first.` : ''"
         />
         <ToggleField
           v-model="model.hasAccuracy"
-          label="Accuracy"
+          :label="disciplineByKey.hasAccuracy.label"
+          :icon="disciplineByKey.hasAccuracy.icon"
+          :desktop-inline="true"
           :disabled="!tournamentDisciplineEnabled.hasAccuracy"
-          :tooltip="!tournamentDisciplineEnabled.hasAccuracy ? 'Enable Accuracy at tournament level first.' : ''"
+          :tooltip="!tournamentDisciplineEnabled.hasAccuracy ? `Enable ${disciplineByKey.hasAccuracy.label} at tournament level first.` : ''"
         />
         <ToggleField
           v-model="model.hasDistance"
-          label="Distance"
+          :label="disciplineByKey.hasDistance.label"
+          :icon="disciplineByKey.hasDistance.icon"
+          :desktop-inline="true"
           :disabled="!tournamentDisciplineEnabled.hasDistance"
-          :tooltip="!tournamentDisciplineEnabled.hasDistance ? 'Enable Distance at tournament level first.' : ''"
+          :tooltip="!tournamentDisciplineEnabled.hasDistance ? `Enable ${disciplineByKey.hasDistance.label} at tournament level first.` : ''"
         />
         <ToggleField
           v-model="model.hasSCF"
-          label="SCF"
+          :label="disciplineByKey.hasSCF.label"
+          :icon="disciplineByKey.hasSCF.icon"
+          :desktop-inline="true"
           :disabled="!tournamentDisciplineEnabled.hasSCF"
-          :tooltip="!tournamentDisciplineEnabled.hasSCF ? 'Enable SCF at tournament level first.' : ''"
+          :tooltip="!tournamentDisciplineEnabled.hasSCF ? `Enable ${disciplineByKey.hasSCF.label} at tournament level first.` : ''"
         />
         <ToggleField
           v-model="model.hasDiscathon"
-          label="Discathon"
+          :label="disciplineByKey.hasDiscathon.label"
+          :icon="disciplineByKey.hasDiscathon.icon"
+          :desktop-inline="true"
           :disabled="!tournamentDisciplineEnabled.hasDiscathon"
-          :tooltip="!tournamentDisciplineEnabled.hasDiscathon ? 'Enable Discathon at tournament level first.' : ''"
+          :tooltip="!tournamentDisciplineEnabled.hasDiscathon ? `Enable ${disciplineByKey.hasDiscathon.label} at tournament level first.` : ''"
         />
         <ToggleField
           v-model="model.hasDDC"
-          label="DDC"
+          :label="disciplineByKey.hasDDC.label"
+          :icon="disciplineByKey.hasDDC.icon"
+          :desktop-inline="true"
           :disabled="!tournamentDisciplineEnabled.hasDDC"
-          :tooltip="!tournamentDisciplineEnabled.hasDDC ? 'Enable DDC at tournament level first.' : ''"
+          :tooltip="!tournamentDisciplineEnabled.hasDDC ? `Enable ${disciplineByKey.hasDDC.label} at tournament level first.` : ''"
         />
         <ToggleField
           v-model="model.hasFreestyle"
-          label="Freestyle"
+          :label="disciplineByKey.hasFreestyle.label"
+          :icon="disciplineByKey.hasFreestyle.icon"
+          :desktop-inline="true"
           :disabled="!tournamentDisciplineEnabled.hasFreestyle"
-          :tooltip="!tournamentDisciplineEnabled.hasFreestyle ? 'Enable Freestyle at tournament level first.' : ''"
+          :tooltip="!tournamentDisciplineEnabled.hasFreestyle ? `Enable ${disciplineByKey.hasFreestyle.label} at tournament level first.` : ''"
         />
       </div>
     </div>
@@ -164,25 +169,22 @@ const mapCenter = computed<[number, number]>(() => {
         {{ mapHint }}
       </p>
       <ClientOnly>
-        <LMap
-          :zoom="model.lat && model.long ? 12 : 5"
-          :center="mapCenter"
-          style="height: 220px; z-index: 0;"
-          @click="emit('mapClick', $event)"
-        >
-          <LTileLayer
-            url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}"
-            attribution="Tiles &copy; <a href='https://www.esri.com/'>Esri</a>"
-          />
-          <LMarker
-            :lat-lng="[model.lat, model.long]"
-            :options="{ title: model.name || 'Venue' }"
-          >
-            <LPopup>
-              <MapLocationPopup :title="model.name || 'Venue'" :centered="false" />
-            </LPopup>
-          </LMarker>
-        </LMap>
+        <VenueMap
+          :lat="model.lat"
+          :long="model.long"
+          :title="model.name || 'Venue'"
+          :has-golf="model.hasGolf"
+          :has-accuracy="model.hasAccuracy"
+          :has-distance="model.hasDistance"
+          :has-scf="model.hasSCF"
+          :has-discathon="model.hasDiscathon"
+          :has-ddc="model.hasDDC"
+          :has-freestyle="model.hasFreestyle"
+          :fallback-center="fallbackCenter"
+          height="220px"
+          :clickable="true"
+          @map-click="emit('mapClick', $event)"
+        />
       </ClientOnly>
     </div>
   </div>

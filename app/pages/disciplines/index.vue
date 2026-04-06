@@ -1,53 +1,38 @@
 <script setup lang="ts">
+import type { DisciplineType } from "~/composables/use-discipline-catalog";
+
 /**
  * Public information page for all disc sport disciplines
  * Serves as a hub for learning about different event types
  */
+import { disciplineCatalog } from "~/composables/use-discipline-catalog";
 
-const disciplines = [
-  {
-    name: "Disc golf",
-    slug: "golf",
-    icon: "tabler:golf",
-    description: "Throw discs at targets in the fewest throws possible, similar to traditional golf.",
-  },
-  {
-    name: "Accuracy",
-    slug: "accuracy",
-    icon: "tabler:target",
-    description: "Precision throwing at various distances and target types.",
-  },
-  {
-    name: "Distance",
-    slug: "distance",
-    icon: "tabler:line",
-    description: "Throw the disc as far as possible in different categories.",
-  },
-  {
-    name: "Self-Caught Flight (SCF)",
-    slug: "self-caught-flight",
-    icon: "tabler:run",
-    description: "Throw and catch your own disc for maximum distance.",
-  },
-  {
-    name: "Discathon",
-    slug: "discathon",
-    icon: "tabler:route",
-    description: "Complete a course in the fewest throws with specific disc requirements.",
-  },
-  {
-    name: "Double Disc Court (DDC)",
-    slug: "double-disc-court",
-    icon: "tabler:users",
-    description: "Team-based game with two discs in play simultaneously.",
-  },
-  {
-    name: "Freestyle",
-    slug: "freestyle",
-    icon: "tabler:stars",
-    description: "Artistic performance and tricks with flying discs.",
-  },
-];
+const disciplineDescriptions: Record<DisciplineType, string> = {
+  golf: "Throw discs at targets in the fewest throws possible, similar to traditional golf.",
+  accuracy: "Precision throwing at various distances and target types.",
+  distance: "Throw the disc as far as possible in different categories.",
+  scf: "Throw and catch your own disc for maximum distance.",
+  discathon: "Complete a course in the fewest throws with specific disc requirements.",
+  ddc: "Team-based game with two discs in play simultaneously.",
+  freestyle: "Artistic performance and tricks with flying discs.",
+};
+
+const disciplineNames: Record<DisciplineType, string> = {
+  golf: "Disc golf",
+  accuracy: "Accuracy",
+  distance: "Distance",
+  scf: "Self-Caught Flight (SCF)",
+  discathon: "Discathon",
+  ddc: "Double Disc Court (DDC)",
+  freestyle: "Freestyle",
+};
+
+const disciplines = disciplineCatalog.map(discipline => ({
+  name: disciplineNames[discipline.type],
+  slug: discipline.publicSlug,
+  icon: discipline.icon,
+  description: disciplineDescriptions[discipline.type],
+}));
 </script>
 
 <template>
