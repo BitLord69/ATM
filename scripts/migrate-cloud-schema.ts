@@ -66,6 +66,14 @@ function formatError(error: unknown) {
   return String(error);
 }
 
+function isIgnorableMigrationError(error: unknown) {
+  const message = formatError(error).toLowerCase();
+
+  return message.includes("duplicate column name")
+    || message.includes("already exists")
+    || message.includes("duplicate table name");
+}
+
 function splitStatements(sqlText: string) {
   const fromBreakpoints = sqlText
     .split("--> statement-breakpoint")
@@ -153,7 +161,17 @@ async function main() {
 
     try {
       for (const statement of statements) {
-        await db.execute(statement);
+        try {
+          await db.execute(statement);
+        }
+        catch (error) {
+          if (isIgnorableMigrationError(error)) {
+            console.warn(`↷ Ignored idempotent statement error in ${entry.tag}: ${formatError(error)}`);
+            continue;
+          }
+
+          throw error;
+        }
       }
 
       await db.execute({
