@@ -2,6 +2,7 @@ import { createAuthClient } from "better-auth/client";
 import { inferAdditionalFields, organizationClient } from "better-auth/client/plugins";
 
 let authClientInstance: ReturnType<typeof createAuthClient> | null = null;
+let authConfigLogged = false;
 
 export function useAuthClient() {
   if (authClientInstance) {
@@ -9,9 +10,16 @@ export function useAuthClient() {
   }
 
   const config = useRuntimeConfig();
+  const baseURL = config.public.betterAuthUrl || undefined;
+
+  if (!authConfigLogged) {
+    const target = baseURL || "(same-origin default)";
+    console.warn(`[auth] baseURL=${target}`);
+    authConfigLogged = true;
+  }
 
   authClientInstance = createAuthClient({
-    baseURL: config.public.betterAuthUrl,
+    baseURL,
     plugins: [
       // Required for invitation and multi-tenant features
       organizationClient(),
@@ -72,11 +80,22 @@ export const useAuthStore = defineStore("useAuthStore", () => {
 
   async function checkSession() {
     loading.value = true;
-    const session = await authClient.getSession();
-    isSignedIn.value = !!session.data;
-    currentUser.value = session.data?.user || null;
-    loading.value = false;
-    return session.data;
+    try {
+      const session = await authClient.getSession();
+      isSignedIn.value = !!session.data;
+      currentUser.value = session.data?.user || null;
+      return session.data;
+    }
+    catch (error) {
+      // Treat network/config failures as signed-out state instead of crashing app init.
+      console.warn("[auth] checkSession failed", error);
+      isSignedIn.value = false;
+      currentUser.value = null;
+      return null;
+    }
+    finally {
+      loading.value = false;
+    }
   }
 
   return {
