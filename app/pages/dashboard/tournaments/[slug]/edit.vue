@@ -9,11 +9,6 @@ import {
 } from "~/composables/use-leaflet-map";
 import { tournamentEditFieldToTab, tournamentEditTabs } from "~/schemas/ui/tournament-edit-tabs";
 
-const LMap = defineAsyncComponent(() => import("@vue-leaflet/vue-leaflet").then(module => module.LMap));
-const LMarker = defineAsyncComponent(() => import("@vue-leaflet/vue-leaflet").then(module => module.LMarker));
-const LPopup = defineAsyncComponent(() => import("@vue-leaflet/vue-leaflet").then(module => module.LPopup));
-const LTileLayer = defineAsyncComponent(() => import("@vue-leaflet/vue-leaflet").then(module => module.LTileLayer));
-
 definePageMeta({
   ssr: false,
   layout: "tournament-admin",
@@ -931,41 +926,8 @@ function onVenueModalMapClick(event: any) {
   venueDraft.value.long = roundCoord(lng);
 }
 
-function hasMapCoordinates(lat: number, long: number) {
-  return Number.isFinite(lat) && Number.isFinite(long) && !(lat === 0 && long === 0);
-}
-
-const leafletDivIcon = shallowRef<((options: {
-  className?: string;
-  html?: string;
-  iconSize?: [number, number];
-  iconAnchor?: [number, number];
-  popupAnchor?: [number, number];
-}) => any) | null>(null);
-
-if (import.meta.client) {
-  import("leaflet")
-    .then(({ divIcon }) => {
-      leafletDivIcon.value = divIcon;
-    })
-    .catch(() => {
-      leafletDivIcon.value = null;
-    });
-}
-
-function getVenueNumberedIcon(index: number) {
-  if (!leafletDivIcon.value) {
-    return undefined;
-  }
-
-  return leafletDivIcon.value({
-    className: "venue-numbered-icon",
-    html: `<div class="w-7 h-7 rounded-full bg-primary text-primary-content border border-base-100 shadow flex items-center justify-center text-xs font-semibold leading-none">${index + 1}</div>`,
-    iconSize: [28, 28],
-    iconAnchor: [14, 28],
-    popupAnchor: [0, -26],
-  });
-}
+const toCoordinate = parseCoordinate;
+const hasMapCoordinates = hasValidCoordinates;
 
 const tournamentCenter = computed<[number, number]>(() => {
   const lat = toCoordinate(form.lat);
