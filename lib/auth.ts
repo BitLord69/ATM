@@ -9,6 +9,25 @@ import db from "./db/index";
 import * as schema from "./db/schema";
 import env from "./env";
 
+function normalizeOrigin(value?: string): string | null {
+  if (!value) {
+    return null;
+  }
+  try {
+    return new URL(value).origin;
+  }
+  catch {
+    return null;
+  }
+}
+
+const trustedOrigins = Array.from(new Set([
+  normalizeOrigin(env.BETTER_AUTH_URL),
+  "https://atm-eosin.vercel.app",
+  "http://localhost:3000",
+  "http://127.0.0.1:3000",
+].filter((value): value is string => Boolean(value))));
+
 // your drizzle instance
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
@@ -59,6 +78,7 @@ export const auth = betterAuth({
     },
   },
   baseURL: env.BETTER_AUTH_URL,
+  trustedOrigins,
   emailAndPassword: {
     enabled: true,
   },
