@@ -13,7 +13,7 @@
     "deploy:vercel:prod": "vercel --prod --yes",
     "postinstall": "nuxt prepare",
     "lint": "eslint .",
-    "lint:fix": "eslint . --fix",
+    "lint:fix": "eslint . --fix --fix-type problem,suggestion,layout",
     "typecheck": "nuxi typecheck",
     "prepare": "husky || echo \"husky skipped\"",
     "center-logos": "node scripts/center-logos.js",
