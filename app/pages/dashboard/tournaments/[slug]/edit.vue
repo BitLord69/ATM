@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import type { DisciplineKey } from "~/composables/use-discipline-catalog";
 import type { TournamentEditTabId } from "~/schemas/ui/tournament-edit-tabs";
 
 import { cloneTournamentBodySchema, editTournamentBodySchema } from "#shared/schemas/tournament-edit";
@@ -9,6 +8,11 @@ import {
   parseCoordinate,
 } from "~/composables/use-leaflet-map";
 import { tournamentEditFieldToTab, tournamentEditTabs } from "~/schemas/ui/tournament-edit-tabs";
+
+const LMap = defineAsyncComponent(() => import("@vue-leaflet/vue-leaflet").then(module => module.LMap));
+const LMarker = defineAsyncComponent(() => import("@vue-leaflet/vue-leaflet").then(module => module.LMarker));
+const LPopup = defineAsyncComponent(() => import("@vue-leaflet/vue-leaflet").then(module => module.LPopup));
+const LTileLayer = defineAsyncComponent(() => import("@vue-leaflet/vue-leaflet").then(module => module.LTileLayer));
 
 definePageMeta({
   ssr: false,
@@ -927,26 +931,41 @@ function onVenueModalMapClick(event: any) {
   venueDraft.value.long = roundCoord(lng);
 }
 
-const toCoordinate = parseCoordinate;
-const hasMapCoordinates = hasValidCoordinates;
+function hasMapCoordinates(lat: number, long: number) {
+  return Number.isFinite(lat) && Number.isFinite(long) && !(lat === 0 && long === 0);
+}
 
-const tournamentMapVenues = computed(() =>
-  venues.value.map((venue, index) => ({
-    id: typeof venue.id === "number" ? venue.id : -(index + 1),
-    lat: toCoordinate(venue.lat),
-    long: toCoordinate(venue.long),
-    name: venue.name || `Venue ${index + 1}`,
-    description: venue.description || null,
-    facilities: venue.facilities || null,
-    hasGolf: venue.hasGolf,
-    hasAccuracy: venue.hasAccuracy,
-    hasDistance: venue.hasDistance,
-    hasSCF: venue.hasSCF,
-    hasDiscathon: venue.hasDiscathon,
-    hasDDC: venue.hasDDC,
-    hasFreestyle: venue.hasFreestyle,
-  })),
-);
+const leafletDivIcon = shallowRef<((options: {
+  className?: string;
+  html?: string;
+  iconSize?: [number, number];
+  iconAnchor?: [number, number];
+  popupAnchor?: [number, number];
+}) => any) | null>(null);
+
+if (import.meta.client) {
+  import("leaflet")
+    .then(({ divIcon }) => {
+      leafletDivIcon.value = divIcon;
+    })
+    .catch(() => {
+      leafletDivIcon.value = null;
+    });
+}
+
+function getVenueNumberedIcon(index: number) {
+  if (!leafletDivIcon.value) {
+    return undefined;
+  }
+
+  return leafletDivIcon.value({
+    className: "venue-numbered-icon",
+    html: `<div class="w-7 h-7 rounded-full bg-primary text-primary-content border border-base-100 shadow flex items-center justify-center text-xs font-semibold leading-none">${index + 1}</div>`,
+    iconSize: [28, 28],
+    iconAnchor: [14, 28],
+    popupAnchor: [0, -26],
+  });
+}
 
 const tournamentCenter = computed<[number, number]>(() => {
   const lat = toCoordinate(form.lat);
@@ -1233,17 +1252,25 @@ async function saveTournament(closeTournament = false) {
 
       <div class="card bg-base-200 shadow-sm border border-base-300/60">
         <div class="card-body">
-          <ClientOnly>
-            <VerticalTabsLayout
-              v-model="activeDetailsTab"
-              :tabs="tournamentEditTabs"
-              :initial-open-tab-ids="['general', 'map', 'venue-actions', 'venue-list']"
-              :session-state-key="`tournament-edit:${slug}`"
-            >
-              <template #general>
-                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-x-4 gap-y-3">
-                  <FormField
-                    label="Tournament Name"
+          <VerticalTabsLayout
+            v-model="activeDetailsTab"
+            :tabs="tournamentEditTabs"
+            :initial-open-tab-ids="['general', 'map', 'venue-actions', 'venue-list']"
+            :session-state-key="`tournament-edit:${slug}`"
+          >
+            <template #general>
+              <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-x-4 gap-y-3">
+                <FormField
+                  label="Tournament Name"
+                  required
+                  wrapper-class="xl:col-span-2"
+                  :error="getFieldError('name')"
+                >
+                  <input
+                    v-model="form.name"
+                    class="input input-bordered w-full"
+                    :class="{ 'input-error': shouldShowFieldError('name') }"
+                    type="text"
                     required
                     wrapper-class="xl:col-span-2"
                     :error="getFieldError('name')"
@@ -1512,45 +1539,12 @@ async function saveTournament(closeTournament = false) {
                       </p>
                     </div>
 
-                    <div class="flex flex-wrap md:flex-nowrap items-end gap-2">
-                      <RadiusControl
-                        v-model="selectedVenueRadiusKm"
-                        v-model:display-unit="venueDistanceUnit"
-                        label="Nearby radius"
-                        :show-unit-toggle="true"
-                      />
-                      <div class="flex flex-wrap items-center gap-2 self-end w-full md:w-auto md:ml-auto md:justify-end md:shrink-0">
-                        <button
-                          type="button"
-                          class="btn btn-xs"
-                          :class="selectedVenueDisciplineFilters.length === 0 ? 'btn-primary' : 'btn-outline'"
-                          @click="clearVenueDisciplineFilters"
-                        >
-                          All venue types
-                        </button>
-                        <button
-                          v-for="option in venueDisciplineFilterOptions"
-                          :key="option.key"
-                          type="button"
-                          class="btn btn-xs"
-                          :class="isVenueDisciplineFilterActive(option.key) ? 'btn-primary' : 'btn-outline'"
-                          @click="toggleVenueDisciplineFilter(option.key)"
-                        >
-                          <Icon
-                            :name="option.icon"
-                            size="14"
-                            class="opacity-85"
-                          />
-                          <span>{{ option.label }}</span>
-                        </button>
-                        <span
-                          v-if="venueDisciplineFilterOptions.length === 0"
-                          class="text-xs opacity-70"
-                        >
-                          Enable tournament disciplines to filter venue types.
-                        </span>
-                      </div>
-                    </div>
+            <template #venue-actions>
+              <div class="space-y-4">
+                <div class="space-y-3">
+                  <h2 class="card-title">
+                    Manage Venues
+                  </h2>
 
                     <p class="text-xs font-semibold uppercase tracking-wide opacity-70">
                       Actions
@@ -1592,47 +1586,71 @@ async function saveTournament(closeTournament = false) {
                     </div>
                   </div>
                 </div>
-              </template>
+              </div>
+            </template>
 
-              <template #venue-list>
-                <div class="space-y-4">
-                  <div v-if="venues.length === 0" class="alert">
-                    <span>No venues yet.</span>
-                  </div>
+            <template #venue-list>
+              <div class="space-y-4">
+                <div v-if="venues.length === 0" class="alert">
+                  <span>No venues yet.</span>
+                </div>
 
-                  <div v-else class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    <div
-                      v-for="(venue, index) in venues"
-                      :key="venue.key"
-                      class="card bg-base-100 border border-base-300 h-full"
-                    >
-                      <div class="card-body p-4">
-                        <div class="flex justify-between items-start">
-                          <h3 class="text-lg font-semibold leading-tight">
-                            Venue {{ index + 1 }}
-                          </h3>
-                          <div class="flex items-center gap-2">
-                            <button
-                              class="btn btn-sm btn-outline"
-                              type="button"
-                              @click="openEditVenueModal(index)"
-                            >
-                              Edit
-                            </button>
-                            <button
-                              class="btn btn-sm btn-outline"
-                              type="button"
-                              @click="removeVenue(index)"
-                            >
-                              Remove
-                            </button>
-                            <button
-                              v-if="venue.id"
-                              class="btn btn-sm btn-error btn-outline"
-                              type="button"
-                              :disabled="deletingVenueId === venue.id"
-                              @click="requestDeleteVenue(index)"
-                            >
+                <div v-else class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  <div
+                    v-for="(venue, index) in venues"
+                    :key="venue.key"
+                    class="card bg-base-100 border border-base-300 h-full"
+                  >
+                    <div class="card-body p-4">
+                      <div class="flex justify-between items-start">
+                        <h3 class="text-lg font-semibold leading-tight">
+                          Venue {{ index + 1 }}
+                        </h3>
+                        <div class="flex items-center gap-2">
+                          <button
+                            class="btn btn-sm btn-outline"
+                            type="button"
+                            @click="openEditVenueModal(index)"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            class="btn btn-sm btn-outline"
+                            type="button"
+                            @click="removeVenue(index)"
+                          >
+                            Remove
+                          </button>
+                          <button
+                            v-if="venue.id"
+                            class="btn btn-sm btn-error btn-outline"
+                            type="button"
+                            :disabled="deletingVenueId === venue.id"
+                            @click="requestDeleteVenue(index)"
+                          >
+                            <span
+                              v-if="deletingVenueId === venue.id"
+                              class="loading loading-spinner loading-xs"
+                            />
+                            <span v-else>Delete Venue</span>
+                          </button>
+                        </div>
+                      </div>
+                      <div class="grid grid-cols-1 xl:grid-cols-3 gap-4 mt-2">
+                        <div class="xl:col-span-2">
+                          <VenueListItem
+                            :venue="venue"
+                            :title="venue.name || `Venue ${index + 1}`"
+                            title-class="text-base font-semibold leading-tight"
+                          >
+                            <div class="flex flex-wrap gap-2 mt-2">
+                              <span v-if="venue.hasGolf" class="badge badge-outline">Disc golf</span>
+                              <span v-if="venue.hasAccuracy" class="badge badge-outline">Accuracy</span>
+                              <span v-if="venue.hasDistance" class="badge badge-outline">Distance</span>
+                              <span v-if="venue.hasSCF" class="badge badge-outline">SCF</span>
+                              <span v-if="venue.hasDiscathon" class="badge badge-outline">Discathon</span>
+                              <span v-if="venue.hasDDC" class="badge badge-outline">DDC</span>
+                              <span v-if="venue.hasFreestyle" class="badge badge-outline">Freestyle</span>
                               <span
                                 v-if="deletingVenueId === venue.id"
                                 class="loading loading-spinner loading-xs"

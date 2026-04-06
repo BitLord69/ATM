@@ -3,7 +3,6 @@ type WorkspaceLink = {
   kind?: "link";
   id: string;
   label: string;
-  icon?: string;
   to: string;
   indented?: boolean;
 };
@@ -12,7 +11,6 @@ type WorkspaceSection = {
   kind: "section";
   id: string;
   label: string;
-  icon?: string;
   defaultOpen?: boolean;
   items: WorkspaceLink[];
 };
@@ -174,13 +172,7 @@ watch(
                 ]"
                 @click="onNavClick(item.id)"
               >
-                <Icon
-                  v-if="item.icon"
-                  :name="item.icon"
-                  size="14"
-                  class="opacity-80"
-                />
-                <span>{{ item.label }}</span>
+                {{ item.label }}
               </NuxtLink>
             </li>
             <li v-else>
@@ -191,15 +183,7 @@ watch(
                 :aria-expanded="isSectionOpen(item) ? 'true' : 'false'"
                 @click="onSectionToggle(item.id)"
               >
-                <span class="inline-flex items-center gap-1.5">
-                  <Icon
-                    v-if="item.icon"
-                    :name="item.icon"
-                    size="14"
-                    class="opacity-80"
-                  />
-                  <span>{{ item.label }}</span>
-                </span>
+                <span>{{ item.label }}</span>
                 <span
                   class="text-xs opacity-70"
                   aria-hidden="true"
@@ -223,13 +207,7 @@ watch(
                       ]"
                       @click="onNavClick(child.id)"
                     >
-                      <Icon
-                        v-if="child.icon"
-                        :name="child.icon"
-                        size="13"
-                        class="opacity-80"
-                      />
-                      <span>{{ child.label }}</span>
+                      {{ child.label }}
                     </NuxtLink>
                   </li>
                 </ul>
