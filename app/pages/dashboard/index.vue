@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useAuthStore } from "~/stores/auth";
 import { useTournamentStore } from "~/stores/tournament";
 
 definePageMeta({
@@ -6,6 +7,11 @@ definePageMeta({
 });
 
 const tournamentStore = useTournamentStore();
+const authStore = useAuthStore();
+const route = useRoute();
+const router = useRouter();
+
+const socialConnectionMessage = ref<string | null>(null);
 
 const filter = ref<"all" | "active" | "future" | "past">("all");
 const sortBy = ref<"date" | "name" | "country" | "city">("date");
@@ -15,6 +21,53 @@ const filteredTournaments = computed(() => tournamentStore.filteredTournaments(f
 
 function toggleSortDirection() {
   sortDirection.value = sortDirection.value === "asc" ? "desc" : "asc";
+}
+
+function resolveSocialProviderLabel(rawProvider: string) {
+  const provider = rawProvider.toLowerCase();
+  if (provider === "github") {
+    return "GitHub";
+  }
+  if (provider === "google") {
+    return "Google";
+  }
+  if (provider === "facebook") {
+    return "Facebook";
+  }
+  return "";
+}
+
+async function maybeShowSocialConnectionMessage() {
+  if (!import.meta.client) {
+    return;
+  }
+
+  const rawValue = route.query.socialConnected;
+  const provider = typeof rawValue === "string"
+    ? rawValue
+    : Array.isArray(rawValue)
+      ? (rawValue[0] || "")
+      : "";
+
+  const providerLabel = resolveSocialProviderLabel(provider);
+  if (!providerLabel) {
+    return;
+  }
+
+  // Keep this one-time per provider and user in the current browser.
+  const userId = typeof authStore.currentUser?.id === "string" && authStore.currentUser.id.length > 0
+    ? authStore.currentUser.id
+    : "current-user";
+  const storageKey = `social-connected:${userId}:${providerLabel.toLowerCase()}`;
+
+  if (!window.localStorage.getItem(storageKey)) {
+    window.localStorage.setItem(storageKey, String(Date.now()));
+    socialConnectionMessage.value = `Your account is now connected to ${providerLabel}.`;
+  }
+
+  const nextQuery = { ...route.query };
+  delete nextQuery.socialConnected;
+  await router.replace({ query: nextQuery });
 }
 
 async function openTournamentEdit(tournamentSlug: string) {
@@ -39,6 +92,8 @@ onMounted(async () => {
   if (tournamentStore.tournaments.length === 0 && !tournamentStore.loading) {
     await tournamentStore.loadTournaments();
   }
+
+  await maybeShowSocialConnectionMessage();
 });
 </script>
 
@@ -59,6 +114,20 @@ onMounted(async () => {
           <span class="badge badge-primary ml-2">{{ tournamentStore.activeTournament.role }}</span>
         </p>
       </div>
+
+      <div
+        v-if="socialConnectionMessage"
+        role="status"
+        class="alert alert-success mb-6"
+      >
+        <Icon
+          name="tabler:circle-check"
+          size="24"
+        />
+        <span>{{ socialConnectionMessage }}</span>
+      </div>
+
+      <!-- TODO: On the future user home/profile page, add a persistent social-connection badge and a button to disconnect linked social login providers. -->
 
       <!-- No Active Tournaments Message -->
       <div

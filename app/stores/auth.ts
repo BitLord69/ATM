@@ -65,10 +65,15 @@ export const useAuthStore = defineStore("useAuthStore", () => {
   async function signIn(_provider: loginProviders) {
     loading.value = true;
 
+    const isSocialProvider = _provider === "github" || _provider === "google" || _provider === "facebook";
+    const callbackURL = isSocialProvider
+      ? `/dashboard?socialConnected=${encodeURIComponent(_provider)}`
+      : "/dashboard";
+
     await authClient.signIn.social({
       provider: _provider,
-      callbackURL: "/dashboard",
-      errorCallbackURL: "/error",
+      callbackURL,
+      errorCallbackURL: "/error?flow=social",
     });
 
     // Note: loading.value = false is not needed since we redirect away

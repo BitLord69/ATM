@@ -162,6 +162,8 @@ async function handleSocialSignup(provider: "github" | "google" | "facebook") {
   await authClient.signIn.social({
     provider,
     callbackURL: `/accept-invite?id=${invitationId.value}`,
+    errorCallbackURL: `/accept-invite?id=${invitationId.value}`,
+    requestSignUp: true,
   });
 
   isSubmitting.value = false;
