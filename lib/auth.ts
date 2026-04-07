@@ -1,7 +1,7 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { organization } from "better-auth/plugins";
-import { eq } from "drizzle-orm";
+import { and, eq, gt } from "drizzle-orm";
 import fs from "node:fs";
 import nodemailer from "nodemailer";
 
@@ -27,6 +27,73 @@ const trustedOrigins = Array.from(new Set([
   "http://localhost:3000",
   "http://127.0.0.1:3000",
 ].filter((value): value is string => Boolean(value))));
+
+const authBaseURL = normalizeOrigin(env.BETTER_AUTH_URL) ?? env.BETTER_AUTH_URL;
+
+let didLogAuthProviderConfig = false;
+function maskClientId(clientId: string): string {
+  if (!clientId) {
+    return "(missing)";
+  }
+  if (clientId.length <= 6) {
+    return "***";
+  }
+  return `${clientId.slice(0, 3)}...${clientId.slice(-3)}`;
+}
+
+if (!didLogAuthProviderConfig) {
+  didLogAuthProviderConfig = true;
+  console.warn(
+    `[auth] baseURL=${authBaseURL} githubClientId=${maskClientId(env.AUTH_GITHUB_CLIENT_ID)}`,
+  );
+}
+
+async function hasValidPendingInvitation(email: string) {
+  const pendingInvitation = await db
+    .select({ id: schema.invitation.id })
+    .from(schema.invitation)
+    .where(and(
+      eq(schema.invitation.email, email),
+      eq(schema.invitation.status, "pending"),
+      gt(schema.invitation.expiresAt, Date.now()),
+    ))
+    .limit(1);
+
+  return pendingInvitation.length > 0;
+}
+
+async function canCreateSessionForUser(userId: string) {
+  const rows = await db
+    .select({
+      email: schema.user.email,
+      role: schema.user.role,
+    })
+    .from(schema.user)
+    .where(eq(schema.user.id, userId))
+    .limit(1);
+
+  const user = rows[0];
+  if (!user?.email) {
+    return false;
+  }
+
+  // Global admins bypass invitation checks.
+  if (user.role === "admin") {
+    return true;
+  }
+
+  const membership = await db
+    .select({ id: schema.member.id })
+    .from(schema.member)
+    .where(eq(schema.member.userId, userId))
+    .limit(1);
+
+  if (membership.length > 0) {
+    return true;
+  }
+
+  return hasValidPendingInvitation(user.email);
+}
 
 // your drizzle instance
 export const auth = betterAuth({
@@ -77,8 +144,44 @@ export const auth = betterAuth({
       },
     },
   },
-  baseURL: env.BETTER_AUTH_URL,
+  baseURL: authBaseURL,
   trustedOrigins,
+  databaseHooks: {
+    user: {
+      create: {
+        async before(user) {
+          if (user.role === "admin") {
+            return;
+          }
+
+          const email = typeof user.email === "string" ? user.email : "";
+          if (!email) {
+            return false;
+          }
+
+          const allowed = await hasValidPendingInvitation(email);
+          if (!allowed) {
+            return false;
+          }
+        },
+      },
+    },
+    session: {
+      create: {
+        async before(session) {
+          const userId = typeof session.userId === "string" ? session.userId : "";
+          if (!userId) {
+            return false;
+          }
+
+          const allowed = await canCreateSessionForUser(userId);
+          if (!allowed) {
+            return false;
+          }
+        },
+      },
+    },
+  },
   emailAndPassword: {
     enabled: true,
   },
@@ -86,21 +189,24 @@ export const auth = betterAuth({
     github: {
       clientId: env.AUTH_GITHUB_CLIENT_ID,
       clientSecret: env.AUTH_GITHUB_CLIENT_SECRET,
+      disableImplicitSignUp: true,
     },
     facebook: {
       clientId: env.FACEBOOK_CLIENT_ID,
       clientSecret: env.FACEBOOK_CLIENT_SECRET,
+      disableImplicitSignUp: true,
     },
     google: {
       clientId: env.GOOGLE_CLIENT_ID,
       clientSecret: env.GOOGLE_CLIENT_SECRET,
+      disableImplicitSignUp: true,
     },
   },
   plugins: [
     organization({
       async sendInvitationEmail(data) {
         const { email, organization } = data;
-        const inviteLink = `${env.BETTER_AUTH_URL}/accept-invite?id=${data.id}`;
+        const inviteLink = `${authBaseURL}/accept-invite?id=${data.id}`;
 
         const logMsg = `[${new Date().toISOString()}] 📧 Attempting to send invitation email to: ${email}`;
         console.warn(logMsg);
