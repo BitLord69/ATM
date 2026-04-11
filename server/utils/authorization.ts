@@ -1,5 +1,7 @@
 import type { UserRole } from "#shared/types/auth";
 
+import { normalizePersistedUserRole } from "#shared/types/auth";
+
 import type { TournamentRole } from "../../lib/db/schema/tournament-membership";
 
 // Hierarchical permission levels for tournament-level roles
@@ -52,14 +54,16 @@ export type AuthUser = {
 // Global role hierarchy - higher value = more privileges
 const GLOBAL_ROLE_HIERARCHY: Record<UserRole, number> = {
   admin: 100, // System administrator
-  td: 50, // Global tournament director
-  presenter: 40, // Can present/announce
-  validator: 30, // Can validate results
-  scorer: 20, // Can score events
-  player: 10, // Registered player
-  invitee: 5, // Has been invited
-  guest: 1, // Unauthenticated or minimal access
+  user: 10, // Default signed-in user role
+  guest: 1, // Unauthenticated or runtime-only fallback
 };
+
+function normalizeRuntimeUserRole(role: unknown): UserRole {
+  if (role === "guest") {
+    return "guest";
+  }
+  return normalizePersistedUserRole(role);
+}
 
 /**
  * Check if user has a minimum global role level
@@ -69,7 +73,7 @@ export function hasGlobalRole(user: AuthUser | null, minRole: UserRole): boolean
     return minRole === "guest";
   }
 
-  const userLevel = GLOBAL_ROLE_HIERARCHY[user.role];
+  const userLevel = GLOBAL_ROLE_HIERARCHY[normalizeRuntimeUserRole(user.role)];
   const requiredLevel = GLOBAL_ROLE_HIERARCHY[minRole];
 
   return userLevel >= requiredLevel;
@@ -79,14 +83,14 @@ export function hasGlobalRole(user: AuthUser | null, minRole: UserRole): boolean
  * Check if user is authenticated (any role above guest)
  */
 export function isAuthenticated(user: AuthUser | null): boolean {
-  return user !== null && user.role !== "guest";
+  return user !== null;
 }
 
 /**
  * Check if user is a system administrator
  */
 export function isSysAdmin(user: AuthUser | null): boolean {
-  return user?.role === "admin";
+  return normalizeRuntimeUserRole(user?.role) === "admin";
 }
 
 /**
@@ -106,7 +110,7 @@ export function can(
   }
 
   // Sysadmins (user.role === 'admin') can do anything
-  if (user.role === "admin") {
+  if (normalizeRuntimeUserRole(user.role) === "admin") {
     return true;
   }
 

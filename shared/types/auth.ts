@@ -1,22 +1,25 @@
 export const USER_ROLES = [
   "admin",
-  "guest",
-  "scorer",
-  "validator",
-  "td",
-  "presenter",
-  "player",
-  "invitee",
+  "user",
 ] as const;
 
-export type UserRole = typeof USER_ROLES[number];
+export type PersistedUserRole = typeof USER_ROLES[number];
+
+// Keep guest as runtime-only role for authorization helpers that model anonymous access.
+export type UserRole = PersistedUserRole | "guest";
+
+export function normalizePersistedUserRole(role: unknown): PersistedUserRole {
+  return role === "admin" ? "admin" : "user";
+}
 
 export type CustomUser = {
-  role: UserRole;
+  role: PersistedUserRole;
   country?: string | null;
   distanceUnit?: "km" | "mi" | null;
   pdgaNumber?: string | null;
   homeClub?: string | null;
   dateOfBirth?: string | null;
   genderCategory?: string | null;
+  banned?: boolean | null;
+  forcePasswordChange?: boolean | null;
 };

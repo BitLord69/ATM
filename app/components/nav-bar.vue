@@ -3,7 +3,15 @@ import LogoutButton from "./logout-button.vue";
 import ThemeToggle from "./theme-toggle.vue";
 
 const authStore = useAuthStore();
+const tournamentStore = useTournamentStore();
 const authUiReady = ref(false);
+const canAccessUsersWorkspace = computed(() => {
+  const role = authStore.currentUser?.role;
+  if (role === "admin") {
+    return true;
+  }
+  return tournamentStore.tournaments.some(t => t.status === "active" && t.role === "td");
+});
 
 onMounted(() => {
   authUiReady.value = true;
@@ -39,6 +47,14 @@ onMounted(() => {
             class="btn btn-ghost"
           >
             Dashboard
+          </NuxtLink>
+        </li>
+        <li v-if="authUiReady && authStore.isSignedIn && canAccessUsersWorkspace">
+          <NuxtLink
+            to="/admin/users"
+            class="btn btn-ghost"
+          >
+            Users
           </NuxtLink>
         </li>
       </ul>

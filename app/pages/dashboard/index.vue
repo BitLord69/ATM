@@ -189,7 +189,7 @@ onMounted(async () => {
               <FormField label="Sort by">
                 <select
                   v-model="sortBy"
-                  class="select select-bordered select-sm"
+                  class="select select-bordered select-sm bg-base-100 text-base-content border-base-300 hover:border-base-content/40 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                 >
                   <option value="date">
                     Date
@@ -245,13 +245,13 @@ onMounted(async () => {
             description-class="text-sm opacity-70 line-clamp-2 mb-3"
             meta-class="text-xs opacity-70 space-y-1.5 mb-3"
             :icon-size="14"
-            :has-golf="tournament.hasGolf"
-            :has-accuracy="tournament.hasAccuracy"
-            :has-distance="tournament.hasDistance"
-            :has-scf="tournament.hasSCF"
-            :has-discathon="tournament.hasDiscathon"
-            :has-ddc="tournament.hasDDC"
-            :has-freestyle="tournament.hasFreestyle"
+            :has-golf="tournament.hasGolf ?? undefined"
+            :has-accuracy="tournament.hasAccuracy ?? undefined"
+            :has-distance="tournament.hasDistance ?? undefined"
+            :has-scf="tournament.hasSCF ?? undefined"
+            :has-discathon="tournament.hasDiscathon ?? undefined"
+            :has-ddc="tournament.hasDDC ?? undefined"
+            :has-freestyle="tournament.hasFreestyle ?? undefined"
             @click="tournamentStore.selectTournament(tournament)"
           >
             <template #title-right>

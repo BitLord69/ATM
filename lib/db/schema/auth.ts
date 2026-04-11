@@ -1,7 +1,7 @@
 import { relations } from "drizzle-orm";
 import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
-import type { UserRole } from "#shared/types/auth";
+import type { PersistedUserRole } from "#shared/types/auth";
 
 import { player } from "./player";
 import { tournamentMembership } from "./tournament-membership";
@@ -22,7 +22,11 @@ export const user = sqliteTable("user", {
   genderCategory: text("gender_category"),
   createdAt: integer("created_at").notNull().$default(() => Date.now()),
   updatedAt: integer("updated_at").notNull().$default(() => Date.now()).$onUpdate(() => Date.now()),
-  role: text("role").$type<UserRole>().notNull().default("guest"),
+  role: text("role").$type<PersistedUserRole>().notNull().default("user"),
+  banned: integer("banned", { mode: "boolean" }).notNull().default(false),
+  bannedAt: integer("banned_at"),
+  banReason: text("ban_reason"),
+  forcePasswordChange: integer("force_password_change", { mode: "boolean" }).notNull().default(false),
 });
 
 export const session = sqliteTable(

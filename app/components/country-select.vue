@@ -82,7 +82,7 @@ function onChange(event: Event) {
 
 <template>
   <select
-    class="select select-bordered w-full"
+    class="select select-bordered w-full bg-base-100 text-base-content border-base-300 hover:border-base-content/40 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
     :value="modelValue"
     :disabled="disabled"
     @change="onChange"

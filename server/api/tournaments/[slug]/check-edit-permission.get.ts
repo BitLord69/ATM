@@ -28,16 +28,18 @@ export default defineEventHandler(async (event) => {
     .where(eq(tournament.slug, slug))
     .limit(1);
 
-  if (tournaments.length === 0) {
+  const [tournamentRow] = tournaments;
+
+  if (!tournamentRow) {
     throw createError({
       statusCode: 404,
       message: "Tournament not found",
     });
   }
 
-  const tournamentId = tournaments[0].id;
-  const isClosed = tournaments[0].closedAt != null;
-  const hasEnded = typeof tournaments[0].endDate === "number" ? tournaments[0].endDate < Date.now() : false;
+  const tournamentId = tournamentRow.id;
+  const isClosed = tournamentRow.closedAt != null;
+  const hasEnded = typeof tournamentRow.endDate === "number" ? tournamentRow.endDate < Date.now() : false;
 
   // Get authenticated user
   const session = await auth.api.getSession({ headers: event.headers });
@@ -73,11 +75,10 @@ export default defineEventHandler(async (event) => {
     )
     .limit(1);
 
-  if (memberships.length === 0) {
+  const [membership] = memberships;
+  if (!membership) {
     return { canEdit: false, isSysadmin: false };
   }
-
-  const membership = memberships[0];
 
   // Check if membership is active
   if (membership.status !== "active") {

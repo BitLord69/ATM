@@ -1,4 +1,4 @@
-import type { TournamentRole } from "~/lib/db/schema/tournament-membership";
+import type { TournamentRole } from "~~/lib/db/schema/tournament-membership";
 
 export type TournamentMembership = {
   membershipId: string;
@@ -51,7 +51,7 @@ export const useTournamentStore = defineStore("tournament", () => {
 
       if (activeTournaments.length === 1) {
         // Only one active tournament, auto-select it
-        activeTournament.value = activeTournaments[0];
+        activeTournament.value = activeTournaments[0] ?? null;
       }
       else if (activeTournaments.length > 1 && !isSysadmin.value) {
         // Multiple active tournaments and user is not sysadmin or TD

@@ -283,7 +283,7 @@ watch(
           <FormField label="Discipline">
             <select
               v-model="selectedDiscipline"
-              class="select select-bordered w-full"
+              class="select select-bordered w-full bg-base-100 text-base-content border-base-300 hover:border-base-content/40 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
               :disabled="loading || busy"
             >
               <option
@@ -307,7 +307,7 @@ watch(
           <FormField label="Division filter">
             <select
               v-model="selectedDivision"
-              class="select select-bordered w-full"
+              class="select select-bordered w-full bg-base-100 text-base-content border-base-300 hover:border-base-content/40 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
               :disabled="loading || busy"
             >
               <option
@@ -322,7 +322,7 @@ watch(
           <FormField label="Group entries">
             <select
               v-model="groupMode"
-              class="select select-bordered w-full"
+              class="select select-bordered w-full bg-base-100 text-base-content border-base-300 hover:border-base-content/40 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
               :disabled="loading || busy"
             >
               <option value="division">

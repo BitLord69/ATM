@@ -22,11 +22,13 @@ export default defineEventHandler(async (event) => {
     .where(eq(tournament.slug, slug))
     .limit(1);
 
-  if (rows.length === 0) {
+  const [tournamentRow] = rows;
+
+  if (!tournamentRow) {
     throw createError({ statusCode: 404, message: "Tournament not found" });
   }
 
-  const tournamentId = rows[0].id;
+  const tournamentId = tournamentRow.id;
 
   if (session.user.role !== "admin") {
     const membershipRows = await db

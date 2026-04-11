@@ -52,13 +52,15 @@ export default defineEventHandler(async (event) => {
     .where(eq(tournament.slug, slug))
     .limit(1);
 
-  if (tournamentRows.length === 0) {
+  const [tournamentRow] = tournamentRows;
+
+  if (!tournamentRow) {
     throw createError({ statusCode: 404, message: "Tournament not found" });
   }
 
-  const tournamentId = tournamentRows[0].id;
+  const tournamentId = tournamentRow.id;
 
-  if (tournamentRows[0].closedAt && session.user.role !== "admin") {
+  if (tournamentRow.closedAt && session.user.role !== "admin") {
     throw createError({ statusCode: 403, message: "Closed tournaments can only be edited by sysadmin" });
   }
 

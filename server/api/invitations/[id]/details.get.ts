@@ -30,14 +30,14 @@ export default defineEventHandler(async (event) => {
     .where(eq(invitation.id, id))
     .limit(1);
 
-  if (invitationRecord.length === 0) {
+  const [inv] = invitationRecord;
+
+  if (!inv) {
     throw createError({
       statusCode: 404,
       statusMessage: "Invitation not found",
     });
   }
-
-  const inv = invitationRecord[0];
 
   if (inv.status !== "pending") {
     throw createError({

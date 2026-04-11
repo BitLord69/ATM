@@ -5,6 +5,8 @@ import { and, eq, gt } from "drizzle-orm";
 import fs from "node:fs";
 import nodemailer from "nodemailer";
 
+import { normalizePersistedUserRole } from "#shared/types/auth";
+
 import db from "./db/index";
 import * as schema from "./db/schema";
 import env from "./env";
@@ -62,11 +64,12 @@ async function hasValidPendingInvitation(email: string) {
   return pendingInvitation.length > 0;
 }
 
-async function canCreateSessionForUser(userId: string) {
+async function canCreateSessionForUser(userId: string): Promise<true | "banned" | false> {
   const rows = await db
     .select({
       email: schema.user.email,
       role: schema.user.role,
+      banned: schema.user.banned,
     })
     .from(schema.user)
     .where(eq(schema.user.id, userId))
@@ -77,8 +80,12 @@ async function canCreateSessionForUser(userId: string) {
     return false;
   }
 
+  if (user.banned) {
+    return "banned";
+  }
+
   // Global admins bypass invitation checks.
-  if (user.role === "admin") {
+  if (normalizePersistedUserRole(user.role) === "admin") {
     return true;
   }
 
@@ -109,7 +116,7 @@ export const auth = betterAuth({
         type: "string",
         required: true,
         input: true,
-        defaultValue: "guest",
+        defaultValue: "user",
       },
       country: {
         type: "string",
@@ -142,6 +149,18 @@ export const auth = betterAuth({
         required: false,
         input: true,
       },
+      banned: {
+        type: "boolean",
+        required: false,
+        input: false,
+        defaultValue: false,
+      },
+      forcePasswordChange: {
+        type: "boolean",
+        required: false,
+        input: false,
+        defaultValue: false,
+      },
     },
   },
   baseURL: authBaseURL,
@@ -150,12 +169,22 @@ export const auth = betterAuth({
     user: {
       create: {
         async before(user) {
-          if (user.role === "admin") {
+          if (normalizePersistedUserRole(user.role) === "admin") {
             return;
           }
 
           const email = typeof user.email === "string" ? user.email : "";
           if (!email) {
+            return false;
+          }
+
+          // Reject if a banned user with the same email exists.
+          const bannedUser = await db
+            .select({ id: schema.user.id })
+            .from(schema.user)
+            .where(and(eq(schema.user.email, email), eq(schema.user.banned, true)))
+            .limit(1);
+          if (bannedUser.length > 0) {
             return false;
           }
 
@@ -174,8 +203,11 @@ export const auth = betterAuth({
             return false;
           }
 
-          const allowed = await canCreateSessionForUser(userId);
-          if (!allowed) {
+          const result = await canCreateSessionForUser(userId);
+          if (result === "banned") {
+            return false;
+          }
+          if (!result) {
             return false;
           }
         },
@@ -184,6 +216,40 @@ export const auth = betterAuth({
   },
   emailAndPassword: {
     enabled: true,
+    sendResetPassword: async ({ user, url }) => {
+      const logMsg = `[${new Date().toISOString()}] 🔑 Sending password reset email to: ${user.email}`;
+      console.warn(logMsg);
+      fs.appendFileSync("./email-log.txt", `${logMsg}\n`);
+
+      const transporter = nodemailer.createTransport({
+        host: env.BREVO_SMTP_HOST,
+        port: env.BREVO_SMTP_PORT,
+        secure: false,
+        auth: {
+          user: env.BREVO_SMTP_USER,
+          pass: env.BREVO_SMTP_KEY,
+        },
+      });
+
+      try {
+        await transporter.sendMail({
+          from: `"ATM Tournament" <${env.BREVO_FROM_EMAIL}>`,
+          to: user.email,
+          subject: "Reset your ATM password",
+          html: `<p>Hi ${user.name || user.email},</p><p>A password reset was requested for your account.</p><p><a href="${url}">Click here to reset your password.</a></p><p>This link expires in 1 hour. If you did not request this, you can safely ignore this email.</p>`,
+        });
+
+        const successMsg = `✅ Password reset email sent to: ${user.email}`;
+        console.warn(successMsg);
+        fs.appendFileSync("./email-log.txt", `${successMsg}\n`);
+      }
+      catch (error: any) {
+        const errorMsg = `❌ Failed to send password reset email to ${user.email}: ${error.message}`;
+        console.error(errorMsg);
+        fs.appendFileSync("./email-log.txt", `${errorMsg}\n`);
+        throw error;
+      }
+    },
   },
   socialProviders: {
     github: {
