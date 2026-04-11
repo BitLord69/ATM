@@ -61,7 +61,7 @@ function formatRadiusLabel(radiusKm: number) {
     <div class="flex items-center gap-2 whitespace-nowrap">
       <select
         v-model="selected"
-        class="select select-bordered select-sm w-40"
+        class="select select-bordered select-sm w-40 bg-base-100 text-base-content border-base-300 hover:border-base-content/40 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
       >
         <option
           v-for="radius in options"

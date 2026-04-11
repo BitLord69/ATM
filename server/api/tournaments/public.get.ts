@@ -2,7 +2,7 @@ import { and, gte, sql } from "drizzle-orm";
 
 import db from "../../../lib/db";
 import { tournament } from "../../../lib/db/schema";
-import { getTournamentStatus } from "../../utils/authorization.ts";
+import { getTournamentStatus } from "../../utils/authorization";
 
 function shouldRetryWithoutDisciplineColumns(error: unknown) {
   const message = String(error ?? "").toLowerCase();

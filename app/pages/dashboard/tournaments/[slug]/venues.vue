@@ -111,7 +111,6 @@ const venues = computed<TournamentVenue[]>(() => {
           </div>
           <VenueListItem
             :venue="venue"
-            :title="null"
           >
             <div class="flex flex-wrap gap-2 mt-2">
               <span v-if="venue.hasGolf" class="badge badge-outline">Disc golf</span>

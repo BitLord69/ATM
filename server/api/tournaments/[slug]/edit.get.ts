@@ -95,14 +95,14 @@ export default defineEventHandler(async (event) => {
     .where(eq(tournament.slug, slug))
     ;
 
-  if (rows.length === 0) {
+  const [t] = rows;
+
+  if (!t) {
     throw createError({
       statusCode: 404,
       message: "Tournament not found",
     });
   }
-
-  const t = rows[0];
 
   if (t.closedAt && session.user.role !== "admin") {
     throw createError({

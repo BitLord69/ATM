@@ -928,6 +928,9 @@ function onVenueModalMapClick(event: any) {
 
 const toCoordinate = parseCoordinate;
 const hasMapCoordinates = hasValidCoordinates;
+function roundCoord(value: number) {
+  return Number(value.toFixed(6));
+}
 
 const tournamentCenter = computed<[number, number]>(() => {
   const lat = toCoordinate(form.lat);
@@ -938,6 +941,24 @@ const tournamentCenter = computed<[number, number]>(() => {
   }
 
   return [59.67497, 12.85981];
+});
+
+const tournamentMapVenues = computed(() => {
+  return venues.value.map(venue => ({
+    id: venue.id ?? (Number.parseInt(venue.key.replace(/\D/g, ""), 10) || 0),
+    name: venue.name,
+    description: venue.description || null,
+    facilities: venue.facilities || null,
+    lat: venue.lat,
+    long: venue.long,
+    hasGolf: venue.hasGolf,
+    hasAccuracy: venue.hasAccuracy,
+    hasDistance: venue.hasDistance,
+    hasSCF: venue.hasSCF,
+    hasDiscathon: venue.hasDiscathon,
+    hasDDC: venue.hasDDC,
+    hasFreestyle: venue.hasFreestyle,
+  }));
 });
 
 watch(
@@ -1549,7 +1570,7 @@ async function saveTournament(closeTournament = false) {
                     <div class="flex items-center gap-2">
                       <select
                         v-model="selectedExistingVenueId"
-                        class="select select-bordered select-sm min-w-65"
+                        class="select select-bordered select-sm min-w-65 bg-base-100 text-base-content border-base-300 hover:border-base-content/40 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                       >
                         <option value="">
                           Use existing venue

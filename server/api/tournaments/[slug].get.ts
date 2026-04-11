@@ -50,14 +50,14 @@ export default defineEventHandler(async (event) => {
     .where(eq(tournament.slug, slug))
     .limit(1);
 
-  if (tournaments.length === 0) {
+  const [t] = tournaments;
+
+  if (!t) {
     throw createError({
       statusCode: 404,
       message: "Tournament not found",
     });
   }
-
-  const t = tournaments[0];
   const tournamentStatus = getTournamentStatus(t.startDate, t.endDate);
 
   // Fetch associated venues for discipline locations

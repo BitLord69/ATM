@@ -44,27 +44,29 @@ export default defineEventHandler(async (event) => {
     .where(eq(tournament.slug, slug))
     .limit(1);
 
-  if (rows.length === 0) {
+  const [tournamentRow] = rows;
+
+  if (!tournamentRow) {
     throw createError({ statusCode: 404, message: "Tournament not found" });
   }
 
-  const tournamentId = rows[0].id;
+  const tournamentId = tournamentRow.id;
   const now = Date.now();
 
-  if (rows[0].closedAt && session.user.role !== "admin") {
+  if (tournamentRow.closedAt && session.user.role !== "admin") {
     throw createError({ statusCode: 403, message: "Closed tournaments can only be edited by sysadmin" });
   }
 
   if (body.closeTournament) {
-    if (rows[0].closedAt) {
+    if (tournamentRow.closedAt) {
       throw createError({ statusCode: 400, message: "Tournament is already closed" });
     }
 
-    if (!rows[0].endDate) {
+    if (!tournamentRow.endDate) {
       throw createError({ statusCode: 400, message: "Tournament must have an end date before it can be closed" });
     }
 
-    if (now < rows[0].endDate) {
+    if (now < tournamentRow.endDate) {
       throw createError({ statusCode: 400, message: "Tournament can only be closed on or after the end date" });
     }
   }
@@ -88,7 +90,7 @@ export default defineEventHandler(async (event) => {
   const changedBy = session.user.id as any;
 
   const effectiveEndDate = body.endDate ?? null;
-  const effectiveClosedAt = body.closeTournament ? now : rows[0].closedAt;
+  const effectiveClosedAt = body.closeTournament ? now : tournamentRow.closedAt;
 
   await db
     .update(tournament)

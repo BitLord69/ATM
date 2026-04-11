@@ -1,6 +1,8 @@
 import { relations } from "drizzle-orm";
 import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
+import type { TournamentRole } from "./tournament-membership";
+
 import { user } from "./auth";
 import { tournament } from "./tournament";
 import { tournamentMembership } from "./tournament-membership";
@@ -44,6 +46,8 @@ export const invitation = sqliteTable(
       .references(() => organization.id, { onDelete: "cascade" }),
     email: text("email").notNull(),
     role: text("role"),
+    tournamentRole: text("tournament_role").$type<TournamentRole>(),
+    globalRoleTarget: text("global_role_target"),
     status: text("status").notNull(),
     expiresAt: integer("expires_at").notNull(),
     inviterId: text("inviter_id")

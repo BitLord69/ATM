@@ -44,12 +44,14 @@ export default defineEventHandler(async (event) => {
     .where(eq(tournament.slug, slugResult.data.slug))
     .limit(1);
 
-  if (tournamentRows.length === 0) {
+  const [tournamentRow] = tournamentRows;
+
+  if (!tournamentRow) {
     throw createError({ statusCode: 404, message: "Tournament not found" });
   }
 
-  const tournamentId = tournamentRows[0].id;
-  if (tournamentRows[0].closedAt && session.user.role !== "admin") {
+  const tournamentId = tournamentRow.id;
+  if (tournamentRow.closedAt && session.user.role !== "admin") {
     throw createError({ statusCode: 403, message: "Closed tournaments can only be edited by sysadmin" });
   }
 
@@ -149,11 +151,13 @@ export default defineEventHandler(async (event) => {
     changedAt: Date.now(),
   };
 
-  if (linkRows.length > 0) {
+  const [linkRow] = linkRows;
+
+  if (linkRow) {
     await db
       .update(tournamentVenue)
       .set(linkValues)
-      .where(eq(tournamentVenue.id, linkRows[0].id));
+      .where(eq(tournamentVenue.id, linkRow.id));
   }
   else {
     await db.insert(tournamentVenue).values({
@@ -176,19 +180,21 @@ export default defineEventHandler(async (event) => {
     .where(eq(venue.id, venueId))
     .limit(1);
 
-  if (venueRows.length === 0) {
+  const [resolvedVenue] = venueRows;
+
+  if (!resolvedVenue) {
     throw createError({ statusCode: 404, message: "Venue not found" });
   }
 
   return {
     success: true,
     venue: {
-      id: venueRows[0].id,
-      name: venueRows[0].name,
-      description: venueRows[0].description,
-      facilities: venueRows[0].facilities,
-      lat: venueRows[0].lat,
-      long: venueRows[0].long,
+      id: resolvedVenue.id,
+      name: resolvedVenue.name,
+      description: resolvedVenue.description,
+      facilities: resolvedVenue.facilities,
+      lat: resolvedVenue.lat,
+      long: resolvedVenue.long,
       hasGolf: !!body.hasGolf,
       hasAccuracy: !!body.hasAccuracy,
       hasDistance: !!body.hasDistance,

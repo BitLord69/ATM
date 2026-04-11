@@ -46,7 +46,11 @@ async function loadInvitation() {
   }
 
   try {
-    const { data } = await $fetch(`/api/invitations/${invitationId.value}/details`);
+    const response = await $fetch<{ data?: { email: string; organizationName: string } }>(`/api/invitations/${invitationId.value}/details`);
+    const data = response?.data;
+    if (!data?.email) {
+      throw createError({ statusCode: 404, message: "Invitation details not found" });
+    }
     invitationDetails.value = data;
 
     // Check current session
@@ -102,7 +106,7 @@ async function handleSignup() {
     const { error } = await authClient.signUp.email({
       email: invitationDetails.value.email,
       password: signupForm.value.password,
-      name: invitationDetails.value.email.split("@")[0], // Use part before @ as name
+      name: invitationDetails.value.email.split("@")[0] || "User",
     });
 
     if (error) {
@@ -178,6 +182,8 @@ async function acceptInvite() {
   isSubmitting.value = true;
   status.value = null;
 
+  // Better Auth organization plugin methods are available at runtime.
+  // @ts-expect-error runtime plugin method
   const { data: _data, error } = await authClient.organization.acceptInvitation({
     invitationId: invitationId.value,
   });
@@ -187,6 +193,13 @@ async function acceptInvite() {
   if (error) {
     status.value = { type: "error", message: error.message ?? "Unable to accept invitation." };
     return;
+  }
+
+  try {
+    await $fetch(`/api/invitations/${invitationId.value}/finalize`, { method: "POST" });
+  }
+  catch (finalizeError) {
+    console.warn("Invitation accepted, but role finalization failed", finalizeError);
   }
 
   status.value = {
@@ -275,7 +288,7 @@ onMounted(() => {
               Invitation For:
             </p>
             <p class="text-lg font-bold">
-              {{ invitationDetails.email }}
+              {{ invitationDetails?.email }}
             </p>
           </div>
 

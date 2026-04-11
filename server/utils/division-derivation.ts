@@ -95,6 +95,6 @@ export function deriveMinorDivisions(
 
   return {
     minorDivisionTags: tags,
-    primaryMinorDivision: tags.length > 0 ? tags[tags.length - 1] : null,
+    primaryMinorDivision: tags.at(-1) ?? null,
   };
 }

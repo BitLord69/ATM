@@ -2,7 +2,15 @@
 import { useAuthStore } from "~/stores/auth";
 
 const authStore = useAuthStore();
+const tournamentStore = useTournamentStore();
 const user = computed(() => authStore.currentUser);
+const canAccessUsersWorkspace = computed(() => {
+  const role = user.value?.role;
+  if (role === "admin") {
+    return true;
+  }
+  return tournamentStore.tournaments.some(t => t.status === "active" && t.role === "td");
+});
 
 async function handleLogout() {
   await authStore.signOut();
@@ -26,7 +34,7 @@ async function handleLogout() {
 
     <ul
       tabindex="0"
-      class="dropdown-content z-1 menu p-2 shadow bg-base-100 rounded-box w-52"
+      class="dropdown-content z-1 menu p-2 rounded-box w-52 bg-base-100 text-base-content border border-base-300 shadow-xl"
     >
       <li class="menu-title">
         <span>{{ user.email }}</span>
@@ -34,6 +42,11 @@ async function handleLogout() {
       <li>
         <NuxtLink to="/dashboard">
           Dashboard
+        </NuxtLink>
+      </li>
+      <li v-if="canAccessUsersWorkspace">
+        <NuxtLink to="/admin/users">
+          User Workspace
         </NuxtLink>
       </li>
       <li>

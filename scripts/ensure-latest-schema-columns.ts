@@ -103,6 +103,36 @@ const REQUIRED_COLUMNS: ColumnSpec[] = [
     name: "has_freestyle",
     ddl: "ALTER TABLE venues ADD COLUMN has_freestyle INTEGER NOT NULL DEFAULT false",
   },
+  {
+    table: "user",
+    name: "banned",
+    ddl: "ALTER TABLE user ADD COLUMN banned INTEGER NOT NULL DEFAULT false",
+  },
+  {
+    table: "user",
+    name: "banned_at",
+    ddl: "ALTER TABLE user ADD COLUMN banned_at INTEGER",
+  },
+  {
+    table: "user",
+    name: "ban_reason",
+    ddl: "ALTER TABLE user ADD COLUMN ban_reason TEXT",
+  },
+  {
+    table: "user",
+    name: "force_password_change",
+    ddl: "ALTER TABLE user ADD COLUMN force_password_change INTEGER NOT NULL DEFAULT false",
+  },
+  {
+    table: "invitation",
+    name: "tournament_role",
+    ddl: "ALTER TABLE invitation ADD COLUMN tournament_role TEXT",
+  },
+  {
+    table: "invitation",
+    name: "global_role_target",
+    ddl: "ALTER TABLE invitation ADD COLUMN global_role_target TEXT",
+  },
 ];
 
 async function tableColumns(db: ReturnType<typeof createClient>, table: string) {
@@ -140,6 +170,17 @@ async function main() {
       await db.execute(spec.ddl);
       console.log(`Added ${table}.${spec.name}`);
     }
+  }
+
+  const legacyRoleCountResult = await db.execute("SELECT COUNT(*) AS count FROM user WHERE role IS NULL OR role NOT IN ('admin', 'user')");
+  const legacyRoleCount = Number(legacyRoleCountResult.rows[0]?.count ?? 0);
+
+  if (legacyRoleCount > 0) {
+    await db.execute("UPDATE user SET role = 'user' WHERE role IS NULL OR role NOT IN ('admin', 'user')");
+    console.log(`Normalized ${legacyRoleCount} legacy global role value(s) to 'user'`);
+  }
+  else {
+    console.log("No legacy global role values found");
   }
 }
 

@@ -78,9 +78,14 @@ function parseAgeProtectedThreshold(code: string) {
     return null;
   }
 
+  const [, prefix, minAgeText] = match;
+  if (!prefix || !minAgeText) {
+    return null;
+  }
+
   return {
-    prefix: match[1],
-    minAge: Number.parseInt(match[2], 10),
+    prefix,
+    minAge: Number.parseInt(minAgeText, 10),
   };
 }
 
