@@ -123,18 +123,6 @@ watch(
     <div class="mb-4 flex items-center justify-between gap-2">
       <div class="flex items-center gap-2">
         <NuxtLink
-          to="/"
-          class="btn btn-ghost btn-sm"
-        >
-          <img
-            src="/logo-symbol.png"
-            srcset="/logo-symbol-32.png 32w, /logo-symbol-64.png 64w, /logo-symbol-128.png 128w"
-            sizes="(max-width: 640px) 24px, 40px"
-            alt="Logo"
-            class="w-6 sm:w-6 md:w-10 prefers-dark-logo dark:invert dark:brightness-125"
-          >
-        </NuxtLink>
-        <NuxtLink
           :to="backTo || '/dashboard'"
           class="btn btn-ghost btn-sm"
         >
@@ -223,12 +211,3 @@ watch(
     </div>
   </div>
 </template>
-
-<style scoped>
-/* Fallback for OS-level dark mode (for browsers without Tailwind `dark:` enabled) */
-@media (prefers-color-scheme: dark) {
-  .prefers-dark-logo {
-    filter: invert(1) brightness(1.15);
-  }
-}
-</style>

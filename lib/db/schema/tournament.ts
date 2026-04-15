@@ -35,6 +35,7 @@ export const tournament = sqliteTable("tournaments", {
   hasDiscathon: integer({ mode: "boolean" }),
   hasDDC: integer({ mode: "boolean" }),
   hasFreestyle: integer({ mode: "boolean" }),
+  banRequestEmailEnabled: int("ban_request_email_enabled", { mode: "boolean" }).notNull().default(true),
   changedBy: int().notNull().references(() => user.id),
   createdAt: int().notNull().$default(() => Date.now()),
   changedAt: int().notNull().$default(() => Date.now()).$onUpdate(() => Date.now()),

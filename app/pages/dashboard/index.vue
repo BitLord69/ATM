@@ -104,7 +104,7 @@ onMounted(async () => {
 
       <div class="mb-6">
         <h1 class="text-3xl font-bold mb-2">
-          Dashboard
+          My dashboard
         </h1>
         <p
           v-if="tournamentStore.activeTournament"

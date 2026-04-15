@@ -110,3 +110,29 @@ export function getNumberedVenueMarkerOptions(index: number, venueName: string) 
     icon,
   };
 }
+
+const STATUS_PIN_COLORS: Record<string, { fill: string; stroke: string }> = {
+  active: { fill: "#22c55e", stroke: "#ffffff" },
+  future: { fill: "#3b82f6", stroke: "#ffffff" },
+  past: { fill: "#9ca3af", stroke: "#ffffff" },
+};
+
+export function getTournamentStatusIcon(status?: string | null, isActive?: boolean) {
+  if (!leafletIconFactory.value)
+    return undefined;
+
+  const key = (isActive || status === "active") ? "active" : status === "future" ? "future" : "past";
+  const { fill, stroke } = STATUS_PIN_COLORS[key]!;
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="26" height="38" viewBox="0 0 26 38"><path d="M13 1C7 1 2 6 2 12c0 8.5 9 21.5 10.6 23.8.3.5 1.1.5 1.4 0C15.6 33.5 24 20.5 24 12 24 6 19 1 13 1z" fill="${fill}" stroke="${stroke}" stroke-width="2"/><circle cx="13" cy="12" r="4" fill="white"/></svg>`;
+
+  return leafletIconFactory.value({
+    iconUrl: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
+    iconRetinaUrl: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
+    shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+    iconSize: [26, 38],
+    iconAnchor: [13, 37],
+    popupAnchor: [0, -32],
+    shadowSize: [41, 41],
+  });
+}

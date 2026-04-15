@@ -89,6 +89,7 @@ const form = reactive({
   hasDiscathon: false,
   hasDDC: false,
   hasFreestyle: false,
+  banRequestEmailEnabled: true,
 });
 
 const venues = ref<EditableVenue[]>([]);
@@ -297,6 +298,7 @@ function createSnapshot() {
       hasDiscathon: form.hasDiscathon,
       hasDDC: form.hasDDC,
       hasFreestyle: form.hasFreestyle,
+      banRequestEmailEnabled: form.banRequestEmailEnabled,
     },
     venues: venues.value.map(v => ({
       id: v.id ?? null,
@@ -884,6 +886,15 @@ function requestDeleteTournament() {
   showDeleteTournamentModal.value = true;
 }
 
+function cancelEdit() {
+  if (import.meta.client && window.history.state?.back) {
+    router.back();
+    return;
+  }
+
+  void navigateTo(`/dashboard/tournaments/${slug.value}`);
+}
+
 function cancelDeleteTournament() {
   showDeleteTournamentModal.value = false;
 }
@@ -990,6 +1001,7 @@ watch(
     form.hasDiscathon = !!value.hasDiscathon;
     form.hasDDC = !!value.hasDDC;
     form.hasFreestyle = !!value.hasFreestyle;
+    form.banRequestEmailEnabled = value.banRequestEmailEnabled !== false;
 
     venues.value = (value.venues || []).map((v: any) => ({
       id: v.id,
@@ -1057,6 +1069,7 @@ async function saveTournament(closeTournament = false) {
     hasDiscathon: form.hasDiscathon,
     hasDDC: form.hasDDC,
     hasFreestyle: form.hasFreestyle,
+    banRequestEmailEnabled: form.banRequestEmailEnabled,
     closeTournament,
     venues: venues.value.map(v => ({
       id: v.id,
@@ -1374,6 +1387,21 @@ async function saveTournament(closeTournament = false) {
                       >
                     </FormField>
                   </div>
+                </div>
+
+                <div class="rounded-box border border-base-300/50 p-3 xl:col-span-2">
+                  <h3 class="font-semibold mb-2">
+                    Moderation Notifications
+                  </h3>
+                  <p class="text-sm opacity-70 mb-2">
+                    Allow optional email notifications when tournament admins submit ban requests.
+                  </p>
+                  <ToggleField
+                    :model-value="form.banRequestEmailEnabled"
+                    label="Enable moderation email notifications"
+                    :desktop-inline="true"
+                    @update:model-value="form.banRequestEmailEnabled = $event as boolean"
+                  />
                 </div>
               </div>
             </template>
@@ -1726,12 +1754,13 @@ async function saveTournament(closeTournament = false) {
         >
           Close Tournament
         </button>
-        <NuxtLink
-          to="/dashboard"
+        <button
+          type="button"
           class="btn btn-ghost"
+          @click="cancelEdit"
         >
           Cancel
-        </NuxtLink>
+        </button>
         <button
           class="btn btn-primary"
           :disabled="saving"

@@ -26,7 +26,7 @@ const items = computed(() => links.value.map(link => ({
     :active-id="section"
     :heading="title"
     back-to="/dashboard"
-    back-label="← Back to Dashboard"
+    back-label="← Back to my dashboard"
     badge-text="Tournament Workspace"
   >
     <slot />

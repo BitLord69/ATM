@@ -117,6 +117,7 @@ export default defineEventHandler(async (event) => {
       hasDiscathon: !!body.hasDiscathon,
       hasDDC: !!body.hasDDC,
       hasFreestyle: !!body.hasFreestyle,
+      banRequestEmailEnabled: body.banRequestEmailEnabled !== false,
       changedBy,
       changedAt: Date.now(),
     })

@@ -33,6 +33,7 @@ type UsersResponse = {
     canDeleteUsers: boolean;
     canBanUsers: boolean;
     canSendPasswordReset: boolean;
+    canRequestBans: boolean;
   };
   scope: {
     type: "admin" | "td";
@@ -90,7 +91,10 @@ const totalPages = computed(() => data.value?.totalPages ?? 0);
 const canBanUsers = computed(() => data.value?.permissions.canBanUsers ?? false);
 const canDeleteUsers = computed(() => data.value?.permissions.canDeleteUsers ?? false);
 const canSendPasswordReset = computed(() => data.value?.permissions.canSendPasswordReset ?? false);
-const canManageUsers = computed(() => canBanUsers.value || canDeleteUsers.value || canSendPasswordReset.value);
+const canRequestBans = computed(() => data.value?.permissions.canRequestBans ?? false);
+const canManageUsers = computed(() => {
+  return canBanUsers.value || canDeleteUsers.value || canSendPasswordReset.value || canRequestBans.value;
+});
 const isTdScope = computed(() => data.value?.scope.type === "td");
 
 // ── Action feedback ──────────────────────────────────────────────────────────
@@ -107,6 +111,13 @@ function setStatus(type: "success" | "error", message: string) {
 // ── Ban modal ────────────────────────────────────────────────────────────────
 const banModal = ref<{ user: AdminUser; banning: boolean } | null>(null);
 const banReason = ref("");
+
+const banRequestModal = ref<AdminUser | null>(null);
+const banRequestReason = ref("");
+const banRequestNotifyByEmail = ref(true);
+const banRequestSubmitting = ref(false);
+
+const canSubmitBanRequest = computed(() => banRequestReason.value.trim().length >= 10 && !banRequestSubmitting.value);
 
 function openBanModal(u: AdminUser) {
   banModal.value = { user: u, banning: !u.banned };
@@ -132,6 +143,39 @@ async function confirmBan() {
   }
   finally {
     banModal.value = null;
+  }
+}
+
+function openBanRequestModal(user: AdminUser) {
+  banRequestModal.value = user;
+  banRequestReason.value = "";
+  banRequestNotifyByEmail.value = true;
+}
+
+async function confirmBanRequest() {
+  if (!banRequestModal.value || !canSubmitBanRequest.value) {
+    return;
+  }
+
+  banRequestSubmitting.value = true;
+  try {
+    await $fetch("/api/admin/ban-requests", {
+      method: "POST",
+      body: {
+        targetUserId: banRequestModal.value.id,
+        reason: banRequestReason.value.trim(),
+        notifyByEmail: banRequestNotifyByEmail.value,
+      },
+    });
+
+    setStatus("success", `Ban request submitted for ${banRequestModal.value.email}.`);
+    banRequestModal.value = null;
+  }
+  catch (err: any) {
+    setStatus("error", err?.data?.message ?? "Failed to submit ban request.");
+  }
+  finally {
+    banRequestSubmitting.value = false;
   }
 }
 
@@ -252,7 +296,7 @@ function sortGlyphClass(column: UserSortBy) {
       role="status"
     >
       <span>
-        You can only see users from tournaments where you are a TD
+        You can only see users from tournaments where you are a tournament admin
         <template v-if="data?.scope.tournamentCount">({{ data.scope.tournamentCount }} tournaments)</template>.
       </span>
     </div>
@@ -463,6 +507,13 @@ function sortGlyphClass(column: UserSortBy) {
                   {{ u.banned ? 'Unban' : 'Ban' }}
                 </button>
                 <button
+                  v-else-if="canRequestBans && !u.banned"
+                  class="btn btn-ghost btn-xs text-warning"
+                  @click="openBanRequestModal(u)"
+                >
+                  Request ban
+                </button>
+                <button
                   v-if="canDeleteUsers"
                   class="btn btn-ghost btn-xs text-error"
                   @click="deleteTarget = u"
@@ -559,6 +610,43 @@ function sortGlyphClass(column: UserSortBy) {
     </dialog>
 
     <!-- Delete confirmation modal -->
+    <ConfirmationModal
+      :open="!!banRequestModal"
+      title="Request user ban"
+      confirm-text="Submit request"
+      cancel-text="Cancel"
+      :confirm-disabled="!canSubmitBanRequest"
+      @confirm="confirmBanRequest"
+      @cancel="banRequestModal = null"
+    >
+      <div v-if="banRequestModal" class="space-y-3">
+        <p class="text-sm opacity-80">
+          Submit a ban request for <span class="font-medium">{{ banRequestModal.email }}</span>.
+          A global admin will review and decide.
+        </p>
+
+        <label class="form-control">
+          <div class="label py-1">
+            <span class="label-text">Reason</span>
+          </div>
+          <textarea
+            v-model="banRequestReason"
+            class="textarea textarea-bordered min-h-24"
+            placeholder="Describe why this user should be banned (minimum 10 characters)"
+          />
+        </label>
+
+        <label class="label cursor-pointer justify-start gap-3">
+          <input
+            v-model="banRequestNotifyByEmail"
+            type="checkbox"
+            class="checkbox checkbox-sm"
+          >
+          <span class="label-text">Send email notification to global admins (if enabled in at least one tournament setting in your scope)</span>
+        </label>
+      </div>
+    </ConfirmationModal>
+
     <ConfirmationModal
       :open="!!deleteTarget"
       title="Delete user"
