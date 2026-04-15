@@ -109,16 +109,21 @@ const activeSection = computed(() => {
 </script>
 
 <template>
-  <WorkspaceShell
-    :items="items"
-    :active-id="activeSection"
-    :heading="tournamentData && !Array.isArray(tournamentData) ? tournamentData.name : undefined"
-    back-to="/dashboard"
-    back-label="← Back to Dashboard"
-    badge-text="Tournament Workspace"
-  >
-    <div :key="route.fullPath">
-      <slot />
-    </div>
-  </WorkspaceShell>
+  <div class="flex min-h-screen flex-col">
+    <NavBar />
+    <main class="flex-1">
+      <WorkspaceShell
+        :items="items"
+        :active-id="activeSection"
+        :heading="tournamentData && !Array.isArray(tournamentData) ? tournamentData.name : undefined"
+        back-to="/dashboard/tournaments"
+        back-label="Change Tournament"
+        badge-text="Tournament Workspace"
+      >
+        <div :key="route.fullPath">
+          <slot />
+        </div>
+      </WorkspaceShell>
+    </main>
+  </div>
 </template>

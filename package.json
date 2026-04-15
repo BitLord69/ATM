@@ -23,6 +23,7 @@
     "db:ensure-latest-schema": "tsx scripts/ensure-latest-schema-columns.ts",
     "db:migrate:cloud": "tsx scripts/migrate-cloud-schema.ts",
     "db:sync-local-to-remote": "tsx scripts/sync-local-to-remote.ts",
+    "db:sync-remote-to-local": "tsx scripts/sync-remote-to-local.ts",
     "env:sync:cloud": "tsx scripts/sync-cloud-env.ts",
     "env:sync:github": "tsx scripts/sync-cloud-env.ts --github-only",
     "env:sync:vercel": "tsx scripts/sync-cloud-env.ts --vercel-only"

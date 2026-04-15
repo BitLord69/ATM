@@ -1,7 +1,8 @@
 import "dotenv/config";
+import { eq } from "drizzle-orm";
 
 import db from "~lib/db";
-import { tournament, user, venue } from "~lib/db/schema";
+import { tournament, tournamentVenue, user, venue } from "~lib/db/schema";
 
 type TournamentRow = {
   id: number;
@@ -23,6 +24,19 @@ type DistanceProfile = {
   km: number;
   bearingDeg: number;
 };
+
+const DISCIPLINE_KEYS = [
+  "hasGolf",
+  "hasAccuracy",
+  "hasDistance",
+  "hasSCF",
+  "hasDiscathon",
+  "hasDDC",
+  "hasFreestyle",
+] as const;
+
+type DisciplineKey = (typeof DISCIPLINE_KEYS)[number];
+type DisciplineFlags = Record<DisciplineKey, boolean>;
 
 const DISTANCE_PROFILES: DistanceProfile[] = [
   { label: "very-close", km: 8, bearingDeg: 0 },
@@ -76,20 +90,43 @@ function buildVenueName(slug: string, profile: DistanceProfile) {
   return `[seed] ${slug} ${profile.label}`;
 }
 
-function buildDisciplineFlags(source: TournamentRow, profileIndex: number) {
-  const activeKeys = [
-    "hasGolf",
-    "hasAccuracy",
-    "hasDistance",
-    "hasSCF",
-    "hasDiscathon",
-    "hasDDC",
-    "hasFreestyle",
-  ] as const;
+function selectSeedDisciplines(source: TournamentRow): DisciplineKey[] {
+  const enabled = DISCIPLINE_KEYS.filter(key => !!source[key]);
 
-  const enabled = activeKeys.filter(key => !!source[key]);
-  const subset = profileIndex % 2 === 0 ? enabled : enabled.slice(0, Math.max(1, Math.min(2, enabled.length)));
+  // Seed venues for all enabled disciplines except one.
+  if (enabled.length > 1) {
+    return enabled.slice(0, -1);
+  }
 
+  return enabled;
+}
+
+function chooseSubset(seedDisciplines: DisciplineKey[], profileIndex: number) {
+  let subset: DisciplineKey[] = [];
+
+  if (seedDisciplines.length === 1) {
+    subset = [seedDisciplines[0]];
+  }
+  else if (seedDisciplines.length > 1 && profileIndex === 0) {
+    const splitAt = Math.ceil(seedDisciplines.length / 2);
+    subset = seedDisciplines.slice(0, splitAt);
+  }
+  else if (seedDisciplines.length > 1 && profileIndex === 1) {
+    const splitAt = Math.ceil(seedDisciplines.length / 2);
+    subset = seedDisciplines.slice(splitAt);
+  }
+  else if (seedDisciplines.length > 1) {
+    subset = seedDisciplines.filter((_, index) => (index + profileIndex) % 2 === 0);
+  }
+
+  if (subset.length === 0 && seedDisciplines.length > 0) {
+    subset = [seedDisciplines[profileIndex % seedDisciplines.length]];
+  }
+
+  return subset;
+}
+
+function buildFlagsFromSubset(subset: DisciplineKey[]): DisciplineFlags {
   return {
     hasGolf: subset.includes("hasGolf"),
     hasAccuracy: subset.includes("hasAccuracy"),
@@ -98,6 +135,29 @@ function buildDisciplineFlags(source: TournamentRow, profileIndex: number) {
     hasDiscathon: subset.includes("hasDiscathon"),
     hasDDC: subset.includes("hasDDC"),
     hasFreestyle: subset.includes("hasFreestyle"),
+  };
+}
+
+function buildDisciplineFlags(seedDisciplines: DisciplineKey[], profileIndex: number) {
+  const subset = chooseSubset(seedDisciplines, profileIndex);
+
+  return buildFlagsFromSubset(subset);
+}
+
+function buildLinkDisciplineFlags(
+  seedDisciplines: DisciplineKey[],
+  coveredDisciplines: Set<DisciplineKey>,
+  profileIndex: number,
+): DisciplineFlags {
+  const uncovered = seedDisciplines.filter(key => !coveredDisciplines.has(key));
+
+  if (uncovered.length > 0) {
+    const subset = chooseSubset(uncovered, profileIndex);
+    return buildFlagsFromSubset(subset);
+  }
+
+  return {
+    ...buildDisciplineFlags(seedDisciplines, profileIndex),
   };
 }
 
@@ -137,14 +197,17 @@ async function main() {
   }
 
   const existingVenueRows = await db
-    .select({ name: venue.name })
+    .select({ id: venue.id, name: venue.name })
     .from(venue);
 
-  const existingNames = new Set(existingVenueRows.map(row => row.name));
+  const existingVenueByName = new Map(existingVenueRows.map(row => [row.name, row.id]));
 
-  let insertedCount = 0;
-  let skippedCount = 0;
+  let createdVenueCount = 0;
+  let createdLinkCount = 0;
+  let skippedExistingVenueCount = 0;
+  let skippedExistingLinkCount = 0;
   let skippedTournamentCount = 0;
+  let toppedUpTournamentCount = 0;
 
   for (const t of tournaments as TournamentRow[]) {
     if (!hasValidCoordinates(t.lat, t.long)) {
@@ -153,38 +216,114 @@ async function main() {
       continue;
     }
 
-    for (const [index, profile] of DISTANCE_PROFILES.entries()) {
-      const name = buildVenueName(t.slug, profile);
+    const seedDisciplines = selectSeedDisciplines(t);
+    const omittedDisciplines = DISCIPLINE_KEYS.filter(key => !!t[key] && !seedDisciplines.includes(key));
 
-      if (existingNames.has(name)) {
-        skippedCount += 1;
+    const existingLinks = await db
+      .select({
+        venueId: tournamentVenue.venueId,
+        hasGolf: tournamentVenue.hasGolf,
+        hasAccuracy: tournamentVenue.hasAccuracy,
+        hasDistance: tournamentVenue.hasDistance,
+        hasSCF: tournamentVenue.hasSCF,
+        hasDiscathon: tournamentVenue.hasDiscathon,
+        hasDDC: tournamentVenue.hasDDC,
+        hasFreestyle: tournamentVenue.hasFreestyle,
+      })
+      .from(tournamentVenue)
+      .where(eq(tournamentVenue.tournamentId, t.id));
+
+    const linkedVenueIds = new Set(existingLinks.map(link => link.venueId));
+    const coveredDisciplines = new Set<DisciplineKey>();
+    for (const link of existingLinks) {
+      for (const key of DISCIPLINE_KEYS) {
+        if (link[key]) {
+          coveredDisciplines.add(key);
+        }
+      }
+    }
+
+    const initialLinkedCount = linkedVenueIds.size;
+
+    for (const [index, profile] of DISTANCE_PROFILES.entries()) {
+      if (linkedVenueIds.size >= 2) {
+        break;
+      }
+
+      const name = buildVenueName(t.slug, profile);
+      let venueId = existingVenueByName.get(name);
+
+      if (venueId == null) {
+        const [lat, long] = offsetCoordinates(t.lat, t.long, profile.km, profile.bearingDeg);
+        const flags = buildDisciplineFlags(seedDisciplines, index);
+        const now = Date.now();
+
+        const [createdVenue] = await db.insert(venue).values({
+          name,
+          description: `Seeded reusable venue ${profile.km} km from ${t.name}.`,
+          facilities: `Seeded proximity test venue (${profile.label}).`,
+          lat,
+          long,
+          ...flags,
+          changedBy,
+          createdAt: now,
+          changedAt: now,
+        }).returning({ id: venue.id });
+
+        venueId = createdVenue.id;
+        existingVenueByName.set(name, venueId);
+        createdVenueCount += 1;
+      }
+      else {
+        skippedExistingVenueCount += 1;
+      }
+
+      if (linkedVenueIds.has(venueId)) {
+        skippedExistingLinkCount += 1;
         continue;
       }
 
-      const [lat, long] = offsetCoordinates(t.lat, t.long, profile.km, profile.bearingDeg);
-      const flags = buildDisciplineFlags(t, index);
       const now = Date.now();
+      const linkFlags = buildLinkDisciplineFlags(seedDisciplines, coveredDisciplines, index);
 
-      await db.insert(venue).values({
-        name,
-        description: `Seeded reusable venue ${profile.km} km from ${t.name}.`,
-        facilities: `Seeded proximity test venue (${profile.label}).`,
-        lat,
-        long,
-        ...flags,
+      await db.insert(tournamentVenue).values({
+        tournamentId: t.id,
+        venueId,
+        ...linkFlags,
         changedBy,
         createdAt: now,
         changedAt: now,
       });
 
-      existingNames.add(name);
-      insertedCount += 1;
+      for (const key of DISCIPLINE_KEYS) {
+        if (linkFlags[key]) {
+          coveredDisciplines.add(key);
+        }
+      }
+
+      linkedVenueIds.add(venueId);
+      createdLinkCount += 1;
+    }
+
+    if (linkedVenueIds.size > initialLinkedCount) {
+      toppedUpTournamentCount += 1;
+    }
+
+    if (linkedVenueIds.size < 2) {
+      console.log(`Warning: ${t.slug} still has ${linkedVenueIds.size} linked venue(s).`);
+    }
+
+    if (omittedDisciplines.length > 0) {
+      console.log(`Seeded ${t.slug} without: ${omittedDisciplines.join(", ")}`);
     }
   }
 
   console.log(`Seeded nearby venues complete.`);
-  console.log(`Inserted: ${insertedCount}`);
-  console.log(`Skipped existing: ${skippedCount}`);
+  console.log(`Created venues: ${createdVenueCount}`);
+  console.log(`Created tournament links: ${createdLinkCount}`);
+  console.log(`Skipped existing venues: ${skippedExistingVenueCount}`);
+  console.log(`Skipped existing links: ${skippedExistingLinkCount}`);
+  console.log(`Tournaments topped up to >= 2 venues: ${toppedUpTournamentCount}`);
   console.log(`Skipped tournaments without coordinates: ${skippedTournamentCount}`);
 }
 

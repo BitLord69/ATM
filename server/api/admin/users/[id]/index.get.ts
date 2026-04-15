@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, or } from "drizzle-orm";
 
 import { normalizePersistedUserRole } from "#shared/types/auth";
 
@@ -138,7 +138,11 @@ export default defineEventHandler(async (event) => {
       .where(
         and(
           eq(tournamentMembership.userId, session.user.id),
-          eq(tournamentMembership.role, "td"),
+          or(
+            eq(tournamentMembership.role, "owner"),
+            eq(tournamentMembership.role, "admin"),
+            eq(tournamentMembership.role, "td"),
+          ),
           eq(tournamentMembership.status, "active"),
         ),
       );

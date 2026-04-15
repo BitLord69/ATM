@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, or } from "drizzle-orm";
 
 import { normalizePersistedUserRole } from "#shared/types/auth";
 
@@ -54,27 +54,36 @@ export default defineEventHandler(async (event) => {
   const userRole = normalizePersistedUserRole((session.user as any).role);
   const isAdmin = userRole === "admin";
 
-  // Tournament directors (by tournament membership) can access only the users workspace route.
-  const isUsersWorkspacePath = path.startsWith("/admin/users") || path.startsWith("/api/admin/users");
-  let hasActiveTdMembership = false;
+  // Tournament admins (owner/admin/td membership) can access scoped moderation workspace routes.
+  const isScopedAdminWorkspacePath = path.startsWith("/admin/users")
+    || path.startsWith("/admin/ban-requests")
+    || path.startsWith("/api/admin/users")
+    || path.startsWith("/api/admin/ban-requests")
+    || path.startsWith("/api/admin/notifications")
+    || path === "/api/admin/settings/moderation";
+  let hasActiveTournamentAdminMembership = false;
 
-  if (!isAdmin && isUsersWorkspacePath) {
-    const tdMembership = await db
+  if (!isAdmin && isScopedAdminWorkspacePath) {
+    const scopedMembership = await db
       .select({ id: tournamentMembership.id })
       .from(tournamentMembership)
       .where(
         and(
           eq(tournamentMembership.userId, session.user.id),
-          eq(tournamentMembership.role, "td"),
+          or(
+            eq(tournamentMembership.role, "owner"),
+            eq(tournamentMembership.role, "admin"),
+            eq(tournamentMembership.role, "td"),
+          ),
           eq(tournamentMembership.status, "active"),
         ),
       )
       .limit(1);
 
-    hasActiveTdMembership = tdMembership.length > 0;
+    hasActiveTournamentAdminMembership = scopedMembership.length > 0;
   }
 
-  const hasUsersWorkspaceAccess = isAdmin || (hasActiveTdMembership && isUsersWorkspacePath);
+  const hasUsersWorkspaceAccess = isAdmin || (hasActiveTournamentAdminMembership && isScopedAdminWorkspacePath);
 
   // Admin role required for /api/admin/* and /admin/* pages (except TD access above).
   const requiresAdmin = path.startsWith("/api/admin") || path.startsWith("/admin");

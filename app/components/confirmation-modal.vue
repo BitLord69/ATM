@@ -2,10 +2,11 @@
 type Props = {
   open: boolean;
   title: string;
-  message: string;
+  message?: string;
   confirmText?: string;
   cancelText?: string;
   isDangerous?: boolean;
+  confirmDisabled?: boolean;
 };
 
 type Emits = {
@@ -14,9 +15,11 @@ type Emits = {
 };
 
 withDefaults(defineProps<Props>(), {
+  message: "",
   confirmText: "Confirm",
   cancelText: "Cancel",
   isDangerous: false,
+  confirmDisabled: false,
 });
 
 defineEmits<Emits>();
@@ -32,9 +35,16 @@ defineEmits<Emits>();
         {{ title }}
       </h3>
 
-      <p class="text-base opacity-90 mb-6">
+      <p
+        v-if="message"
+        class="text-base opacity-90 mb-4"
+      >
         {{ message }}
       </p>
+
+      <div v-if="$slots.default" class="mb-4">
+        <slot />
+      </div>
 
       <div class="modal-action">
         <button
@@ -45,6 +55,7 @@ defineEmits<Emits>();
         </button>
         <button
           :class="isDangerous ? 'btn btn-error' : 'btn btn-primary'"
+          :disabled="confirmDisabled"
           @click="$emit('confirm')"
         >
           {{ confirmText }}

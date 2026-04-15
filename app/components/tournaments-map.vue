@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { LMarker, LPopup } from "@vue-leaflet/vue-leaflet";
 
-import { calculateBounds, hasValidCoordinates, parseCoordinate } from "~/composables/use-leaflet-map";
+import { calculateBounds, getTournamentStatusIcon, hasValidCoordinates, parseCoordinate } from "~/composables/use-leaflet-map";
 import { getCountryCoordinates } from "~/utils/country-coordinates";
 
 const props = defineProps<{
@@ -16,6 +16,7 @@ const props = defineProps<{
     city?: string | null;
     country?: string | null;
     startDate?: number | null;
+    endDate?: number | null;
     isActive?: boolean;
     status?: string;
     hasGolf?: boolean;
@@ -48,7 +49,8 @@ const mappableTournaments = computed(() => {
     .filter(item => hasValidCoordinates(item.lat, item.long));
 });
 
-const mappableTournamentData = computed(() => mappableTournaments.value.map(item => item.tournament));
+const { formatDateRange } = useFormatDate();
+
 const mapBounds = computed<[[number, number], [number, number]] | null>(() => {
   return calculateBounds(mappableTournaments.value.map(item => [item.lat, item.long]));
 });
@@ -100,49 +102,66 @@ watch(
 </script>
 
 <template>
-  <BaseMap
-    :map-key="mapViewKey"
-    :zoom="mapZoom"
-    :center="mapCenter"
-    :bounds="mapBounds || undefined"
-    :bounds-options="{ padding: [28, 28] }"
-    height="500px"
-  >
-    <LMarker
-      v-for="tournament in mappableTournamentData"
-      :key="tournament.id"
-      :lat-lng="[tournament.lat, tournament.long]"
-      :options="{ title: tournament.name }"
+  <div>
+    <BaseMap
+      :map-key="mapViewKey"
+      :zoom="mapZoom"
+      :center="mapCenter"
+      :bounds="mapBounds || undefined"
+      :bounds-options="{ padding: [28, 28] }"
+      height="500px"
     >
-      <LPopup>
-        <MapLocationPopup
-          :title="tournament.name"
-          :title-to="`/tournaments/${tournament.slug}`"
-          :subtitle="[tournament.city, tournament.country].filter(Boolean).join(', ')"
-          :description="tournament.startDate ? new Date(tournament.startDate).toLocaleDateString() : 'TBD'"
-          :has-golf="tournament.hasGolf"
-          :has-accuracy="tournament.hasAccuracy"
-          :has-distance="tournament.hasDistance"
-          :has-scf="tournament.hasSCF"
-          :has-discathon="tournament.hasDiscathon"
-          :has-ddc="tournament.hasDDC"
-          :has-freestyle="tournament.hasFreestyle"
-          :centered="false"
-        >
-          <span
-            v-if="tournament.isActive"
-            class="badge badge-success badge-xs mt-2"
+      <LMarker
+        v-for="{ tournament, lat, long } in mappableTournaments"
+        :key="tournament.id"
+        :lat-lng="[lat, long]"
+        :options="{ title: tournament.name, icon: getTournamentStatusIcon(tournament.status, tournament.isActive) }"
+      >
+        <LPopup>
+          <MapLocationPopup
+            :title="tournament.name"
+            :title-to="`/tournaments/${tournament.slug}`"
+            :subtitle="[tournament.city, tournament.country].filter(Boolean).join(', ')"
+            :description="formatDateRange(tournament.startDate, tournament.endDate)"
+            :has-golf="tournament.hasGolf"
+            :has-accuracy="tournament.hasAccuracy"
+            :has-distance="tournament.hasDistance"
+            :has-scf="tournament.hasSCF"
+            :has-discathon="tournament.hasDiscathon"
+            :has-ddc="tournament.hasDDC"
+            :has-freestyle="tournament.hasFreestyle"
+            :centered="false"
           >
-            Live Now
-          </span>
-          <span
-            v-else-if="tournament.status === 'future'"
-            class="badge badge-info badge-xs mt-2"
-          >
-            Upcoming
-          </span>
-        </MapLocationPopup>
-      </LPopup>
-    </LMarker>
-  </BaseMap>
+            <span
+              v-if="tournament.isActive"
+              class="badge badge-success badge-xs mt-2"
+            >
+              Live Now
+            </span>
+            <span
+              v-else-if="tournament.status === 'future'"
+              class="badge badge-info badge-xs mt-2"
+            >
+              Upcoming
+            </span>
+          </MapLocationPopup>
+        </LPopup>
+      </LMarker>
+    </BaseMap>
+
+    <div class="flex justify-center gap-6 mt-2 text-sm opacity-60">
+      <div class="flex items-center gap-1.5">
+        <span class="inline-block w-3 h-3 rounded-full bg-green-500" />
+        Live now
+      </div>
+      <div class="flex items-center gap-1.5">
+        <span class="inline-block w-3 h-3 rounded-full bg-blue-500" />
+        Upcoming
+      </div>
+      <div class="flex items-center gap-1.5">
+        <span class="inline-block w-3 h-3 rounded-full bg-gray-400" />
+        Past
+      </div>
+    </div>
+  </div>
 </template>

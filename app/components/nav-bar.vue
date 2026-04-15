@@ -5,17 +5,36 @@ import ThemeToggle from "./theme-toggle.vue";
 const authStore = useAuthStore();
 const tournamentStore = useTournamentStore();
 const authUiReady = ref(false);
-const canAccessUsersWorkspace = computed(() => {
-  const role = authStore.currentUser?.role;
-  if (role === "admin") {
-    return true;
-  }
-  return tournamentStore.tournaments.some(t => t.status === "active" && t.role === "td");
+const route = useRoute();
+const adminMenuDetails = ref<HTMLDetailsElement | null>(null);
+
+const TOURNAMENT_ADMIN_ROLES = new Set(["owner", "admin", "td"]);
+
+const isGlobalAdmin = computed(() => authStore.currentUser?.role === "admin");
+
+const hasTournamentAdminAccess = computed(() => {
+  return tournamentStore.tournaments.some(
+    t => t.status === "active" && TOURNAMENT_ADMIN_ROLES.has(t.role),
+  );
 });
+
+const canAccessAdminMenu = computed(() => isGlobalAdmin.value || hasTournamentAdminAccess.value);
+
+const canAccessTournamentWorkspace = computed(() => canAccessAdminMenu.value);
+
+const canAccessUsersWorkspace = computed(() => canAccessAdminMenu.value);
 
 onMounted(() => {
   authUiReady.value = true;
 });
+
+function closeAdminMenu() {
+  if (adminMenuDetails.value?.open) {
+    adminMenuDetails.value.open = false;
+  }
+}
+
+watch(() => route.fullPath, closeAdminMenu);
 </script>
 
 <template>
@@ -46,16 +65,45 @@ onMounted(() => {
             to="/dashboard"
             class="btn btn-ghost"
           >
-            Dashboard
+            My dashboard
           </NuxtLink>
         </li>
         <li v-if="authUiReady && authStore.isSignedIn && canAccessUsersWorkspace">
-          <NuxtLink
-            to="/admin/users"
-            class="btn btn-ghost"
-          >
-            Users
-          </NuxtLink>
+          <details ref="adminMenuDetails" class="group">
+            <summary class="btn btn-ghost list-none after:hidden [&::-webkit-details-marker]:hidden">
+              <span>Admin</span>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+                class="size-4 ml-2 transition-transform duration-200 group-open:rotate-180"
+                aria-hidden="true"
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.51a.75.75 0 01-1.08 0l-4.25-4.51a.75.75 0 01.02-1.06z"
+                  clip-rule="evenodd"
+                />
+              </svg>
+            </summary>
+            <ul class="z-1 menu p-2 rounded-box w-52 bg-base-100 opacity-100 text-base-content border border-base-300 shadow-xl">
+              <li v-if="canAccessTournamentWorkspace">
+                <NuxtLink to="/dashboard/tournaments" @click="closeAdminMenu">
+                  Tournament Workspace
+                </NuxtLink>
+              </li>
+              <li v-if="canAccessUsersWorkspace">
+                <NuxtLink to="/admin/users" @click="closeAdminMenu">
+                  User Workspace
+                </NuxtLink>
+              </li>
+              <li v-if="canAccessUsersWorkspace">
+                <NuxtLink to="/admin/ban-requests" @click="closeAdminMenu">
+                  Ban Requests
+                </NuxtLink>
+              </li>
+            </ul>
+          </details>
         </li>
       </ul>
     </div>

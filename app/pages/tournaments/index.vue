@@ -1,4 +1,8 @@
 <script setup lang="ts">
+import type { DisciplineKey } from "~/composables/use-discipline-catalog";
+
+import { disciplineCatalog } from "~/composables/use-discipline-catalog";
+
 /**
  * Public tournament list page
  * Accessible to everyone including guests
@@ -37,35 +41,38 @@ watch(() => tournaments.value, () => {
   loadPermissions();
 });
 
-const filteredCount = computed(() => tournaments.value?.length || 0);
+// Discipline filtering
+const activeDisciplines = ref<Set<DisciplineKey>>(new Set());
 
-function formatDate(timestamp: number | null | undefined) {
-  if (!timestamp)
-    return "TBD";
-  return new Date(timestamp).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
-
-function formatDateRange(start: number | null | undefined, end: number | null | undefined) {
-  if (!start || !end)
-    return "Dates TBD";
-  const startDate = new Date(start);
-  const endDate = new Date(end);
-
-  if (startDate.toDateString() === endDate.toDateString()) {
-    return formatDate(start);
+function toggleDiscipline(key: DisciplineKey) {
+  if (activeDisciplines.value.has(key)) {
+    activeDisciplines.value.delete(key);
   }
-
-  return `${formatDate(start)} - ${formatDate(end)}`;
+  else {
+    activeDisciplines.value.add(key);
+  }
+  // trigger reactivity
+  activeDisciplines.value = new Set(activeDisciplines.value);
 }
+
+const filteredTournaments = computed(() => {
+  if (!tournaments.value)
+    return [];
+  if (activeDisciplines.value.size === 0)
+    return tournaments.value;
+  return tournaments.value.filter(t =>
+    [...activeDisciplines.value].every(key => t[key]),
+  );
+});
+
+const filteredCount = computed(() => filteredTournaments.value.length);
+
+const { formatDateRange } = useFormatDate();
 </script>
 
 <template>
   <div class="container mx-auto p-4 max-w-7xl">
-    <div class="mb-8">
+    <div class="mb-5">
       <h1 class="text-4xl font-bold mb-2">
         Tournaments
       </h1>
@@ -74,9 +81,9 @@ function formatDateRange(start: number | null | undefined, end: number | null | 
       </p>
     </div>
 
-    <!-- Filter Tabs -->
-    <div class="mb-6">
-      <div class="tabs tabs-boxed">
+    <!-- Filter Tabs + Discipline Filters -->
+    <div class="mb-3 space-y-1">
+      <div class="tabs self-start -ml-3">
         <button
           class="tab"
           :class="{ 'tab-active': filter === 'upcoming' }"
@@ -106,8 +113,36 @@ function formatDateRange(start: number | null | undefined, end: number | null | 
           All Tournaments
         </button>
       </div>
-      <div class="text-sm opacity-70 mt-2">
-        {{ filteredCount }} tournament{{ filteredCount !== 1 ? 's' : '' }} found
+
+      <div class="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
+        <div class="flex flex-wrap gap-2 items-center">
+          <span class="text-sm font-medium opacity-60 mr-1">Disciplines:</span>
+          <button
+            v-for="discipline in disciplineCatalog"
+            :key="discipline.key"
+            type="button"
+            class="btn btn-sm gap-1.5 transition-all"
+            :class="activeDisciplines.has(discipline.key)
+              ? 'btn-primary'
+              : 'btn-ghost border border-base-300'"
+            @click="toggleDiscipline(discipline.key)"
+          >
+            <Icon :name="discipline.icon" size="15" />
+            {{ discipline.label }}
+          </button>
+          <button
+            v-if="activeDisciplines.size > 0"
+            type="button"
+            class="btn btn-sm btn-ghost opacity-60"
+            @click="activeDisciplines = new Set()"
+          >
+            Clear
+          </button>
+        </div>
+
+        <span class="text-sm opacity-50 md:text-right md:whitespace-nowrap">
+          {{ filteredCount }} tournament{{ filteredCount !== 1 ? 's' : '' }} found
+        </span>
       </div>
     </div>
 
@@ -116,8 +151,8 @@ function formatDateRange(start: number | null | undefined, end: number | null | 
 
     <!-- Empty State -->
     <EmptyStateAlert
-      v-else-if="!tournaments || tournaments.length === 0"
-      message="No tournaments found for this filter."
+      v-else-if="!filteredTournaments.length"
+      :message="activeDisciplines.size > 0 ? 'No tournaments match the selected disciplines.' : 'No tournaments found for this filter.'"
     />
 
     <!-- Tournament Grid -->
@@ -126,7 +161,7 @@ function formatDateRange(start: number | null | undefined, end: number | null | 
       class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6"
     >
       <TournamentCard
-        v-for="tournament in tournaments"
+        v-for="tournament in filteredTournaments"
         :key="tournament.id"
         :title="tournament.name"
         :description="tournament.description"

@@ -42,6 +42,7 @@ export const editTournamentBodySchema = z.object({
   hasDiscathon: z.boolean().optional(),
   hasDDC: z.boolean().optional(),
   hasFreestyle: z.boolean().optional(),
+  banRequestEmailEnabled: z.boolean().optional(),
   closeTournament: z.boolean().optional(),
   venues: z.array(venueInputSchema).optional(),
 });

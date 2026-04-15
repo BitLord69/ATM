@@ -1,6 +1,7 @@
 export * from "./auth";
 export * from "./division-policy";
 export * from "./event-entry";
+export * from "./moderation";
 export * from "./organization";
 export * from "./player";
 export * from "./tournament";
