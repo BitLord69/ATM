@@ -251,6 +251,13 @@ export const auth = betterAuth({
       }
     },
   },
+  account: {
+    accountLinking: {
+      enabled: true,
+      allowDifferentEmails: true,
+      trustedProviders: ["github", "google", "facebook"],
+    },
+  },
   socialProviders: {
     github: {
       clientId: env.AUTH_GITHUB_CLIENT_ID,
