@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { DisciplineKey } from "~/composables/use-discipline-catalog";
+import type { CheckEditPermissionResponse, PublicTournament } from "~/types/tournaments";
 
 import { disciplineCatalog } from "~/composables/use-discipline-catalog";
 
@@ -9,7 +10,7 @@ import { disciplineCatalog } from "~/composables/use-discipline-catalog";
  */
 
 const filter = ref<"upcoming" | "active" | "finished" | "all">("upcoming");
-const { data: tournaments, pending } = await useFetch("/api/tournaments/public", {
+const { data: tournaments, pending } = await useFetch<PublicTournament[]>("/api/tournaments/public", {
   query: { filter },
   watch: [filter],
 });
@@ -26,7 +27,7 @@ async function loadPermissions() {
 
   for (const tournament of tournaments.value) {
     try {
-      const { data } = await useFetch(`/api/tournaments/${tournament.slug}/check-edit-permission`);
+      const { data } = await useFetch<CheckEditPermissionResponse>(`/api/tournaments/${tournament.slug}/check-edit-permission`);
       if (data.value && typeof data.value === "object" && "canEdit" in data.value) {
         editPermissions.value[tournament.id] = (data.value as { canEdit: boolean }).canEdit;
       }

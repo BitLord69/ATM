@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import type { loginProviders } from "~/stores/auth";
+import type { socialLoginProvider } from "~/stores/auth";
 
 import { useAuthStore } from "~/stores/auth";
 
 type Props = {
-  provider: loginProviders;
+  provider: socialLoginProvider;
   icon: string;
 };
 
@@ -16,7 +16,7 @@ const authStore = useAuthStore();
   <button
     class="btn btn-accent"
     :disabled="authStore.loading"
-    @click="authStore.signIn(props.provider)"
+    @click="authStore.signInSocial(props.provider)"
   >
     <span v-if="authStore.loading" class="loading loading-spinner loading-sm" />
     <Icon

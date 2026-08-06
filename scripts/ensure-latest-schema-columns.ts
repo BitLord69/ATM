@@ -35,8 +35,93 @@ const REQUIRED_COLUMNS: ColumnSpec[] = [
   },
   {
     table: "tournaments",
+    name: "website_url",
+    ddl: "ALTER TABLE tournaments ADD COLUMN website_url TEXT",
+  },
+  {
+    table: "tournaments",
+    name: "payment_information",
+    ddl: "ALTER TABLE tournaments ADD COLUMN payment_information TEXT",
+  },
+  {
+    table: "tournaments",
+    name: "facilities",
+    ddl: "ALTER TABLE tournaments ADD COLUMN facilities TEXT",
+  },
+  {
+    table: "tournaments",
+    name: "registration_open_date",
+    ddl: "ALTER TABLE tournaments ADD COLUMN registration_open_date INTEGER",
+  },
+  {
+    table: "tournaments",
+    name: "registration_close_date",
+    ddl: "ALTER TABLE tournaments ADD COLUMN registration_close_date INTEGER",
+  },
+  {
+    table: "tournaments",
+    name: "is_sanctioned",
+    ddl: "ALTER TABLE tournaments ADD COLUMN is_sanctioned INTEGER NOT NULL DEFAULT false",
+  },
+  {
+    table: "tournaments",
+    name: "division_open",
+    ddl: "ALTER TABLE tournaments ADD COLUMN division_open INTEGER NOT NULL DEFAULT true",
+  },
+  {
+    table: "tournaments",
+    name: "division_women",
+    ddl: "ALTER TABLE tournaments ADD COLUMN division_women INTEGER NOT NULL DEFAULT true",
+  },
+  {
+    table: "tournaments",
+    name: "division_master",
+    ddl: "ALTER TABLE tournaments ADD COLUMN division_master INTEGER NOT NULL DEFAULT false",
+  },
+  {
+    table: "tournaments",
+    name: "division_grand_master",
+    ddl: "ALTER TABLE tournaments ADD COLUMN division_grand_master INTEGER NOT NULL DEFAULT false",
+  },
+  {
+    table: "tournaments",
+    name: "division_senior_grand_master",
+    ddl: "ALTER TABLE tournaments ADD COLUMN division_senior_grand_master INTEGER NOT NULL DEFAULT false",
+  },
+  {
+    table: "tournaments",
+    name: "division_legend",
+    ddl: "ALTER TABLE tournaments ADD COLUMN division_legend INTEGER NOT NULL DEFAULT false",
+  },
+  {
+    table: "tournaments",
+    name: "division_junior",
+    ddl: "ALTER TABLE tournaments ADD COLUMN division_junior INTEGER NOT NULL DEFAULT false",
+  },
+  {
+    table: "tournaments",
+    name: "keep_juniors_separate",
+    ddl: "ALTER TABLE tournaments ADD COLUMN keep_juniors_separate INTEGER NOT NULL DEFAULT false",
+  },
+  {
+    table: "tournaments",
+    name: "show_division_in_results",
+    ddl: "ALTER TABLE tournaments ADD COLUMN show_division_in_results INTEGER NOT NULL DEFAULT false",
+  },
+  {
+    table: "tournaments",
     name: "has_golf",
     ddl: "ALTER TABLE tournaments ADD COLUMN has_golf INTEGER NOT NULL DEFAULT false",
+  },
+  {
+    table: "tournaments",
+    name: "golf_rounds",
+    ddl: "ALTER TABLE tournaments ADD COLUMN golf_rounds INTEGER",
+  },
+  {
+    table: "tournaments",
+    name: "golf_cumulative_rounds",
+    ddl: "ALTER TABLE tournaments ADD COLUMN golf_cumulative_rounds INTEGER",
   },
   {
     table: "tournaments",
@@ -45,8 +130,28 @@ const REQUIRED_COLUMNS: ColumnSpec[] = [
   },
   {
     table: "tournaments",
+    name: "accuracy_rounds",
+    ddl: "ALTER TABLE tournaments ADD COLUMN accuracy_rounds INTEGER",
+  },
+  {
+    table: "tournaments",
+    name: "accuracy_cumulative_rounds",
+    ddl: "ALTER TABLE tournaments ADD COLUMN accuracy_cumulative_rounds INTEGER",
+  },
+  {
+    table: "tournaments",
     name: "has_distance",
     ddl: "ALTER TABLE tournaments ADD COLUMN has_distance INTEGER NOT NULL DEFAULT false",
+  },
+  {
+    table: "tournaments",
+    name: "distance_rounds",
+    ddl: "ALTER TABLE tournaments ADD COLUMN distance_rounds INTEGER",
+  },
+  {
+    table: "tournaments",
+    name: "distance_cumulative_rounds",
+    ddl: "ALTER TABLE tournaments ADD COLUMN distance_cumulative_rounds INTEGER",
   },
   {
     table: "tournaments",
@@ -55,8 +160,28 @@ const REQUIRED_COLUMNS: ColumnSpec[] = [
   },
   {
     table: "tournaments",
+    name: "scf_rounds",
+    ddl: "ALTER TABLE tournaments ADD COLUMN scf_rounds INTEGER",
+  },
+  {
+    table: "tournaments",
+    name: "scf_cumulative_rounds",
+    ddl: "ALTER TABLE tournaments ADD COLUMN scf_cumulative_rounds INTEGER",
+  },
+  {
+    table: "tournaments",
     name: "has_discathon",
     ddl: "ALTER TABLE tournaments ADD COLUMN has_discathon INTEGER NOT NULL DEFAULT false",
+  },
+  {
+    table: "tournaments",
+    name: "discathon_rounds",
+    ddl: "ALTER TABLE tournaments ADD COLUMN discathon_rounds INTEGER",
+  },
+  {
+    table: "tournaments",
+    name: "discathon_cumulative_rounds",
+    ddl: "ALTER TABLE tournaments ADD COLUMN discathon_cumulative_rounds INTEGER",
   },
   {
     table: "tournaments",
@@ -65,8 +190,28 @@ const REQUIRED_COLUMNS: ColumnSpec[] = [
   },
   {
     table: "tournaments",
+    name: "ddc_rounds",
+    ddl: "ALTER TABLE tournaments ADD COLUMN ddc_rounds INTEGER",
+  },
+  {
+    table: "tournaments",
+    name: "ddc_cumulative_rounds",
+    ddl: "ALTER TABLE tournaments ADD COLUMN ddc_cumulative_rounds INTEGER",
+  },
+  {
+    table: "tournaments",
     name: "has_freestyle",
     ddl: "ALTER TABLE tournaments ADD COLUMN has_freestyle INTEGER NOT NULL DEFAULT false",
+  },
+  {
+    table: "tournaments",
+    name: "freestyle_rounds",
+    ddl: "ALTER TABLE tournaments ADD COLUMN freestyle_rounds INTEGER",
+  },
+  {
+    table: "tournaments",
+    name: "freestyle_cumulative_rounds",
+    ddl: "ALTER TABLE tournaments ADD COLUMN freestyle_cumulative_rounds INTEGER",
   },
   {
     table: "venues",

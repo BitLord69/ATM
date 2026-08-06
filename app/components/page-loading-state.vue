@@ -13,9 +13,9 @@ withDefaults(defineProps<{
 </script>
 
 <template>
-  <div :class="`flex justify-center items-center ${wrapperClass}`">
+  <div class="flex justify-center items-center" :class="wrapperClass">
     <div :class="text ? 'flex flex-col items-center gap-4' : ''">
-      <span :class="`loading loading-spinner loading-lg ${spinnerClass}`" />
+      <span class="loading loading-spinner loading-lg" :class="spinnerClass" />
       <p
         v-if="text"
         :class="textClass"

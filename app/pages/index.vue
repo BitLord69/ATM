@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import type { PublicTournament } from "~/types/tournaments";
+
 import { getCountryCoordinates } from "~/utils/country-coordinates";
 
 const authStore = useAuthStore();
@@ -8,16 +10,16 @@ onMounted(() => {
   authUiReady.value = true;
 });
 
-const { data: activeTournaments, pending: activePending } = await useFetch("/api/tournaments/public", {
+const { data: activeTournaments, pending: activePending } = await useFetch<PublicTournament[]>("/api/tournaments/public", {
   query: { filter: "active" },
 });
 
-const { data: upcomingTournaments, pending: upcomingPending } = await useFetch("/api/tournaments/public", {
+const { data: upcomingTournaments, pending: upcomingPending } = await useFetch<PublicTournament[]>("/api/tournaments/public", {
   query: { filter: "upcoming" },
 });
 
 // Fetch all tournaments for the map
-const { data: allTournaments } = await useFetch("/api/tournaments/public", {
+const { data: allTournaments } = await useFetch<PublicTournament[]>("/api/tournaments/public", {
   query: { filter: "all" },
 });
 

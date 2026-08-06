@@ -1,8 +1,8 @@
+import fs from "node:fs";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { organization } from "better-auth/plugins";
 import { and, eq, gt } from "drizzle-orm";
-import fs from "node:fs";
 import nodemailer from "nodemailer";
 
 import { normalizePersistedUserRole } from "#shared/types/auth";

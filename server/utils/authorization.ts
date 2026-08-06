@@ -1,8 +1,8 @@
 import type { UserRole } from "#shared/types/auth";
 
-import { normalizePersistedUserRole } from "#shared/types/auth";
-
 import type { TournamentRole } from "../../lib/db/schema/tournament-membership";
+
+import { normalizePersistedUserRole } from "#shared/types/auth";
 
 // Hierarchical permission levels for tournament-level roles
 const TOURNAMENT_ROLE_HIERARCHY: Record<TournamentRole, number> = {

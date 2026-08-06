@@ -29,7 +29,10 @@ const marginTopClass = computed(() => {
 </script>
 
 <template>
-  <div :class="`pt-3 border-t border-base-300 ${marginTopClass} flex gap-2 ${justifyClass}`">
+  <div
+    class="pt-3 border-t border-base-300 flex gap-2"
+    :class="[marginTopClass, justifyClass]"
+  >
     <slot />
   </div>
 </template>

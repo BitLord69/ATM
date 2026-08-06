@@ -1,7 +1,7 @@
-import { relations } from "drizzle-orm";
-import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
-
 import type { PersistedUserRole } from "#shared/types/auth";
+import { relations } from "drizzle-orm";
+
+import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 import { player } from "./player";
 import { tournamentMembership } from "./tournament-membership";
@@ -58,8 +58,8 @@ export const account = sqliteTable(
     accessToken: text("access_token"),
     refreshToken: text("refresh_token"),
     idToken: text("id_token"),
-    accessTokenexpiresAt: integer("access_tokenexpiresAt"),
-    refreshTokenexpiresAt: integer("refresh_tokenexpiresAt"),
+    accessTokenExpiresAt: integer("access_tokenexpiresAt"),
+    refreshTokenExpiresAt: integer("refresh_tokenexpiresAt"),
     scope: text("scope"),
     password: text("password"),
     createdAt: integer("created_at").notNull().$default(() => Date.now()),

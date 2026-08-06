@@ -1,10 +1,12 @@
 <script setup lang="ts">
+import type { TournamentEditResponse } from "~/types/tournaments";
+
 definePageMeta({ ssr: false, layout: "tournament-admin" });
 
 const route = useRoute();
 const slug = computed(() => route.params.slug as string);
 
-const { data, error } = await useFetch(() => `/api/tournaments/${slug.value}/edit`);
+const { data, error } = await useFetch<TournamentEditResponse>(() => `/api/tournaments/${slug.value}/edit`);
 
 if (error.value) {
   throw createError({

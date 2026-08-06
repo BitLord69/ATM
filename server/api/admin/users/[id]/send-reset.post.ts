@@ -29,17 +29,13 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 404, message: "User not found" });
   }
 
-  // Use Better Auth's built-in forgetPassword flow (runtime API surface).
-  const response = await (auth.api as any).forgetPassword({
+  // Use Better Auth's built-in requestPasswordReset flow (runtime API surface).
+  await (auth.api as any).requestPasswordReset({
     body: {
       email: target.email,
       redirectTo: `${env.BETTER_AUTH_URL}/reset-password`,
     },
-  }) as { ok?: boolean };
-
-  if (!response.ok) {
-    throw createError({ statusCode: 502, message: "Failed to send password reset email" });
-  }
+  });
 
   return { success: true };
 });
