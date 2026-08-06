@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import type { TournamentEditResponse } from "~/types/tournaments";
+
 definePageMeta({ ssr: false, layout: "tournament-admin" });
 
 type TournamentVenue = {
@@ -21,7 +23,7 @@ const route = useRoute();
 const slug = computed(() => route.params.slug as string);
 const venueId = computed(() => Number(route.params.id));
 
-const { data, pending, error, refresh } = await useFetch(() => `/api/tournaments/${slug.value}/edit`);
+const { data, pending, error, refresh } = await useFetch<TournamentEditResponse>(() => `/api/tournaments/${slug.value}/edit`);
 
 if (error.value) {
   throw createError({

@@ -6,3 +6,9 @@
 ✅ Invitation email sent successfully to: bitlord.developer@gmail.com (ID: <70c13bba-9a0e-22ac-03e3-6fb896dea9a0@hotmail.com>)
 [2026-02-15T02:33:46.206Z] 📧 Attempting to send invitation email to: bitlord.developer@gmail.com
 ✅ Invitation email sent successfully to: bitlord.developer@gmail.com (ID: <2c6d90c1-a7aa-5778-39c7-45f9b3df7c68@hotmail.com>)
+[2026-08-06T15:16:44.778Z] 🔑 Sending password reset email to: janis_k@hotmail.com
+✅ Password reset email sent to: janis_k@hotmail.com
+[2026-08-06T15:31:56.776Z] 🔑 Sending password reset email to: janis_k@hotmail.com
+✅ Password reset email sent to: janis_k@hotmail.com
+[2026-08-06T18:44:25.929Z] 🔑 Sending password reset email to: janis_k@hotmail.com
+✅ Password reset email sent to: janis_k@hotmail.com

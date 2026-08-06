@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import type { TournamentEditResponse } from "~/types/tournaments";
+
 type StartingListLockState = {
   isLocked: boolean;
   lockedBy: string | null;
@@ -29,7 +31,7 @@ definePageMeta({ ssr: false, layout: "tournament-admin" });
 const route = useRoute();
 const slug = computed(() => route.params.slug as string);
 
-const { data, pending, error } = await useFetch(() => `/api/tournaments/${slug.value}/edit`);
+const { data, pending, error } = await useFetch<TournamentEditResponse>(() => `/api/tournaments/${slug.value}/edit`);
 
 if (error.value) {
   throw createError({

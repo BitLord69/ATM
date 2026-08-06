@@ -1,6 +1,6 @@
-import { and, eq } from "drizzle-orm";
-
 import type { TournamentContext } from "../../../utils/authorization";
+
+import { and, eq } from "drizzle-orm";
 
 import { auth } from "../../../../lib/auth";
 import db from "../../../../lib/db";

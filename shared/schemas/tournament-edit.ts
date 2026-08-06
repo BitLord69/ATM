@@ -23,6 +23,9 @@ export const venueInputSchema = z.object({
 export const editTournamentBodySchema = z.object({
   name: z.string().trim().min(1, "Name is required"),
   description: z.string().nullable().optional(),
+  websiteUrl: z.string().trim().url("Invalid website URL").nullable().optional().or(z.literal("")),
+  paymentInformation: z.string().nullable().optional(),
+  facilities: z.string().nullable().optional(),
   country: z.string().nullable().optional(),
   city: z.string().nullable().optional(),
   contactName: z.string().nullable().optional(),
@@ -35,6 +38,18 @@ export const editTournamentBodySchema = z.object({
   long: z.number().gte(-180).lte(180),
   startDate: z.number().nullable().optional(),
   endDate: z.number().nullable().optional(),
+  registrationOpenDate: z.number().nullable().optional(),
+  registrationCloseDate: z.number().nullable().optional(),
+  isSanctioned: z.boolean().optional(),
+  divisionOpen: z.boolean().optional(),
+  divisionWomen: z.boolean().optional(),
+  divisionMaster: z.boolean().optional(),
+  divisionGrandMaster: z.boolean().optional(),
+  divisionSeniorGrandMaster: z.boolean().optional(),
+  divisionLegend: z.boolean().optional(),
+  divisionJunior: z.boolean().optional(),
+  keepJuniorsSeparate: z.boolean().optional(),
+  showDivisionInResults: z.boolean().optional(),
   hasGolf: z.boolean().optional(),
   hasAccuracy: z.boolean().optional(),
   hasDistance: z.boolean().optional(),
@@ -45,6 +60,15 @@ export const editTournamentBodySchema = z.object({
   banRequestEmailEnabled: z.boolean().optional(),
   closeTournament: z.boolean().optional(),
   venues: z.array(venueInputSchema).optional(),
+}).refine((value) => {
+  if (value.registrationOpenDate == null || value.registrationCloseDate == null) {
+    return true;
+  }
+
+  return value.registrationCloseDate >= value.registrationOpenDate;
+}, {
+  message: "Registration closing date must be on or after the registration opening date",
+  path: ["registrationCloseDate"],
 });
 
 export const cloneTournamentBodySchema = z.object({

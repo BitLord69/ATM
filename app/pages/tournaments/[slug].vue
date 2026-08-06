@@ -13,6 +13,9 @@ type TournamentDetail = {
   name: string;
   slug: string;
   description: string | null;
+  websiteUrl: string | null;
+  paymentInformation: string | null;
+  facilities: string | null;
   country: string | null;
   city: string | null;
   lat: number;
@@ -25,7 +28,10 @@ type TournamentDetail = {
   directorPhone: string | null;
   startDate: number | null;
   endDate: number | null;
+  registrationOpenDate: number | null;
+  registrationCloseDate: number | null;
   closedAt: number | null;
+  isSanctioned: boolean;
   hasGolf: boolean;
   hasAccuracy: boolean;
   hasDistance: boolean;
@@ -114,6 +120,22 @@ function formatDateRange(start: number | null | undefined, end: number | null | 
   }
 
   return `${formatDate(start)} - ${formatDate(end)}`;
+}
+
+function formatRegistrationDateRange(start: number | null | undefined, end: number | null | undefined) {
+  if (!start && !end) {
+    return "Registration dates TBD";
+  }
+
+  if (start && end) {
+    return `${formatDate(start)} - ${formatDate(end)}`;
+  }
+
+  if (start) {
+    return `Opens ${formatDate(start)}`;
+  }
+
+  return `Closes ${formatDate(end)}`;
 }
 
 const tournamentDirectorEmail = computed(() => tournament.value?.directorEmail || tournament.value?.contactEmail || null);
@@ -274,6 +296,63 @@ const hasDirectorData = computed(() => {
                 </div>
 
                 <div
+                  v-if="tournament.websiteUrl"
+                  class="card bg-base-200"
+                >
+                  <div class="card-body">
+                    <h3 class="card-title text-base flex items-center gap-2">
+                      <Icon
+                        name="tabler:world"
+                        size="20"
+                      />
+                      Website
+                    </h3>
+                    <a
+                      :href="tournament.websiteUrl"
+                      class="link link-primary text-sm break-all"
+                      target="_blank"
+                      rel="noreferrer"
+                    >{{ tournament.websiteUrl }}</a>
+                  </div>
+                </div>
+
+                <div
+                  v-if="tournament.registrationOpenDate || tournament.registrationCloseDate"
+                  class="card bg-base-200"
+                >
+                  <div class="card-body">
+                    <h3 class="card-title text-base flex items-center gap-2">
+                      <Icon
+                        name="tabler:user-plus"
+                        size="20"
+                      />
+                      Registration
+                    </h3>
+                    <p class="text-sm">
+                      {{ formatRegistrationDateRange(tournament.registrationOpenDate, tournament.registrationCloseDate) }}
+                    </p>
+                  </div>
+                </div>
+
+                <div
+                  v-if="tournament.isSanctioned"
+                  class="card bg-base-200"
+                >
+                  <div class="card-body">
+                    <h3 class="card-title text-base flex items-center gap-2">
+                      <Icon
+                        name="tabler:rosette-discount-check"
+                        size="20"
+                      />
+                      Status
+                    </h3>
+                    <p class="text-sm">
+                      Sanctioned tournament
+                    </p>
+                  </div>
+                </div>
+
+                <div
                   v-if="tournament.hasGolf || tournament.hasAccuracy || tournament.hasDistance || tournament.hasSCF || tournament.hasDiscathon || tournament.hasDDC || tournament.hasFreestyle"
                   class="card bg-base-200 md:col-span-2"
                 >
@@ -296,6 +375,42 @@ const hasDirectorData = computed(() => {
                       size="md"
                       wrapper-class="flex flex-wrap gap-2"
                     />
+                  </div>
+                </div>
+
+                <div
+                  v-if="tournament.paymentInformation"
+                  class="card bg-base-200 md:col-span-2"
+                >
+                  <div class="card-body">
+                    <h3 class="card-title text-base flex items-center gap-2">
+                      <Icon
+                        name="tabler:credit-card"
+                        size="20"
+                      />
+                      Payment information
+                    </h3>
+                    <p class="text-sm whitespace-pre-line">
+                      {{ tournament.paymentInformation }}
+                    </p>
+                  </div>
+                </div>
+
+                <div
+                  v-if="tournament.facilities"
+                  class="card bg-base-200 md:col-span-2"
+                >
+                  <div class="card-body">
+                    <h3 class="card-title text-base flex items-center gap-2">
+                      <Icon
+                        name="tabler:building-community"
+                        size="20"
+                      />
+                      Facilities
+                    </h3>
+                    <p class="text-sm whitespace-pre-line">
+                      {{ tournament.facilities }}
+                    </p>
                   </div>
                 </div>
               </div>

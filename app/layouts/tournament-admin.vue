@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import type { WorkspaceNavItem } from "~/components/workspace-shell.vue";
+import type { TournamentEditResponse } from "~/types/tournaments";
 
 const route = useRoute();
 
 const slug = computed(() => route.params.slug as string);
-const { data: tournamentData } = await useFetch(() => `/api/tournaments/${slug.value}/edit`);
+const { data: tournamentData } = await useFetch<TournamentEditResponse>(() => `/api/tournaments/${slug.value}/edit`, {
+  key: "tournament-admin-nav-data",
+});
 
 const disciplineConfig = [
   { key: "hasGolf", slug: "golf", label: "Disc golf" },
@@ -16,13 +19,20 @@ const disciplineConfig = [
   { key: "hasFreestyle", slug: "freestyle", label: "Freestyle" },
 ] as const;
 
+const navDisciplines = useState<Record<string, boolean> | null>("tournament-nav-disciplines", () => null);
+
+watch(slug, () => {
+  navDisciplines.value = null;
+});
+
 const enabledDisciplineLinks = computed(() => {
-  if (!tournamentData.value || Array.isArray(tournamentData.value)) {
+  const source = navDisciplines.value ?? tournamentData.value;
+  if (!source || Array.isArray(source)) {
     return [] as Array<{ id: string; label: string; to: string; indented: true }>;
   }
 
   return disciplineConfig
-    .filter(item => !!(tournamentData.value as any)[item.key])
+    .filter(item => !!(source as any)[item.key])
     .map(item => ({
       id: `discipline:${item.slug}`,
       label: item.label,
@@ -71,7 +81,7 @@ const items = computed<WorkspaceNavItem[]>(() => {
     base.push({
       kind: "section",
       id: "disciplines-section",
-      label: "Disciplines",
+      label: "Discipline settings",
       defaultOpen: route.path.includes("/disciplines/"),
       items: enabledDisciplineLinks.value,
     });

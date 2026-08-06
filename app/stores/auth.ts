@@ -2,7 +2,6 @@ import { createAuthClient } from "better-auth/client";
 import { inferAdditionalFields, organizationClient } from "better-auth/client/plugins";
 
 let authClientInstance: ReturnType<typeof createAuthClient> | null = null;
-let authConfigLogged = false;
 
 function resolveAuthBaseURL(rawValue: unknown) {
   const raw = String(rawValue ?? "").trim();
@@ -25,6 +24,27 @@ function resolveAuthBaseURL(rawValue: unknown) {
     return `https://${raw}`;
   }
 
+  // During SSR in local dev, Nuxt may run on an alternate port (e.g. 3001)
+  // while env still points to 3000. Prefer same-origin behavior on server.
+  if (import.meta.server && /^https?:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?$/i.test(raw)) {
+    return undefined;
+  }
+
+  // In local dev, Nuxt may switch ports (e.g. 3000 -> 3001). Use same-origin
+  // so auth requests always target the currently running dev server.
+  if (import.meta.client && window.location?.origin) {
+    try {
+      const parsed = new URL(raw, window.location.origin);
+      const isLocalhost = parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1";
+      if (isLocalhost && parsed.origin !== window.location.origin) {
+        return window.location.origin;
+      }
+    }
+    catch {
+      // Fall through to raw if URL parsing fails.
+    }
+  }
+
   return raw;
 }
 
@@ -35,12 +55,6 @@ export function useAuthClient() {
 
   const config = useRuntimeConfig();
   const baseURL = resolveAuthBaseURL(config.public.betterAuthUrl);
-
-  if (!authConfigLogged) {
-    const target = baseURL || "(same-origin default)";
-    console.warn(`[auth] baseURL=${target}`);
-    authConfigLogged = true;
-  }
 
   authClientInstance = createAuthClient({
     baseURL,
@@ -54,7 +68,7 @@ export function useAuthClient() {
   return authClientInstance;
 }
 
-export type loginProviders = "email" | "github" | "google" | "facebook";
+export type socialLoginProvider = "github" | "google" | "facebook";
 
 export const useAuthStore = defineStore("useAuthStore", () => {
   const loading = ref(false);
@@ -62,21 +76,74 @@ export const useAuthStore = defineStore("useAuthStore", () => {
   const currentUser = ref<any>(null);
   const authClient = useAuthClient();
 
-  async function signIn(_provider: loginProviders) {
+  async function signInSocial(provider: socialLoginProvider) {
+    loading.value = true;
+    try {
+      const { error } = await authClient.signIn.social({
+        provider,
+        callbackURL: `/dashboard?socialConnected=${encodeURIComponent(provider)}`,
+        errorCallbackURL: "/error?flow=social",
+      });
+
+      if (error) {
+        return { ok: false, error: error.message || "Unable to start social sign-in." };
+      }
+
+      return { ok: true, error: null };
+    }
+    catch {
+      return { ok: false, error: "Unable to start social sign-in." };
+    }
+    finally {
+      loading.value = false;
+    }
+  }
+
+  async function signInEmail(email: string, password: string) {
     loading.value = true;
 
-    const isSocialProvider = _provider === "github" || _provider === "google" || _provider === "facebook";
-    const callbackURL = isSocialProvider
-      ? `/dashboard?socialConnected=${encodeURIComponent(_provider)}`
-      : "/dashboard";
+    try {
+      const { error } = await authClient.signIn.email({
+        email,
+        password,
+      });
 
-    await authClient.signIn.social({
-      provider: _provider,
-      callbackURL,
-      errorCallbackURL: "/error?flow=social",
-    });
+      if (error) {
+        return { ok: false, error: error.message || "Invalid email or password." };
+      }
 
-    // Note: loading.value = false is not needed since we redirect away
+      // Sync store state immediately after sign-in so navbar/UI updates
+      // without waiting for a full app reload.
+      const session = await authClient.getSession();
+      isSignedIn.value = !!session.data;
+      currentUser.value = session.data?.user || null;
+
+      return { ok: true, error: null };
+    }
+    finally {
+      loading.value = false;
+    }
+  }
+
+  async function requestPasswordReset(email: string) {
+    loading.value = true;
+
+    try {
+      await $fetch("/api/auth/forgot-password", {
+        method: "POST",
+        body: { email },
+      });
+
+      return { ok: true, error: null };
+    }
+    catch (error: any) {
+      const message = error?.data?.message || error?.message || "Unable to request password reset.";
+      console.warn("[auth] requestPasswordReset failed", error);
+      return { ok: false, error: message };
+    }
+    finally {
+      loading.value = false;
+    }
   }
 
   async function signOut() {
@@ -131,7 +198,9 @@ export const useAuthStore = defineStore("useAuthStore", () => {
     loading,
     isSignedIn,
     currentUser,
-    signIn,
+    signInSocial,
+    signInEmail,
+    requestPasswordReset,
     signOut,
     checkSession,
   };

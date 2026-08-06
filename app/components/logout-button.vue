@@ -82,7 +82,7 @@ async function handleLogout() {
       </li>
       <li v-if="canAccessUsersWorkspace">
         <NuxtLink to="/admin/users">
-          User Workspace
+          User workspace
         </NuxtLink>
       </li>
       <li v-if="canAccessUsersWorkspace">
@@ -93,13 +93,13 @@ async function handleLogout() {
       </li>
       <li>
         <NuxtLink to="/admin/invites">
-          Send Invitations
+          Send invitations
         </NuxtLink>
       </li>
       <li>
         <button :disabled="authStore.loading" @click="handleLogout">
           <span v-if="authStore.loading" class="loading loading-spinner loading-sm" />
-          <span v-else>Log Out</span>
+          <span v-else>Sign out</span>
         </button>
       </li>
     </ul>

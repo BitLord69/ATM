@@ -1,6 +1,5 @@
-import tailwindcss from "@tailwindcss/vite";
 import { env } from "node:process";
-import tsconfigPaths from "vite-tsconfig-paths";
+import tailwindcss from "@tailwindcss/vite";
 
 export default defineNuxtConfig({
   runtimeConfig: {
@@ -9,8 +8,10 @@ export default defineNuxtConfig({
     },
   },
   vite: {
+    resolve: {
+      tsconfigPaths: true,
+    },
     plugins: [
-      tsconfigPaths(),
       tailwindcss(),
     ],
   },
@@ -18,6 +19,13 @@ export default defineNuxtConfig({
   devtools: { enabled: false },
   colorMode: {
     dataValue: "theme",
+  },
+  icon: {
+    provider: "none",
+    mode: "svg",
+    clientBundle: {
+      scan: true,
+    },
   },
   modules: [
     "@nuxt/eslint",

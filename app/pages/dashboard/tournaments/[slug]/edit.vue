@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { TournamentEditTabId } from "~/schemas/ui/tournament-edit-tabs";
+import type { TournamentEditResponse } from "~/types/tournaments";
 
 import { cloneTournamentBodySchema, editTournamentBodySchema } from "#shared/schemas/tournament-edit";
 import { disciplineByKey, disciplineKeyOrder } from "~/composables/use-discipline-catalog";
@@ -52,7 +53,7 @@ const router = useRouter();
 const slug = computed(() => route.params.slug as string);
 const selectedVenueRadiusKm = ref(300);
 
-const { data, pending, error, refresh } = await useFetch(() => `/api/tournaments/${slug.value}/edit`, {
+const { data, pending, error, refresh } = await useFetch<TournamentEditResponse>(() => `/api/tournaments/${slug.value}/edit`, {
   query: {
     radiusKm: selectedVenueRadiusKm,
   },
@@ -70,6 +71,9 @@ const form = reactive({
   name: "",
   slug: "",
   description: "",
+  websiteUrl: "",
+  paymentInformation: "",
+  facilities: "",
   country: "",
   city: "",
   contactName: "",
@@ -82,6 +86,18 @@ const form = reactive({
   long: 0,
   startDate: "",
   endDate: "",
+  registrationOpenDate: "",
+  registrationCloseDate: "",
+  isSanctioned: false,
+  divisionOpen: true,
+  divisionWomen: true,
+  divisionMaster: false,
+  divisionGrandMaster: false,
+  divisionSeniorGrandMaster: false,
+  divisionLegend: false,
+  divisionJunior: false,
+  keepJuniorsSeparate: false,
+  showDivisionInResults: false,
   hasGolf: false,
   hasAccuracy: false,
   hasDistance: false,
@@ -279,6 +295,9 @@ function createSnapshot() {
       name: form.name,
       slug: form.slug,
       description: form.description,
+      websiteUrl: form.websiteUrl,
+      paymentInformation: form.paymentInformation,
+      facilities: form.facilities,
       country: form.country,
       city: form.city,
       contactName: form.contactName,
@@ -291,6 +310,18 @@ function createSnapshot() {
       long: form.long,
       startDate: form.startDate,
       endDate: form.endDate,
+      registrationOpenDate: form.registrationOpenDate,
+      registrationCloseDate: form.registrationCloseDate,
+      isSanctioned: form.isSanctioned,
+      divisionOpen: form.divisionOpen,
+      divisionWomen: form.divisionWomen,
+      divisionMaster: form.divisionMaster,
+      divisionGrandMaster: form.divisionGrandMaster,
+      divisionSeniorGrandMaster: form.divisionSeniorGrandMaster,
+      divisionLegend: form.divisionLegend,
+      divisionJunior: form.divisionJunior,
+      keepJuniorsSeparate: form.keepJuniorsSeparate,
+      showDivisionInResults: form.showDivisionInResults,
       hasGolf: form.hasGolf,
       hasAccuracy: form.hasAccuracy,
       hasDistance: form.hasDistance,
@@ -982,6 +1013,9 @@ watch(
     form.name = value.name || "";
     form.slug = value.slug || "";
     form.description = value.description || "";
+    form.websiteUrl = value.websiteUrl || "";
+    form.paymentInformation = value.paymentInformation || "";
+    form.facilities = value.facilities || "";
     form.country = value.country || "";
     form.city = value.city || "";
     form.contactName = value.contactName || "";
@@ -994,6 +1028,18 @@ watch(
     form.long = value.long || 0;
     form.startDate = toDateInput(value.startDate);
     form.endDate = toDateInput(value.endDate);
+    form.registrationOpenDate = toDateInput(value.registrationOpenDate);
+    form.registrationCloseDate = toDateInput(value.registrationCloseDate);
+    form.isSanctioned = !!value.isSanctioned;
+    form.divisionOpen = value.divisionOpen !== false;
+    form.divisionWomen = value.divisionWomen !== false;
+    form.divisionMaster = !!value.divisionMaster;
+    form.divisionGrandMaster = !!value.divisionGrandMaster;
+    form.divisionSeniorGrandMaster = !!value.divisionSeniorGrandMaster;
+    form.divisionLegend = !!value.divisionLegend;
+    form.divisionJunior = !!value.divisionJunior;
+    form.keepJuniorsSeparate = !!value.keepJuniorsSeparate;
+    form.showDivisionInResults = !!value.showDivisionInResults;
     form.hasGolf = !!value.hasGolf;
     form.hasAccuracy = !!value.hasAccuracy;
     form.hasDistance = !!value.hasDistance;
@@ -1025,6 +1071,31 @@ watch(
   { immediate: true },
 );
 
+const navDisciplines = useState<Record<string, boolean> | null>("tournament-nav-disciplines", () => null);
+watch(
+  [
+    () => form.hasGolf,
+    () => form.hasAccuracy,
+    () => form.hasDistance,
+    () => form.hasSCF,
+    () => form.hasDiscathon,
+    () => form.hasDDC,
+    () => form.hasFreestyle,
+  ],
+  () => {
+    navDisciplines.value = {
+      hasGolf: form.hasGolf,
+      hasAccuracy: form.hasAccuracy,
+      hasDistance: form.hasDistance,
+      hasSCF: form.hasSCF,
+      hasDiscathon: form.hasDiscathon,
+      hasDDC: form.hasDDC,
+      hasFreestyle: form.hasFreestyle,
+    };
+  },
+  { immediate: true },
+);
+
 const isTournamentClosed = computed(() => data.value && !Array.isArray(data.value) ? data.value.closedAt != null : false);
 const canCloseTournament = computed(() => !isTournamentClosed.value);
 
@@ -1050,6 +1121,9 @@ async function saveTournament(closeTournament = false) {
   const requestBody = {
     name: form.name,
     description: form.description || null,
+    websiteUrl: form.websiteUrl || null,
+    paymentInformation: form.paymentInformation || null,
+    facilities: form.facilities || null,
     country: form.country || null,
     city: form.city || null,
     contactName: form.contactName || null,
@@ -1062,6 +1136,18 @@ async function saveTournament(closeTournament = false) {
     long: form.long,
     startDate: fromDateInput(form.startDate),
     endDate: fromDateInput(form.endDate),
+    registrationOpenDate: fromDateInput(form.registrationOpenDate),
+    registrationCloseDate: fromDateInput(form.registrationCloseDate),
+    isSanctioned: form.isSanctioned,
+    divisionOpen: form.divisionOpen,
+    divisionWomen: form.divisionWomen,
+    divisionMaster: form.divisionMaster,
+    divisionGrandMaster: form.divisionGrandMaster,
+    divisionSeniorGrandMaster: form.divisionSeniorGrandMaster,
+    divisionLegend: form.divisionLegend,
+    divisionJunior: form.divisionJunior,
+    keepJuniorsSeparate: form.keepJuniorsSeparate,
+    showDivisionInResults: form.showDivisionInResults,
     hasGolf: form.hasGolf,
     hasAccuracy: form.hasAccuracy,
     hasDistance: form.hasDistance,
@@ -1135,7 +1221,7 @@ async function saveTournament(closeTournament = false) {
       await router.replace(`/dashboard/tournaments/${result.slug}/edit`);
     }
     await refresh();
-    await refreshNuxtData();
+    await refreshNuxtData("tournament-admin-nav-data");
   }
   catch (err: any) {
     saveError.value = err?.data?.message || err?.message || "Failed to save tournament";
@@ -1268,15 +1354,6 @@ async function saveTournament(closeTournament = false) {
                     :class="{ 'input-error': shouldShowFieldError('name') }"
                     type="text"
                     required
-                    wrapper-class="xl:col-span-2"
-                    :error="getFieldError('name')"
-                  >
-                  <input
-                    v-model="form.name"
-                    class="input input-bordered w-full"
-                    :class="{ 'input-error': shouldShowFieldError('name') }"
-                    type="text"
-                    required
                     :aria-invalid="shouldShowFieldError('name')"
                     @blur="markTouched('name')"
                   >
@@ -1300,6 +1377,14 @@ async function saveTournament(closeTournament = false) {
                     rows="3"
                   />
                 </FormField>
+                <FormField label="Website">
+                  <input
+                    v-model="form.websiteUrl"
+                    class="input input-bordered w-full"
+                    type="url"
+                    placeholder="https://example.com"
+                  >
+                </FormField>
                 <FormField label="Country">
                   <CountrySelect v-model="form.country" />
                 </FormField>
@@ -1310,22 +1395,64 @@ async function saveTournament(closeTournament = false) {
                     type="text"
                   >
                 </FormField>
-                <div class="grid grid-cols-2 gap-3">
-                  <FormField label="Start Date">
+                <div class="col-span-full grid grid-cols-2 xl:grid-cols-4 gap-3">
+                  <FormField label="Start date">
                     <input
                       v-model="form.startDate"
                       class="input input-bordered w-full"
                       type="date"
                     >
                   </FormField>
-                  <FormField label="End Date">
+                  <FormField label="End date">
                     <input
                       v-model="form.endDate"
                       class="input input-bordered w-full"
                       type="date"
                     >
                   </FormField>
+                  <FormField label="Registration opening date">
+                    <input
+                      v-model="form.registrationOpenDate"
+                      class="input input-bordered w-full"
+                      type="date"
+                    >
+                  </FormField>
+                  <FormField label="Registration closing date">
+                    <input
+                      v-model="form.registrationCloseDate"
+                      class="input input-bordered w-full"
+                      type="date"
+                    >
+                  </FormField>
                 </div>
+                <div class="xl:col-span-3 rounded-box border border-base-300/50 p-3">
+                  <ToggleField
+                    :model-value="form.isSanctioned"
+                    label="Sanctioned"
+                    :desktop-inline="true"
+                    @update:model-value="form.isSanctioned = $event as boolean"
+                  />
+                </div>
+                <FormField
+                  label="Payment information"
+                  wrapper-class="xl:col-span-3"
+                >
+                  <textarea
+                    v-model="form.paymentInformation"
+                    class="textarea textarea-bordered w-full"
+                    rows="3"
+                  />
+                </FormField>
+                <FormField
+                  label="Facilities"
+                  wrapper-class="xl:col-span-3"
+                >
+                  <textarea
+                    v-model="form.facilities"
+                    class="textarea textarea-bordered w-full"
+                    rows="3"
+                  />
+                </FormField>
               </div>
             </template>
 
@@ -1476,6 +1603,70 @@ async function saveTournament(closeTournament = false) {
                 <p class="text-xs opacity-70 leading-tight">
                   * No venue assigned yet
                 </p>
+              </div>
+            </template>
+
+            <template #divisions>
+              <div class="space-y-4">
+                <div class="rounded-box bg-base-100 p-3 md:p-4 grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 border border-base-300/50">
+                  <ToggleField
+                    :model-value="form.divisionOpen"
+                    label="Open"
+                    :desktop-inline="true"
+                    @update:model-value="form.divisionOpen = $event as boolean"
+                  />
+                  <ToggleField
+                    :model-value="form.divisionWomen"
+                    label="Women"
+                    :desktop-inline="true"
+                    @update:model-value="form.divisionWomen = $event as boolean"
+                  />
+                  <ToggleField
+                    :model-value="form.divisionMaster"
+                    label="Master"
+                    :desktop-inline="true"
+                    @update:model-value="form.divisionMaster = $event as boolean"
+                  />
+                  <ToggleField
+                    :model-value="form.divisionGrandMaster"
+                    label="Grand master"
+                    :desktop-inline="true"
+                    @update:model-value="form.divisionGrandMaster = $event as boolean"
+                  />
+                  <ToggleField
+                    :model-value="form.divisionSeniorGrandMaster"
+                    label="Senior grand master"
+                    :desktop-inline="true"
+                    @update:model-value="form.divisionSeniorGrandMaster = $event as boolean"
+                  />
+                  <ToggleField
+                    :model-value="form.divisionLegend"
+                    label="Legend"
+                    :desktop-inline="true"
+                    @update:model-value="form.divisionLegend = $event as boolean"
+                  />
+                  <ToggleField
+                    :model-value="form.divisionJunior"
+                    label="Junior"
+                    :desktop-inline="true"
+                    @update:model-value="form.divisionJunior = $event as boolean"
+                  />
+                </div>
+
+                <div class="rounded-box bg-base-100 p-3 md:p-4 grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 border border-base-300/50">
+                  <ToggleField
+                    :model-value="form.keepJuniorsSeparate"
+                    label="Keep juniors separate"
+                    :desktop-inline="true"
+                    @update:model-value="form.keepJuniorsSeparate = $event as boolean"
+                  />
+                  <ToggleField
+                    :model-value="form.showDivisionInResults"
+                    label="Show division in results"
+                    :desktop-inline="true"
+                    @update:model-value="form.showDivisionInResults = $event as boolean"
+                  />
+                </div>
               </div>
             </template>
 

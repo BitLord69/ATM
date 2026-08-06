@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { AdminInvitesTabId } from "~/schemas/ui/admin-invites-tabs";
+import type { InviteTournamentOrganization } from "~/types/tournaments";
 
 import { adminInvitesFieldToTab, adminInvitesTabs } from "~/schemas/ui/admin-invites-tabs";
 import { useAuthClient } from "~/stores/auth";
@@ -177,7 +178,7 @@ function confirmNo() {
 }
 
 // Fetch invite-eligible tournaments (active/upcoming only)
-const { data: organizations, pending } = await useFetch("/api/admin/invite-tournaments");
+const { data: organizations, pending } = await useFetch<InviteTournamentOrganization[]>("/api/admin/invite-tournaments");
 
 const filteredOrganizations = computed(() => {
   const list = organizations.value ?? [];
