@@ -85,13 +85,13 @@ async function handleResetPassword() {
           Reset password
         </h1>
 
-        <div
-          v-if="status"
-          :class="status.type === 'success' ? 'alert alert-success' : 'alert alert-error'"
+        <FlashAlert
+          :message="status?.message || null"
+          :type="status?.type || 'info'"
           role="alert"
-        >
-          <span>{{ status.message }}</span>
-        </div>
+          :auto-hide-ms="0"
+          @dismiss="status = null"
+        />
 
         <div class="form-control">
           <label class="label">

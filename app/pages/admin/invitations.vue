@@ -29,9 +29,6 @@ const status = ref<StatusMsg | null>(null);
 
 function setStatus(type: "success" | "error", message: string) {
   status.value = { type, message };
-  setTimeout(() => {
-    status.value = null;
-  }, 5000);
 }
 
 const resendingId = ref<string | null>(null);
@@ -94,17 +91,12 @@ function statusLabel(inv: InvitationRow) {
     </div>
 
     <!-- Status alert -->
-    <div
-      v-if="status"
-      class="alert flex items-center justify-between shadow-sm"
-      :class="status.type === 'success' ? 'alert-success' : 'alert-error'"
+    <FlashAlert
+      :message="status?.message || null"
+      :type="status?.type || 'info'"
       role="alert"
-    >
-      <span>{{ status.message }}</span>
-      <button class="btn btn-ghost btn-xs" @click="status = null">
-        ✕
-      </button>
-    </div>
+      @dismiss="status = null"
+    />
 
     <!-- Loading -->
     <div v-if="pending" class="flex justify-center py-10">

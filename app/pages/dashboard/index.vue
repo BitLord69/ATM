@@ -78,6 +78,14 @@ function setProviderFeedback(type: "success" | "error", message: string) {
   providerFeedback.value = { type, message };
 }
 
+function getUnlinkHelpText(provider: { providerId: string; linked: boolean; canUnlink: boolean }) {
+  if (!provider.linked || provider.canUnlink || provider.providerId === "credential") {
+    return "";
+  }
+
+  return "Keep at least one sign-in method: set a password or connect another provider first.";
+}
+
 async function loadLinkedProviders() {
   try {
     linkedProviders.value = await $fetch<Array<{ providerId: string; label: string; icon: string; linked: boolean; canUnlink: boolean; accountId: string | null }>>("/api/account/linked-providers");
@@ -292,7 +300,7 @@ onMounted(async () => {
               <div
                 v-for="provider in linkedProviders"
                 :key="provider.providerId"
-                class="flex items-center justify-between gap-3 rounded-lg border border-base-300 p-4"
+                class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-base-300 p-4"
               >
                 <div class="flex items-center gap-3">
                   <Icon
@@ -341,6 +349,31 @@ onMounted(async () => {
                     <span v-else>Disconnect</span>
                   </button>
 
+                  <div
+                    v-else-if="provider.linked && provider.providerId !== 'credential'"
+                    class="flex items-center gap-2"
+                  >
+                    <span
+                      class="tooltip tooltip-left hidden sm:inline-flex"
+                      :data-tip="getUnlinkHelpText(provider)"
+                    >
+                      <button
+                        class="btn btn-sm btn-outline"
+                        type="button"
+                        disabled
+                      >
+                        Disconnect
+                      </button>
+                    </span>
+                    <button
+                      class="btn btn-sm btn-outline sm:hidden"
+                      type="button"
+                      disabled
+                    >
+                      Disconnect
+                    </button>
+                  </div>
+
                   <span
                     v-else-if="provider.linked"
                     class="badge badge-success"
@@ -348,6 +381,13 @@ onMounted(async () => {
                     Active
                   </span>
                 </div>
+
+                <p
+                  v-if="provider.linked && provider.providerId !== 'credential' && !provider.canUnlink"
+                  class="w-full text-right text-xs text-base-content/65 sm:hidden"
+                >
+                  {{ getUnlinkHelpText(provider) }}
+                </p>
               </div>
             </div>
           </div>
