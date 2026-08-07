@@ -103,9 +103,6 @@ const status = ref<StatusMsg | null>(null);
 
 function setStatus(type: "success" | "error", message: string) {
   status.value = { type, message };
-  setTimeout(() => {
-    status.value = null;
-  }, 5000);
 }
 
 // ── Ban modal ────────────────────────────────────────────────────────────────
@@ -385,17 +382,12 @@ function sortGlyphClass(column: UserSortBy) {
     </div>
 
     <!-- Status alert -->
-    <div
-      v-if="status"
-      class="alert flex items-center justify-between shadow-sm"
-      :class="status.type === 'success' ? 'alert-success' : 'alert-error'"
+    <FlashAlert
+      :message="status?.message || null"
+      :type="status?.type || 'info'"
       role="alert"
-    >
-      <span>{{ status.message }}</span>
-      <button class="btn btn-ghost btn-xs" @click="status = null">
-        ✕
-      </button>
-    </div>
+      @dismiss="status = null"
+    />
 
     <div class="text-xs opacity-70">
       Role column shows system-wide role. Per-tournament roles are available in each user's details page.

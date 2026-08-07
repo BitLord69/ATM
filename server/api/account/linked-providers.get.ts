@@ -37,22 +37,32 @@ export default defineEventHandler(async (event) => {
     .select({
       providerId: account.providerId,
       accountId: account.accountId,
+      password: account.password,
     })
     .from(account)
     .where(eq(account.userId, session.user.id));
+
+  const socialProviderIds = new Set(["github", "google", "facebook"]);
+  const socialProviderCount = linkedAccounts.filter(item => socialProviderIds.has(item.providerId)).length;
+  const hasPasswordLogin = linkedAccounts.some(
+    item => item.providerId === "credential" && typeof item.password === "string" && item.password.length > 0,
+  );
 
   const linkedByProvider = new Map(linkedAccounts.map(item => [item.providerId, item]));
 
   return PROVIDERS.map((provider) => {
     const linked = linkedByProvider.get(provider.providerId);
-    const providerCount = linkedAccounts.length;
+    const isSocial = socialProviderIds.has(provider.providerId);
+    const canUnlinkSocialProvider = isSocial
+      && Boolean(linked)
+      && (hasPasswordLogin || socialProviderCount > 1);
 
     return {
       providerId: provider.providerId,
       label: provider.label,
       icon: provider.icon,
       linked: Boolean(linked),
-      canUnlink: provider.providerId !== "credential" && Boolean(linked) && providerCount > 1,
+      canUnlink: canUnlinkSocialProvider,
       accountId: linked?.accountId ?? null,
     };
   });
