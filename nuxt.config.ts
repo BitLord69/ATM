@@ -25,6 +25,20 @@ export default defineNuxtConfig({
     mode: "svg",
     clientBundle: {
       scan: true,
+      icons: [
+        "tabler:alert-circle",
+        "tabler:alert-triangle",
+        "tabler:brand-facebook",
+        "tabler:brand-github",
+        "tabler:brand-google",
+        "tabler:circle-check",
+        "tabler:eye",
+        "tabler:eye-off",
+        "tabler:info-circle",
+        "tabler:key",
+        "tabler:link-off",
+        "tabler:mail",
+      ],
     },
   },
   modules: [
