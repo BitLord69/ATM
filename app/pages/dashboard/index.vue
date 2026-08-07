@@ -14,8 +14,18 @@ const router = useRouter();
 
 const socialConnectionMessage = ref<string | null>(null);
 const providerFeedback = ref<{ type: "success" | "error"; message: string } | null>(null);
+const passwordModalFeedback = ref<{ type: "success" | "error"; message: string } | null>(null);
 const linkedProviders = ref<Array<{ providerId: string; label: string; icon: string; linked: boolean; canUnlink: boolean; accountId: string | null }>>([]);
 const providerActionLoading = ref<string | null>(null);
+const passwordModalOpen = ref(false);
+const passwordMode = ref<"set" | "change">("change");
+const currentPassword = ref("");
+const newPassword = ref("");
+const confirmPassword = ref("");
+const revokeOtherSessions = ref(false);
+const showCurrentPassword = ref(false);
+const showNewPassword = ref(false);
+const showConfirmPassword = ref(false);
 
 type SupportedSocialProvider = "github" | "google" | "facebook";
 
@@ -78,12 +88,139 @@ function setProviderFeedback(type: "success" | "error", message: string) {
   providerFeedback.value = { type, message };
 }
 
+const passwordStrength = computed(() => {
+  const value = newPassword.value;
+  if (!value) {
+    return {
+      label: "Enter a new password with at least 8 characters.",
+      toneClass: "text-base-content/60",
+      progressClass: "progress-neutral",
+      value: 0,
+    };
+  }
+
+  let score = 0;
+  if (value.length >= 8) {
+    score += 1;
+  }
+  if (value.length >= 12) {
+    score += 1;
+  }
+  if (/[A-Z]/.test(value) && /[a-z]/.test(value)) {
+    score += 1;
+  }
+  if (/\d/.test(value)) {
+    score += 1;
+  }
+  if (/[^A-Z0-9]/i.test(value)) {
+    score += 1;
+  }
+
+  if (score <= 2) {
+    return {
+      label: "Weak password. Add length, numbers, and symbols.",
+      toneClass: "text-error",
+      progressClass: "progress-error",
+      value: 25,
+    };
+  }
+
+  if (score <= 4) {
+    return {
+      label: "Good password. A bit more length or complexity would strengthen it.",
+      toneClass: "text-warning",
+      progressClass: "progress-warning",
+      value: 65,
+    };
+  }
+
+  return {
+    label: "Strong password.",
+    toneClass: "text-success",
+    progressClass: "progress-success",
+    value: 100,
+  };
+});
+
 function getUnlinkHelpText(provider: { providerId: string; linked: boolean; canUnlink: boolean }) {
   if (!provider.linked || provider.canUnlink || provider.providerId === "credential") {
     return "";
   }
 
   return "Keep at least one sign-in method: set a password or connect another provider first.";
+}
+
+function resetPasswordForm() {
+  currentPassword.value = "";
+  newPassword.value = "";
+  confirmPassword.value = "";
+  revokeOtherSessions.value = false;
+  showCurrentPassword.value = false;
+  showNewPassword.value = false;
+  showConfirmPassword.value = false;
+  passwordModalFeedback.value = null;
+}
+
+function openPasswordModal(provider: { linked: boolean }) {
+  passwordMode.value = provider.linked ? "change" : "set";
+  passwordModalFeedback.value = null;
+  passwordModalOpen.value = true;
+}
+
+function closePasswordModal() {
+  passwordModalOpen.value = false;
+  resetPasswordForm();
+}
+
+async function submitPasswordChange(provider: { linked: boolean }) {
+  passwordModalFeedback.value = null;
+
+  if (provider.linked && !currentPassword.value) {
+    passwordModalFeedback.value = { type: "error", message: "Enter your current password." };
+    return;
+  }
+
+  if (!newPassword.value || !confirmPassword.value) {
+    passwordModalFeedback.value = { type: "error", message: "Enter and confirm your new password." };
+    return;
+  }
+
+  if (newPassword.value !== confirmPassword.value) {
+    passwordModalFeedback.value = { type: "error", message: "Passwords do not match." };
+    return;
+  }
+
+  if (newPassword.value.length < 8) {
+    passwordModalFeedback.value = { type: "error", message: "Password must be at least 8 characters." };
+    return;
+  }
+
+  providerActionLoading.value = "credential-password";
+
+  try {
+    const response = await $fetch<{ message?: string }>("/api/auth/change-password", {
+      method: "POST",
+      body: {
+        currentPassword: provider.linked ? currentPassword.value : undefined,
+        newPassword: newPassword.value,
+        revokeOtherSessions: provider.linked ? revokeOtherSessions.value : undefined,
+      },
+    });
+
+    await loadLinkedProviders();
+    setProviderFeedback(
+      "success",
+      response.message || (provider.linked ? "Password updated successfully." : "Password added successfully."),
+    );
+    closePasswordModal();
+  }
+  catch (error: any) {
+    const message = error?.data?.message || "Unable to update password right now.";
+    passwordModalFeedback.value = { type: "error", message };
+  }
+  finally {
+    providerActionLoading.value = null;
+  }
 }
 
 async function loadLinkedProviders() {
@@ -289,7 +426,7 @@ onMounted(async () => {
         </template>
 
         <template #accounts>
-          <div class="space-y-4">
+          <div class="space-y-5">
             <FlashAlert
               :message="providerFeedback?.message || null"
               :type="providerFeedback?.type || 'info'"
@@ -311,13 +448,34 @@ onMounted(async () => {
                     <div class="font-medium">
                       {{ provider.label }}
                     </div>
+                    <div
+                      v-if="provider.providerId === 'credential' && authStore.currentUser?.email"
+                      class="mt-1 text-sm text-base-content/70"
+                    >
+                      <span>{{ authStore.currentUser.email }}</span>
+                    </div>
                     <div class="mt-1">
-                      <span
-                        class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium"
-                        :class="provider.linked ? 'bg-success/15 text-success' : 'bg-base-200 text-base-content/70'"
-                      >
-                        {{ provider.linked ? 'Connected' : 'Not connected' }}
-                      </span>
+                      <div class="flex flex-wrap items-center gap-2">
+                        <span
+                          class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium"
+                          :class="provider.linked ? 'bg-success/15 text-success' : 'bg-base-200 text-base-content/70'"
+                        >
+                          {{ provider.linked ? 'Connected' : 'Not connected' }}
+                        </span>
+                        <button
+                          v-if="provider.providerId === 'credential'"
+                          class="btn btn-outline btn-xs gap-1.5"
+                          type="button"
+                          :disabled="providerActionLoading === 'credential-password'"
+                          @click="openPasswordModal(provider)"
+                        >
+                          <Icon
+                            name="tabler:key"
+                            class="size-3.5 shrink-0"
+                          />
+                          <span>{{ provider.linked ? 'Change password' : 'Set password' }}</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -338,7 +496,7 @@ onMounted(async () => {
 
                   <button
                     v-else-if="provider.linked && provider.canUnlink"
-                    class="btn btn-sm btn-outline"
+                    class="btn btn-sm btn-outline gap-2"
                     :disabled="providerActionLoading === provider.providerId"
                     @click="unlinkProvider(provider)"
                   >
@@ -346,7 +504,13 @@ onMounted(async () => {
                       v-if="providerActionLoading === provider.providerId"
                       class="loading loading-spinner loading-sm"
                     />
-                    <span v-else>Disconnect</span>
+                    <template v-else>
+                      <Icon
+                        name="tabler:link-off"
+                        size="16"
+                      />
+                      <span>Disconnect</span>
+                    </template>
                   </button>
 
                   <div
@@ -358,19 +522,27 @@ onMounted(async () => {
                       :data-tip="getUnlinkHelpText(provider)"
                     >
                       <button
-                        class="btn btn-sm btn-outline"
+                        class="btn btn-sm btn-outline gap-2"
                         type="button"
                         disabled
                       >
-                        Disconnect
+                        <Icon
+                          name="tabler:link-off"
+                          size="16"
+                        />
+                        <span>Disconnect</span>
                       </button>
                     </span>
                     <button
-                      class="btn btn-sm btn-outline sm:hidden"
+                      class="btn btn-sm btn-outline gap-2 sm:hidden"
                       type="button"
                       disabled
                     >
-                      Disconnect
+                      <Icon
+                        name="tabler:link-off"
+                        size="16"
+                      />
+                      <span>Disconnect</span>
                     </button>
                   </div>
 
@@ -550,6 +722,132 @@ onMounted(async () => {
           </div>
         </template>
       </VerticalTabsLayout>
+
+      <ConfirmationModal
+        :open="passwordModalOpen"
+        :title="passwordMode === 'change' ? 'Change password' : 'Set password'"
+        :message="passwordMode === 'change' ? 'Update your password for email sign-in.' : 'Add a password so you can also sign in with email.'"
+        :confirm-text="passwordMode === 'change' ? 'Update password' : 'Save password'"
+        :confirm-disabled="providerActionLoading === 'credential-password'"
+        confirm-icon="tabler:key"
+        :confirm-loading="providerActionLoading === 'credential-password'"
+        @cancel="closePasswordModal"
+        @confirm="submitPasswordChange({ linked: passwordMode === 'change' })"
+      >
+        <div class="-mt-1 space-y-3">
+          <FlashAlert
+            :message="passwordModalFeedback?.message || null"
+            :type="passwordModalFeedback?.type || 'info'"
+            :auto-hide-ms="0"
+            @dismiss="passwordModalFeedback = null"
+          />
+
+          <div class="flex flex-col gap-3">
+            <label
+              v-if="passwordMode === 'change'"
+              class="form-control gap-2"
+            >
+              <span class="label-text mb-2 text-sm">Current password</span>
+              <div class="join w-full">
+                <input
+                  v-model="currentPassword"
+                  :type="showCurrentPassword ? 'text' : 'password'"
+                  autocomplete="current-password"
+                  class="input input-bordered join-item w-full"
+                  placeholder="Current password"
+                >
+                <button
+                  class="btn btn-square join-item border border-base-300 bg-base-100 text-base-content/80 shadow-none hover:border-base-content/40 hover:bg-base-200 hover:text-base-content focus-visible:outline-none"
+                  type="button"
+                  :aria-label="showCurrentPassword ? 'Hide current password' : 'Show current password'"
+                  @click="showCurrentPassword = !showCurrentPassword"
+                >
+                  <Icon
+                    :name="showCurrentPassword ? 'tabler:eye-off' : 'tabler:eye'"
+                    class="size-4 shrink-0"
+                  />
+                </button>
+              </div>
+            </label>
+
+            <label class="form-control gap-2">
+              <span class="label-text mb-2 text-sm">New password</span>
+              <div class="join w-full">
+                <input
+                  v-model="newPassword"
+                  :type="showNewPassword ? 'text' : 'password'"
+                  autocomplete="new-password"
+                  class="input input-bordered join-item w-full"
+                  placeholder="At least 8 characters"
+                >
+                <button
+                  class="btn btn-square join-item border border-base-300 bg-base-100 text-base-content/80 shadow-none hover:border-base-content/40 hover:bg-base-200 hover:text-base-content focus-visible:outline-none"
+                  type="button"
+                  :aria-label="showNewPassword ? 'Hide new password' : 'Show new password'"
+                  @click="showNewPassword = !showNewPassword"
+                >
+                  <Icon
+                    :name="showNewPassword ? 'tabler:eye-off' : 'tabler:eye'"
+                    class="size-4 shrink-0"
+                  />
+                </button>
+              </div>
+            </label>
+
+            <label class="form-control gap-2">
+              <span class="label-text mb-2 text-sm">Confirm password</span>
+              <div class="join w-full">
+                <input
+                  v-model="confirmPassword"
+                  :type="showConfirmPassword ? 'text' : 'password'"
+                  autocomplete="new-password"
+                  class="input input-bordered join-item w-full"
+                  placeholder="Confirm new password"
+                  @keydown.enter="submitPasswordChange({ linked: passwordMode === 'change' })"
+                >
+                <button
+                  class="btn btn-square join-item border border-base-300 bg-base-100 text-base-content/80 shadow-none hover:border-base-content/40 hover:bg-base-200 hover:text-base-content focus-visible:outline-none"
+                  type="button"
+                  :aria-label="showConfirmPassword ? 'Hide password confirmation' : 'Show password confirmation'"
+                  @click="showConfirmPassword = !showConfirmPassword"
+                >
+                  <Icon
+                    :name="showConfirmPassword ? 'tabler:eye-off' : 'tabler:eye'"
+                    class="size-4 shrink-0"
+                  />
+                </button>
+              </div>
+            </label>
+          </div>
+
+          <div class="space-y-1">
+            <progress
+              class="progress m-0 h-2 w-full"
+              :class="passwordStrength.progressClass"
+              :value="passwordStrength.value"
+              max="100"
+            />
+            <p
+              class="text-sm"
+              :class="passwordStrength.toneClass"
+            >
+              {{ passwordStrength.label }}
+            </p>
+          </div>
+
+          <label
+            v-if="passwordMode === 'change'"
+            class="label cursor-pointer justify-start gap-3 rounded-md border border-base-300 px-3 py-2"
+          >
+            <input
+              v-model="revokeOtherSessions"
+              type="checkbox"
+              class="checkbox checkbox-sm"
+            >
+            <span class="label-text">Sign out my other devices after changing password</span>
+          </label>
+        </div>
+      </ConfirmationModal>
     </ClientOnly>
   </div>
 </template>

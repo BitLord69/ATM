@@ -7,6 +7,8 @@ type Props = {
   cancelText?: string;
   isDangerous?: boolean;
   confirmDisabled?: boolean;
+  confirmIcon?: string;
+  confirmLoading?: boolean;
 };
 
 type Emits = {
@@ -20,6 +22,8 @@ withDefaults(defineProps<Props>(), {
   cancelText: "Cancel",
   isDangerous: false,
   confirmDisabled: false,
+  confirmIcon: "",
+  confirmLoading: false,
 });
 
 defineEmits<Emits>();
@@ -54,11 +58,21 @@ defineEmits<Emits>();
           {{ cancelText }}
         </button>
         <button
-          :class="isDangerous ? 'btn btn-error' : 'btn btn-primary'"
-          :disabled="confirmDisabled"
+          class="gap-2"
+          :class="[isDangerous ? 'btn btn-error' : 'btn btn-primary']"
+          :disabled="confirmDisabled || confirmLoading"
           @click="$emit('confirm')"
         >
-          {{ confirmText }}
+          <span
+            v-if="confirmLoading"
+            class="loading loading-spinner loading-sm"
+          />
+          <Icon
+            v-else-if="confirmIcon"
+            :name="confirmIcon"
+            class="size-4 shrink-0"
+          />
+          <span>{{ confirmText }}</span>
         </button>
       </div>
     </div>
