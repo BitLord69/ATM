@@ -87,6 +87,10 @@ export type DisciplineSettingsResponse = {
   isEnabled: boolean;
   rounds: number | null;
   cumulativeRounds: number | null;
+  poolMode?: "static" | "dynamic";
+  poolCount?: number;
+  golfStartEnabled?: boolean;
+  roundPars?: Array<number | null>;
 };
 
 export type InviteTournamentOrganization = {

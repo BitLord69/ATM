@@ -8,7 +8,7 @@ This document is the living Command Center for ATM development, synchronized wit
 
 **Goal:** Deliver a complete end-to-end flow for our first discipline (**Disc Golf**) — from tournament/discipline setup and player registration to pool assignment, round score entry (strokes + optional par), and public standings presentation on the tournament page.
 
-- [ ] **M1.1 – Disc Golf Discipline Settings (Pool Mode, Golf Start, Cut & Course Par)** (`#59`)
+- [x] **M1.1 – Disc Golf Discipline Settings (Pool Mode, Golf Start, Cut & Course Par)** (`#59`)
   - Configure **Pool Mode** when setting up the tournament/discipline:
     - `static`: Players stay in their assigned pool (`Pool A`, `Pool B`, etc.) across rounds.
     - `dynamic`: Pools/starting lists are resorted between rounds based on cumulative standings.

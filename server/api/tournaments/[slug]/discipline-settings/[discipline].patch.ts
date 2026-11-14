@@ -95,14 +95,34 @@ export default defineEventHandler(async (event) => {
   }
 
   const changedBy = session.user.id;
+  const updatePayload: Record<string, unknown> = {
+    [config.roundsKey]: parsed.data.rounds,
+    [config.cumulativeKey]: parsed.data.cumulativeRounds,
+    changedBy,
+    changedAt: Date.now(),
+  };
+
+  if (disciplineParam === "golf") {
+    if (parsed.data.poolMode !== undefined) {
+      updatePayload.golfPoolMode = parsed.data.poolMode;
+    }
+    if (parsed.data.poolCount !== undefined) {
+      updatePayload.golfPoolCount = parsed.data.poolCount;
+    }
+    if (parsed.data.golfStartEnabled !== undefined) {
+      updatePayload.golfStartEnabled = parsed.data.golfStartEnabled;
+    }
+    if (parsed.data.roundPars !== undefined) {
+      const trimmedPars = parsed.data.rounds
+        ? parsed.data.roundPars.slice(0, parsed.data.rounds)
+        : [];
+      updatePayload.golfRoundPars = JSON.stringify(trimmedPars);
+    }
+  }
+
   await db
     .update(tournament)
-    .set({
-      [config.roundsKey]: parsed.data.rounds,
-      [config.cumulativeKey]: parsed.data.cumulativeRounds,
-      changedBy,
-      changedAt: Date.now(),
-    } as any)
+    .set(updatePayload as any)
     .where(eq(tournament.id, found.id));
 
   return { success: true };

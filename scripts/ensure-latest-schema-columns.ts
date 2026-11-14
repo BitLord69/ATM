@@ -125,6 +125,26 @@ const REQUIRED_COLUMNS: ColumnSpec[] = [
   },
   {
     table: "tournaments",
+    name: "golf_pool_mode",
+    ddl: "ALTER TABLE tournaments ADD COLUMN golf_pool_mode TEXT NOT NULL DEFAULT 'static'",
+  },
+  {
+    table: "tournaments",
+    name: "golf_pool_count",
+    ddl: "ALTER TABLE tournaments ADD COLUMN golf_pool_count INTEGER NOT NULL DEFAULT 1",
+  },
+  {
+    table: "tournaments",
+    name: "golf_start_enabled",
+    ddl: "ALTER TABLE tournaments ADD COLUMN golf_start_enabled INTEGER NOT NULL DEFAULT false",
+  },
+  {
+    table: "tournaments",
+    name: "golf_round_pars",
+    ddl: "ALTER TABLE tournaments ADD COLUMN golf_round_pars TEXT",
+  },
+  {
+    table: "tournaments",
     name: "has_accuracy",
     ddl: "ALTER TABLE tournaments ADD COLUMN has_accuracy INTEGER NOT NULL DEFAULT false",
   },

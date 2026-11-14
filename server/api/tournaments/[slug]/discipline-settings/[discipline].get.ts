@@ -52,6 +52,28 @@ const disciplineConfig = {
 
 type DisciplineKey = keyof typeof disciplineConfig;
 
+function parseRoundPars(raw: string | null | undefined, rounds: number | null): Array<number | null> {
+  let parsed: unknown = [];
+  if (raw) {
+    try {
+      parsed = JSON.parse(raw);
+    }
+    catch {
+      parsed = [];
+    }
+  }
+
+  const arr = Array.isArray(parsed)
+    ? parsed.map(item => (typeof item === "number" && Number.isInteger(item) ? item : null))
+    : [];
+
+  if (!rounds || rounds <= 0) {
+    return arr;
+  }
+
+  return Array.from({ length: rounds }, (_, idx) => arr[idx] ?? null);
+}
+
 export default defineEventHandler(async (event) => {
   const slug = getRouterParam(event, "slug");
   const disciplineParam = String(getRouterParam(event, "discipline") || "").toLowerCase() as DisciplineKey;
@@ -83,6 +105,10 @@ export default defineEventHandler(async (event) => {
       hasFreestyle: tournament.hasFreestyle,
       golfRounds: tournament.golfRounds,
       golfCumulativeRounds: tournament.golfCumulativeRounds,
+      golfPoolMode: tournament.golfPoolMode,
+      golfPoolCount: tournament.golfPoolCount,
+      golfStartEnabled: tournament.golfStartEnabled,
+      golfRoundPars: tournament.golfRoundPars,
       accuracyRounds: tournament.accuracyRounds,
       accuracyCumulativeRounds: tournament.accuracyCumulativeRounds,
       distanceRounds: tournament.distanceRounds,
@@ -125,11 +151,28 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 403, message: "Forbidden" });
   }
 
+  const rounds = (found as any)[config.roundsKey] as number | null;
+  const cumulativeRounds = (found as any)[config.cumulativeKey] as number | null;
+
+  if (disciplineParam === "golf") {
+    return {
+      discipline: disciplineParam,
+      label: config.label,
+      isEnabled: !!found.hasGolf,
+      rounds,
+      cumulativeRounds,
+      poolMode: found.golfPoolMode === "dynamic" ? "dynamic" : "static",
+      poolCount: typeof found.golfPoolCount === "number" && found.golfPoolCount >= 1 ? found.golfPoolCount : 1,
+      golfStartEnabled: !!found.golfStartEnabled,
+      roundPars: parseRoundPars(found.golfRoundPars, rounds),
+    };
+  }
+
   return {
     discipline: disciplineParam,
     label: config.label,
     isEnabled: !!(found as any)[config.enabledKey],
-    rounds: (found as any)[config.roundsKey] as number | null,
-    cumulativeRounds: (found as any)[config.cumulativeKey] as number | null,
+    rounds,
+    cumulativeRounds,
   };
 });

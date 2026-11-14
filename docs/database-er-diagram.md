@@ -67,6 +67,10 @@ erDiagram
     int start_date
     int end_date
     int closed_at
+    text golf_pool_mode
+    int golf_pool_count
+    int golf_start_enabled
+    text golf_round_pars
   }
 
   tournament_membership {
