@@ -21,11 +21,37 @@ export const divisionPolicyPatchSchema = z.object({
   ).optional(),
 });
 
+export const playerProfileInputSchema = z.object({
+  displayName: z.string().trim().min(1).max(120).optional().nullable(),
+  country: z.string().trim().max(80).optional().nullable(),
+  email: z.string().trim().email().max(160).optional().nullable().or(z.literal("")),
+  dateOfBirth: z.string().trim().max(32).optional().nullable(),
+  genderCategory: z.enum(["open", "women"]).optional().nullable(),
+  pdgaNumber: z.string().trim().max(32).optional().nullable(),
+  homeClub: z.string().trim().max(120).optional().nullable(),
+});
+
+export const guestPlayerInputSchema = playerProfileInputSchema.extend({
+  displayName: z.string().trim().min(1, "Player name is required").max(120),
+});
+
 export const tournamentEntryCreateSchema = z.object({
   majorDivision: divisionCodeSchema,
-  discipline: z.string().trim().min(1).max(64).optional().default("overall"),
+  discipline: z.string().trim().min(1).max(64).optional(),
+  disciplines: z.array(z.string().trim().min(1).max(64)).min(1).optional(),
   playerId: z.string().trim().min(1).optional(),
+  userId: z.string().trim().min(1).optional(),
+  guestPlayer: guestPlayerInputSchema.optional(),
+  profile: playerProfileInputSchema.optional(),
+});
+
+export const tournamentPlayerRegistrationPatchSchema = z.object({
+  majorDivision: divisionCodeSchema.optional(),
+  disciplines: z.array(z.string().trim().min(1).max(64)).min(1).optional(),
+  status: z.enum(["registered", "withdrawn"]).optional(),
+  profile: playerProfileInputSchema.optional(),
 });
 
 export type DivisionPolicyPatch = z.infer<typeof divisionPolicyPatchSchema>;
 export type TournamentEntryCreateBody = z.infer<typeof tournamentEntryCreateSchema>;
+export type TournamentPlayerRegistrationPatchBody = z.infer<typeof tournamentPlayerRegistrationPatchSchema>;

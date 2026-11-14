@@ -19,7 +19,7 @@ This document is the living Command Center for ATM development, synchronized wit
     - Straight sum of all rounds (`rounds`) OR cut after `cumulativeRounds` into Semifinal/Final.
   - Configure optional **Course Par per Round** so leaderboards can show both total strokes (`54`) and relative to par (`-4`).
 
-- [ ] **M1.2 – Player Registration Flow (Public Self-Signup + TD/Admin & Guest Players)** (`#60`)
+- [x] **M1.2 – Player Registration Flow (Public Self-Signup + TD/Admin & Guest Players)** (`#60`)
   - **Public Self-Signup (`/tournaments/[slug]`):**
     - Logged-in players choose Major Division (`Open` / `Women`) and check desired disciplines (including a `"Select All / Full Overall"` shortcut).
     - Minor/age divisions (`OM`, `OGM`, `OSGM`, `OL`, `OJ`, etc.) are automatically derived from birth year.

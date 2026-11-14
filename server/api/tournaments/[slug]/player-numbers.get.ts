@@ -46,6 +46,8 @@ export default defineEventHandler(async (event) => {
     .select({
       playerId: player.id,
       playerName: player.displayName,
+      playerCountry: player.country,
+      playerEmail: player.email,
       userName: user.name,
       userCountry: user.country,
       userEmail: user.email,
@@ -53,7 +55,12 @@ export default defineEventHandler(async (event) => {
     .from(eventEntry)
     .innerJoin(player, eq(player.id, eventEntry.playerId))
     .leftJoin(user, eq(user.id, player.userId))
-    .where(eq(eventEntry.tournamentId, foundTournament.id));
+    .where(
+      and(
+        eq(eventEntry.tournamentId, foundTournament.id),
+        eq(eventEntry.status, "registered"),
+      ),
+    );
 
   const numberRows = await db
     .select({
@@ -87,8 +94,8 @@ export default defineEventHandler(async (event) => {
       playerId: row.playerId,
       playerName: row.playerName,
       userName: row.userName,
-      userCountry: row.userCountry,
-      userEmail: row.userEmail,
+      userCountry: row.playerCountry || row.userCountry,
+      userEmail: row.playerEmail || row.userEmail,
       entryCount: 1,
     });
   }

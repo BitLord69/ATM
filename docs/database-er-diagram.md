@@ -101,6 +101,10 @@ erDiagram
     text id PK
     text user_id FK
     text display_name
+    text country
+    text email
+    text pdga_number
+    text home_club
     text date_of_birth
     text gender_category
   }
@@ -168,7 +172,7 @@ erDiagram
   user ||--o{ tournament_membership : assigned
   user ||--o{ tournaments : contact_for
   user ||--o{ venues : changed_by
-  user ||--|| player : player_profile
+  user |o--o| player : player_profile
 
   organization ||--o{ member : has
   organization ||--o{ invitation : has

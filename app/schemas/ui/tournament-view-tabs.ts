@@ -4,6 +4,7 @@ import { buildTabScheme } from "~/schemas/ui/tab-scheme";
 
 const TOURNAMENT_VIEW_TABS = [
   { id: "overview", label: "Overview" },
+  { id: "registration", label: "Registration" },
   { id: "contacts", label: "Contacts" },
   { id: "map", label: "Map" },
   { id: "venues", label: "Venues" },

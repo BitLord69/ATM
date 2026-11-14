@@ -298,6 +298,16 @@ const REQUIRED_COLUMNS: ColumnSpec[] = [
     name: "global_role_target",
     ddl: "ALTER TABLE invitation ADD COLUMN global_role_target TEXT",
   },
+  {
+    table: "player",
+    name: "country",
+    ddl: "ALTER TABLE player ADD COLUMN country TEXT",
+  },
+  {
+    table: "player",
+    name: "email",
+    ddl: "ALTER TABLE player ADD COLUMN email TEXT",
+  },
 ];
 
 async function tableColumns(db: ReturnType<typeof createClient>, table: string) {
@@ -346,6 +356,17 @@ async function main() {
   }
   else {
     console.log("No legacy global role values found");
+  }
+
+  const playerInfo = await db.execute("PRAGMA table_info(player)");
+  const userIdCol = playerInfo.rows.find(row => String(row.name) === "user_id");
+  if (userIdCol && Number(userIdCol.notnull) === 1) {
+    await db.execute("DROP INDEX IF EXISTS player_user_id_unique");
+    await db.execute("DROP INDEX IF EXISTS player_pdga_number_idx");
+    await db.execute("ALTER TABLE player ALTER COLUMN \"user_id\" TO \"user_id\" text REFERENCES user(id) ON DELETE set null");
+    await db.execute("CREATE UNIQUE INDEX IF NOT EXISTS player_user_id_unique ON player (user_id)");
+    await db.execute("CREATE INDEX IF NOT EXISTS player_pdga_number_idx ON player (pdga_number)");
+    console.log("Updated player.user_id to allow NULL for guest players");
   }
 
   const requiredIndexes = [

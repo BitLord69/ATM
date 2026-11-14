@@ -73,19 +73,20 @@ function getAgeOnEventDate(
 }
 
 function parseAgeProtectedThreshold(code: string) {
-  const match = code.match(/^(MP|FP|MA|FA)(\d{2})$/);
+  const match = code.match(/^(MP|FP|MA|FA|MJ|FJ)(\d{2})$/);
   if (!match) {
     return null;
   }
 
-  const [, prefix, minAgeText] = match;
-  if (!prefix || !minAgeText) {
+  const [, prefix, ageText] = match;
+  if (!prefix || !ageText) {
     return null;
   }
 
   return {
     prefix,
-    minAge: Number.parseInt(minAgeText, 10),
+    isJunior: prefix === "MJ" || prefix === "FJ",
+    ageLimit: Number.parseInt(ageText, 10),
   };
 }
 
@@ -119,7 +120,7 @@ export function validateMajorDivision(input: ValidateMajorDivisionInput): MajorD
     }
 
     const age = getAgeOnEventDate(dateOfBirth, eventDate, policy.ageReferenceMode);
-    if (age < threshold.minAge) {
+    if (threshold.isJunior ? age > threshold.ageLimit : age < threshold.ageLimit) {
       return { eligible: false, reason: "age_not_eligible" };
     }
   }

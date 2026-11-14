@@ -68,18 +68,29 @@ export default defineEventHandler(async (event) => {
     .select({
       playerId: player.id,
       playerName: player.displayName,
+      playerCountry: player.country,
       userName: user.name,
       userCountry: user.country,
     })
     .from(eventEntry)
     .innerJoin(player, eq(player.id, eventEntry.playerId))
     .leftJoin(user, eq(user.id, player.userId))
-    .where(eq(eventEntry.tournamentId, foundTournament.id));
+    .where(
+      and(
+        eq(eventEntry.tournamentId, foundTournament.id),
+        eq(eventEntry.status, "registered"),
+      ),
+    );
 
   const uniquePlayers = new Map<string, { playerId: string; playerName: string | null; userName: string | null; userCountry: string | null }>();
   for (const row of entryRows) {
     if (!uniquePlayers.has(row.playerId)) {
-      uniquePlayers.set(row.playerId, row);
+      uniquePlayers.set(row.playerId, {
+        playerId: row.playerId,
+        playerName: row.playerName,
+        userName: row.userName,
+        userCountry: row.playerCountry || row.userCountry,
+      });
     }
   }
 

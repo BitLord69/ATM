@@ -1,8 +1,20 @@
 import { eq } from "drizzle-orm";
 
 import db from "../../../lib/db";
-import { tournament, tournamentVenue, venue } from "../../../lib/db/schema";
+import {
+  divisionPolicy,
+  tournament,
+  tournamentDivision,
+  tournamentRegistrationLock,
+  tournamentVenue,
+  venue,
+} from "../../../lib/db/schema";
 import { getTournamentStatus } from "../../utils/authorization";
+import {
+  getEnabledTournamentDisciplines,
+  getTournamentRegistrationStatus,
+  mapPolicyFromDb,
+} from "../../utils/division-policy";
 
 /**
  * Public API endpoint - returns tournament details by slug
@@ -43,6 +55,15 @@ export default defineEventHandler(async (event) => {
       registrationCloseDate: tournament.registrationCloseDate,
       closedAt: tournament.closedAt,
       isSanctioned: tournament.isSanctioned,
+      divisionOpen: tournament.divisionOpen,
+      divisionWomen: tournament.divisionWomen,
+      divisionMaster: tournament.divisionMaster,
+      divisionGrandMaster: tournament.divisionGrandMaster,
+      divisionSeniorGrandMaster: tournament.divisionSeniorGrandMaster,
+      divisionLegend: tournament.divisionLegend,
+      divisionJunior: tournament.divisionJunior,
+      keepJuniorsSeparate: tournament.keepJuniorsSeparate,
+      showDivisionInResults: tournament.showDivisionInResults,
       hasGolf: tournament.hasGolf,
       hasAccuracy: tournament.hasAccuracy,
       hasDistance: tournament.hasDistance,
@@ -87,10 +108,42 @@ export default defineEventHandler(async (event) => {
     .innerJoin(venue, eq(tournamentVenue.venueId, venue.id))
     .where(eq(tournamentVenue.tournamentId, t.id));
 
+  const [policyRows, offeredRows, lockRows] = await Promise.all([
+    db
+      .select({ ageReferenceMode: divisionPolicy.ageReferenceMode })
+      .from(divisionPolicy)
+      .where(eq(divisionPolicy.tournamentId, t.id))
+      .limit(1),
+    db
+      .select({
+        code: tournamentDivision.code,
+        label: tournamentDivision.label,
+        isEnabled: tournamentDivision.isEnabled,
+      })
+      .from(tournamentDivision)
+      .where(eq(tournamentDivision.tournamentId, t.id)),
+    db
+      .select({ isLocked: tournamentRegistrationLock.isLocked })
+      .from(tournamentRegistrationLock)
+      .where(eq(tournamentRegistrationLock.tournamentId, t.id))
+      .limit(1),
+  ]);
+
+  const policyContext = mapPolicyFromDb(policyRows[0], offeredRows, t);
+  const registrationState = getTournamentRegistrationStatus(t, !!lockRows[0]?.isLocked);
+  const enabledDisciplines = getEnabledTournamentDisciplines(t);
+
   return {
     ...t,
     status: tournamentStatus,
     isActive: tournamentStatus === "active",
     venues,
+    majorDivisions: policyContext.majorDivisions,
+    offeredDivisionCodes: policyContext.offeredDivisionCodes,
+    ageReferenceMode: policyContext.config.ageReferenceMode,
+    enabledDisciplines,
+    isRegistrationLocked: registrationState.isRegistrationLocked,
+    isRegistrationOpen: registrationState.isRegistrationOpen,
+    registrationStatusReason: registrationState.registrationStatusReason,
   };
 });

@@ -4,6 +4,7 @@ import { auth } from "../../../../lib/auth";
 import db from "../../../../lib/db";
 import { tournament, tournamentMembership, tournamentRegistrationLock } from "../../../../lib/db/schema";
 import { hasTournamentRole } from "../../../utils/authorization";
+import { getTournamentRegistrationStatus } from "../../../utils/division-policy";
 
 export default defineEventHandler(async (event) => {
   const slug = getRouterParam(event, "slug");
@@ -17,7 +18,13 @@ export default defineEventHandler(async (event) => {
   }
 
   const tournamentRows = await db
-    .select({ id: tournament.id, startDate: tournament.startDate })
+    .select({
+      id: tournament.id,
+      startDate: tournament.startDate,
+      closedAt: tournament.closedAt,
+      registrationOpenDate: tournament.registrationOpenDate,
+      registrationCloseDate: tournament.registrationCloseDate,
+    })
     .from(tournament)
     .where(eq(tournament.slug, slug))
     .limit(1);
@@ -49,10 +56,15 @@ export default defineEventHandler(async (event) => {
     .limit(1);
 
   const lock = lockRows[0] ?? { isLocked: false, lockedBy: null, lockedAt: null };
+  const registrationState = getTournamentRegistrationStatus(foundTournament, !!lock.isLocked);
 
   return {
     tournamentId: foundTournament.id,
     hasStarted: !!foundTournament.startDate && Date.now() >= foundTournament.startDate,
+    registrationOpenDate: foundTournament.registrationOpenDate,
+    registrationCloseDate: foundTournament.registrationCloseDate,
+    isRegistrationOpen: registrationState.isRegistrationOpen,
+    registrationStatusReason: registrationState.registrationStatusReason,
     lock: {
       isLocked: !!lock.isLocked,
       lockedBy: lock.lockedBy,

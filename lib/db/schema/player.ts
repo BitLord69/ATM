@@ -8,8 +8,10 @@ export const player = sqliteTable(
   "player",
   {
     id: text("id").primaryKey(),
-    userId: text("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
+    userId: text("user_id").references(() => user.id, { onDelete: "set null" }),
     displayName: text("display_name"),
+    country: text("country"),
+    email: text("email"),
     pdgaNumber: text("pdga_number"),
     homeClub: text("home_club"),
     dateOfBirth: text("date_of_birth"),
