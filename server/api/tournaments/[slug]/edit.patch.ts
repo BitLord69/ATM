@@ -1,20 +1,11 @@
-import { and, eq, notInArray } from "drizzle-orm";
+import { and, eq, inArray, notInArray } from "drizzle-orm";
 
 import { editTournamentBodySchema, slugParamSchema } from "#shared/schemas/tournament-edit";
 
 import { auth } from "../../../../lib/auth";
 import db from "../../../../lib/db";
 import { tournament, tournamentMembership, tournamentVenue, venue } from "../../../../lib/db/schema";
-
-function canEditTournament(globalRole: string | undefined, membership: { role: string; status: string } | undefined) {
-  if (globalRole === "admin") {
-    return true;
-  }
-  if (!membership || membership.status !== "active") {
-    return false;
-  }
-  return ["owner", "admin", "td"].includes(membership.role);
-}
+import { hasTournamentRole } from "../../../utils/authorization";
 
 export default defineEventHandler(async (event) => {
   const slugResult = slugParamSchema.safeParse({ slug: getRouterParam(event, "slug") });
@@ -83,11 +74,11 @@ export default defineEventHandler(async (event) => {
     .limit(1);
 
   const membership = membershipRows[0];
-  if (!canEditTournament(session.user.role, membership)) {
+  if (!hasTournamentRole(session.user.role, membership, "td")) {
     throw createError({ statusCode: 403, message: "Forbidden" });
   }
 
-  const changedBy = session.user.id as any;
+  const changedBy = session.user.id;
 
   const effectiveEndDate = body.endDate ?? null;
   const effectiveClosedAt = body.closeTournament ? now : tournamentRow.closedAt;
@@ -171,35 +162,26 @@ export default defineEventHandler(async (event) => {
   const linkedVenueIds = linkedRows.map(v => v.venueId);
   const finalVenueIds: number[] = [];
 
-  for (const inputVenue of inputVenues) {
-    if (inputVenue.id) {
-      const existing = await db
+  const candidateVenueIds = [...new Set(inputVenues.map(v => v.id).filter((id): id is number => typeof id === "number"))];
+  const existingVenues = candidateVenueIds.length > 0
+    ? await db
         .select({ id: venue.id })
         .from(venue)
-        .where(eq(venue.id, inputVenue.id))
-        .limit(1);
+        .where(inArray(venue.id, candidateVenueIds))
+    : [];
+  const existingVenueIdSet = new Set(existingVenues.map(v => v.id));
+  const venueToUpdateFlags: Array<{ id: number; flags: ReturnType<typeof buildVenueFlags> }> = [];
 
-      if (existing.length > 0) {
-        if (linkedVenueIds.includes(inputVenue.id)) {
-          await db
-            .update(tournamentVenue)
-            .set({
-              ...buildVenueFlags(inputVenue),
-              changedBy,
-              changedAt: Date.now(),
-            })
-            .where(
-              and(
-                eq(tournamentVenue.tournamentId, tournamentId),
-                eq(tournamentVenue.venueId, inputVenue.id),
-              ),
-            );
-        }
-
-        venueFlagsById.set(inputVenue.id, buildVenueFlags(inputVenue));
-        finalVenueIds.push(inputVenue.id);
-        continue;
+  for (const inputVenue of inputVenues) {
+    if (inputVenue.id && existingVenueIdSet.has(inputVenue.id)) {
+      const flags = buildVenueFlags(inputVenue);
+      if (linkedVenueIds.includes(inputVenue.id)) {
+        venueToUpdateFlags.push({ id: inputVenue.id, flags });
       }
+
+      venueFlagsById.set(inputVenue.id, flags);
+      finalVenueIds.push(inputVenue.id);
+      continue;
     }
 
     if (!inputVenue.name?.trim()) {
@@ -226,7 +208,7 @@ export default defineEventHandler(async (event) => {
         hasDDC: !!inputVenue.hasDDC,
         hasFreestyle: !!inputVenue.hasFreestyle,
         changedBy,
-        changedAt: Date.now(),
+        changedAt: now,
       })
       .returning({ id: venue.id });
 
@@ -234,6 +216,27 @@ export default defineEventHandler(async (event) => {
       finalVenueIds.push(inserted[0].id);
       venueFlagsById.set(inserted[0].id, buildVenueFlags(inputVenue));
     }
+  }
+
+  const venueLinkUpdates = venueToUpdateFlags.map(item =>
+    db
+      .update(tournamentVenue)
+      .set({
+        ...item.flags,
+        changedBy,
+        changedAt: now,
+      })
+      .where(
+        and(
+          eq(tournamentVenue.tournamentId, tournamentId),
+          eq(tournamentVenue.venueId, item.id),
+        ),
+      ),
+  );
+
+  const [firstUpdate, ...restUpdates] = venueLinkUpdates;
+  if (firstUpdate) {
+    await db.batch([firstUpdate, ...restUpdates]);
   }
 
   const uniqueFinalVenueIds = [...new Set(finalVenueIds)];

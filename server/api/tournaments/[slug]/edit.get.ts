@@ -5,17 +5,8 @@ import { slugParamSchema } from "#shared/schemas/tournament-edit";
 import { auth } from "../../../../lib/auth";
 import db from "../../../../lib/db";
 import { tournament, tournamentMembership, tournamentVenue, venue } from "../../../../lib/db/schema";
+import { hasTournamentRole } from "../../../utils/authorization";
 import { distanceKm } from "../../../utils/geo";
-
-function canEditTournament(globalRole: string | undefined, membership: { role: string; status: string } | undefined) {
-  if (globalRole === "admin") {
-    return true;
-  }
-  if (!membership || membership.status !== "active") {
-    return false;
-  }
-  return ["owner", "admin", "td"].includes(membership.role);
-}
 
 export default defineEventHandler(async (event) => {
   const radiusQuery = Number(getQuery(event).radiusKm);
@@ -142,7 +133,7 @@ export default defineEventHandler(async (event) => {
     .limit(1);
 
   const membership = membershipRows[0];
-  if (!canEditTournament(session.user.role, membership)) {
+  if (!hasTournamentRole(session.user.role, membership, "td")) {
     throw createError({
       statusCode: 403,
       message: "Forbidden",

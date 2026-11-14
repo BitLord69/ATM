@@ -327,6 +327,22 @@ async function main() {
   else {
     console.log("No legacy global role values found");
   }
+
+  const requiredIndexes = [
+    "CREATE INDEX IF NOT EXISTS tournaments_organization_id_idx ON tournaments (organization_id)",
+    "CREATE INDEX IF NOT EXISTS tournamentvenues_tournament_id_idx ON tournamentvenues (tournament_id)",
+    "CREATE INDEX IF NOT EXISTS tournamentvenues_venue_id_idx ON tournamentvenues (venue_id)",
+    "CREATE INDEX IF NOT EXISTS tournamentvenues_tournament_venue_idx ON tournamentvenues (tournament_id, venue_id)",
+    "CREATE INDEX IF NOT EXISTS tournament_membership_user_id_idx ON tournament_membership (user_id)",
+    "CREATE INDEX IF NOT EXISTS tournament_membership_tournament_id_idx ON tournament_membership (tournament_id)",
+    "CREATE INDEX IF NOT EXISTS tournament_membership_organization_id_idx ON tournament_membership (organization_id)",
+    "CREATE INDEX IF NOT EXISTS tournament_membership_user_tournament_idx ON tournament_membership (user_id, tournament_id)",
+  ];
+
+  for (const indexDdl of requiredIndexes) {
+    await db.execute(indexDdl);
+  }
+  console.log("Verified required database indexes");
 }
 
 main().catch((error) => {

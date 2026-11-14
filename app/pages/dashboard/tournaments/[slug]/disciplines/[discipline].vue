@@ -35,6 +35,28 @@ const form = reactive({
   cumulativeRounds: "",
 });
 
+function createSnapshot() {
+  return JSON.stringify({
+    rounds: form.rounds.trim(),
+    cumulativeRounds: form.cumulativeRounds.trim(),
+  });
+}
+
+const {
+  hasUnsavedChanges,
+  captureInitialSnapshot,
+} = useSnapshotDirtyState(createSnapshot);
+
+const {
+  showLeaveConfirmModal,
+  modalTitle,
+  modalMessage,
+  modalConfirmText,
+  modalCancelText,
+  confirmLeavePage,
+  cancelLeavePage,
+} = useUnsavedChangesGuard(hasUnsavedChanges);
+
 const saveError = ref<string | null>(null);
 const saveSuccess = ref<string | null>(null);
 const saving = ref(false);
@@ -48,6 +70,7 @@ watch(
 
     form.rounds = typeof value.rounds === "number" ? String(value.rounds) : "";
     form.cumulativeRounds = typeof value.cumulativeRounds === "number" ? String(value.cumulativeRounds) : "";
+    captureInitialSnapshot();
   },
   { immediate: true },
 );
@@ -91,6 +114,7 @@ async function saveSettings() {
 
     saveSuccess.value = `${disciplineLabel.value} settings saved.`;
     await refresh();
+    captureInitialSnapshot();
   }
   catch (err: any) {
     saveError.value = err?.data?.message || err?.message || "Failed to save discipline settings";
@@ -161,7 +185,7 @@ async function saveSettings() {
             <button
               class="btn btn-primary"
               type="button"
-              :disabled="saving"
+              :disabled="saving || !hasUnsavedChanges"
               @click="saveSettings"
             >
               <span
@@ -173,6 +197,17 @@ async function saveSettings() {
           </div>
         </div>
       </div>
+
+      <ConfirmationModal
+        :open="showLeaveConfirmModal"
+        :title="modalTitle"
+        :message="modalMessage"
+        :confirm-text="modalConfirmText"
+        :cancel-text="modalCancelText"
+        :is-dangerous="true"
+        @confirm="confirmLeavePage"
+        @cancel="cancelLeavePage"
+      />
     </div>
   </div>
 </template>

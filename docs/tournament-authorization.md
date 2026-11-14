@@ -25,6 +25,7 @@ This implements a tournament-scoped role system where users can have different r
 
 - `can(user, action, tournamentContext)` - Check if user can perform an action
 - `hasRoleLevel(tournamentContext, minRole)` - Check role hierarchy
+- `hasTournamentRole(globalRole, membership, minRole)` - Check if a user has at least the specified active tournament role (`owner`, `admin`, `td`, `scorer`, `viewer`) or is a global system `admin`
 - `isTournamentActive(startDate, endDate)` - Check tournament date status
 - `getTournamentStatus(startDate, endDate)` - Return 'active' | 'coming' | 'past'
 - `isPrivilegedMember(tournamentContext)` - Check if user is TD or higher

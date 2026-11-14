@@ -5,18 +5,7 @@ import { playerNumberGenerateBodySchema } from "#shared/schemas/player-numbers";
 import { auth } from "../../../../../lib/auth";
 import db from "../../../../../lib/db";
 import { eventEntry, player, tournament, tournamentMembership, tournamentPlayerNumber, user } from "../../../../../lib/db/schema";
-
-function canManageTournament(globalRole: string | undefined, membership: { role: string; status: string } | undefined) {
-  if (globalRole === "admin") {
-    return true;
-  }
-
-  if (!membership || membership.status !== "active") {
-    return false;
-  }
-
-  return ["owner", "admin", "td", "scorer"].includes(membership.role);
-}
+import { hasTournamentRole } from "../../../../utils/authorization";
 
 export default defineEventHandler(async (event) => {
   const slug = getRouterParam(event, "slug");
@@ -58,7 +47,7 @@ export default defineEventHandler(async (event) => {
     )
     .limit(1);
 
-  if (!canManageTournament(session.user.role, membershipRows[0])) {
+  if (!hasTournamentRole(session.user.role, membershipRows[0], "scorer")) {
     throw createError({ statusCode: 403, message: "Forbidden" });
   }
 

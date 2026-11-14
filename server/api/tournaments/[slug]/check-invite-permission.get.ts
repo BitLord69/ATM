@@ -3,6 +3,7 @@ import { and, eq } from "drizzle-orm";
 import { auth } from "../../../../lib/auth";
 import db from "../../../../lib/db";
 import { tournament, tournamentMembership } from "../../../../lib/db/schema";
+import { hasTournamentRole } from "../../../utils/authorization";
 
 export default defineEventHandler(async (event) => {
   const slug = getRouterParam(event, "slug");
@@ -66,7 +67,7 @@ export default defineEventHandler(async (event) => {
   if (!membership) {
     return { canInvite: false };
   }
-  const canInvite = membership.status === "active" && (membership.role === "owner" || membership.role === "admin");
+  const canInvite = hasTournamentRole(user.role, membership, "admin");
 
   return { canInvite };
 });

@@ -3,18 +3,7 @@ import { and, asc, eq } from "drizzle-orm";
 import { auth } from "../../../../lib/auth";
 import db from "../../../../lib/db";
 import { divisionPolicy, tournament, tournamentDivision, tournamentMembership } from "../../../../lib/db/schema";
-
-function canManageTournament(globalRole: string | undefined, membership: { role: string; status: string } | undefined) {
-  if (globalRole === "admin") {
-    return true;
-  }
-
-  if (!membership || membership.status !== "active") {
-    return false;
-  }
-
-  return ["owner", "admin", "td"].includes(membership.role);
-}
+import { hasTournamentRole } from "../../../utils/authorization";
 
 export default defineEventHandler(async (event) => {
   const slug = getRouterParam(event, "slug");
@@ -49,7 +38,7 @@ export default defineEventHandler(async (event) => {
     )
     .limit(1);
 
-  if (!canManageTournament(session.user.role, membershipRows[0])) {
+  if (!hasTournamentRole(session.user.role, membershipRows[0], "td")) {
     throw createError({ statusCode: 403, message: "Forbidden" });
   }
 

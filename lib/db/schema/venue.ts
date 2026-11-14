@@ -16,7 +16,7 @@ export const venue = sqliteTable("venues", {
   hasDiscathon: integer("has_discathon", { mode: "boolean" }).notNull().default(false),
   hasDDC: integer("has_ddc", { mode: "boolean" }).notNull().default(false),
   hasFreestyle: integer("has_freestyle", { mode: "boolean" }).notNull().default(false),
-  changedBy: int().notNull().references(() => user.id),
+  changedBy: text().notNull().references(() => user.id),
   createdAt: int().notNull().$default(() => Date.now()),
   changedAt: int().notNull().$default(() => Date.now()).$onUpdate(() => Date.now()),
 });

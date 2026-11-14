@@ -46,7 +46,7 @@ async function loadInvitation() {
   }
 
   try {
-    const response = await $fetch<{ data?: { email: string; organizationName: string } }>(`/api/invitations/${invitationId.value}/details`);
+    const response = await $fetch<{ data?: { email: string; organizationName: string; accountExists?: boolean } }>(`/api/invitations/${invitationId.value}/details`);
     const data = response?.data;
     if (!data?.email) {
       throw createError({ statusCode: 404, message: "Invitation details not found" });
@@ -63,11 +63,14 @@ async function loadInvitation() {
         await acceptInvite();
       }
     }
+    else if (typeof data.accountExists === "boolean") {
+      accountExists.value = data.accountExists;
+    }
     else {
       // Check if account exists for this email
       const checkResponse = await $fetch("/api/users/check-email", {
         method: "POST",
-        body: { email: data.email },
+        body: { email: data.email, invitationId: invitationId.value },
       });
       accountExists.value = checkResponse.exists;
     }

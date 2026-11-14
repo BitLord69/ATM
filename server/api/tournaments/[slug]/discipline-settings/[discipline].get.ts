@@ -3,16 +3,7 @@ import { and, eq } from "drizzle-orm";
 import { auth } from "../../../../../lib/auth";
 import db from "../../../../../lib/db";
 import { tournament, tournamentMembership } from "../../../../../lib/db/schema";
-
-function canEditTournament(globalRole: string | undefined, membership: { role: string; status: string } | undefined) {
-  if (globalRole === "admin") {
-    return true;
-  }
-  if (!membership || membership.status !== "active") {
-    return false;
-  }
-  return ["owner", "admin", "td"].includes(membership.role);
-}
+import { hasTournamentRole } from "../../../../utils/authorization";
 
 const disciplineConfig = {
   golf: {
@@ -130,7 +121,7 @@ export default defineEventHandler(async (event) => {
     .limit(1);
 
   const membership = membershipRows[0];
-  if (!canEditTournament(session.user.role, membership)) {
+  if (!hasTournamentRole(session.user.role, membership, "td")) {
     throw createError({ statusCode: 403, message: "Forbidden" });
   }
 

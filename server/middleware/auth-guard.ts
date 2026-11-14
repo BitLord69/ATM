@@ -23,8 +23,14 @@ export default defineEventHandler(async (event) => {
     "/admin",
     "/api/tournaments/my-tournaments",
     "/api/invitations",
+    "/api/organizations",
     "/api/admin",
   ];
+
+  // Unauthenticated invitees must be able to read basic details of a valid pending invitation token
+  if (/^\/api\/invitations\/[^/]+\/details$/.test(path)) {
+    return;
+  }
 
   // Check if current path requires authentication
   const requiresAuth = protectedPaths.some(p => path.startsWith(p));
@@ -54,11 +60,15 @@ export default defineEventHandler(async (event) => {
   const userRole = normalizePersistedUserRole((session.user as any).role);
   const isAdmin = userRole === "admin";
 
-  // Tournament admins (owner/admin/td membership) can access scoped moderation workspace routes.
+  // Tournament admins (owner/admin/td membership) can access scoped moderation and invitation workspace routes.
   const isScopedAdminWorkspacePath = path.startsWith("/admin/users")
     || path.startsWith("/admin/ban-requests")
+    || path.startsWith("/admin/invites")
+    || path.startsWith("/admin/invitations")
     || path.startsWith("/api/admin/users")
     || path.startsWith("/api/admin/ban-requests")
+    || path.startsWith("/api/admin/invite-tournaments")
+    || path.startsWith("/api/admin/invitations")
     || path.startsWith("/api/admin/notifications")
     || path === "/api/admin/settings/moderation";
   let hasActiveTournamentAdminMembership = false;

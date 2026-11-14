@@ -19,7 +19,11 @@ export default defineEventHandler(async (event) => {
       .where(
         and(
           eq(tournamentMembership.userId, session.user.id),
-          eq(tournamentMembership.role, "td"),
+          or(
+            eq(tournamentMembership.role, "owner"),
+            eq(tournamentMembership.role, "admin"),
+            eq(tournamentMembership.role, "td"),
+          ),
           eq(tournamentMembership.status, "active"),
         ),
       )
@@ -46,7 +50,11 @@ export default defineEventHandler(async (event) => {
         and(
           eq(tournamentMembership.tournamentId, tournament.id),
           eq(tournamentMembership.userId, session.user.id),
-          eq(tournamentMembership.role, "td"),
+          or(
+            eq(tournamentMembership.role, "owner"),
+            eq(tournamentMembership.role, "admin"),
+            eq(tournamentMembership.role, "td"),
+          ),
           eq(tournamentMembership.status, "active"),
         ),
       ),

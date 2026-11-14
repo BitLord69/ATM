@@ -14,21 +14,10 @@ import {
   tournamentRegistrationLock,
   user,
 } from "../../../../lib/db/schema";
+import { hasTournamentRole } from "../../../utils/authorization";
 import { deriveMinorDivisions } from "../../../utils/division-derivation";
 import { validateMajorDivision } from "../../../utils/division-eligibility";
 import { mapPolicyFromDb } from "../../../utils/division-policy";
-
-function canManageTournament(globalRole: string | undefined, membership: { role: string; status: string } | undefined) {
-  if (globalRole === "admin") {
-    return true;
-  }
-
-  if (!membership || membership.status !== "active") {
-    return false;
-  }
-
-  return ["owner", "admin", "td", "scorer"].includes(membership.role);
-}
 
 export default defineEventHandler(async (event) => {
   const slug = getRouterParam(event, "slug");
@@ -70,7 +59,7 @@ export default defineEventHandler(async (event) => {
     )
     .limit(1);
 
-  const isManager = canManageTournament(session.user.role, membershipRows[0]);
+  const isManager = hasTournamentRole(session.user.role, membershipRows[0], "scorer");
 
   const now = Date.now();
   const hasStarted = !!foundTournament.startDate && now >= foundTournament.startDate;

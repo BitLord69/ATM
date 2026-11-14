@@ -5,19 +5,8 @@ import { startingListReorderBodySchema } from "#shared/schemas/starting-lists";
 import { auth } from "../../../../../lib/auth";
 import db from "../../../../../lib/db";
 import { startingListEntry, startingListLock, tournament, tournamentMembership } from "../../../../../lib/db/schema";
+import { hasTournamentRole } from "../../../../utils/authorization";
 import { resequencePositions } from "../../../../utils/starting-list";
-
-function canManageStartingLists(globalRole: string | undefined, membership: { role: string; status: string } | undefined) {
-  if (globalRole === "admin") {
-    return true;
-  }
-
-  if (!membership || membership.status !== "active") {
-    return false;
-  }
-
-  return ["owner", "admin", "td", "scorer"].includes(membership.role);
-}
 
 function hasUniqueValues(values: string[]) {
   return new Set(values).size === values.length;
@@ -66,7 +55,7 @@ export default defineEventHandler(async (event) => {
     )
     .limit(1);
 
-  if (!canManageStartingLists(session.user.role, membershipRows[0])) {
+  if (!hasTournamentRole(session.user.role, membershipRows[0], "scorer")) {
     throw createError({ statusCode: 403, message: "Forbidden" });
   }
 
@@ -125,11 +114,12 @@ export default defineEventHandler(async (event) => {
   const resequenced = resequencePositions(body.orderedEventEntryIds);
 
   const bumpOffset = 10000;
-  await db
+  const now = Date.now();
+  const bumpStatement = db
     .update(startingListEntry)
     .set({
       position: sql`${startingListEntry.position} + ${bumpOffset}`,
-      updatedAt: Date.now(),
+      updatedAt: now,
     })
     .where(
       and(
@@ -139,18 +129,21 @@ export default defineEventHandler(async (event) => {
       ),
     );
 
-  const now = Date.now();
-  for (const item of resequenced) {
+  const updateStatements = resequenced.flatMap((item) => {
     const row = eventEntryIdToRow.get(item.eventEntryId);
     if (!row) {
-      continue;
+      return [];
     }
 
-    await db
-      .update(startingListEntry)
-      .set({ position: item.position, updatedAt: now })
-      .where(eq(startingListEntry.id, row.id));
-  }
+    return [
+      db
+        .update(startingListEntry)
+        .set({ position: item.position, updatedAt: now })
+        .where(eq(startingListEntry.id, row.id)),
+    ];
+  });
+
+  await db.batch([bumpStatement, ...updateStatements]);
 
   return {
     success: true,

@@ -4,6 +4,7 @@ import { z } from "zod";
 import { auth } from "../../../../../../lib/auth";
 import db from "../../../../../../lib/db";
 import { tournament, tournamentMembership, tournamentVenue, venue } from "../../../../../../lib/db/schema";
+import { hasTournamentRole } from "../../../../../utils/authorization";
 
 const bodySchema = z.object({
   name: z.string().trim().min(1, "Venue name is required"),
@@ -12,18 +13,6 @@ const bodySchema = z.object({
   lat: z.number().gte(-90).lte(90),
   long: z.number().gte(-180).lte(180),
 });
-
-function canEditTournament(globalRole: string | undefined, membership: { role: string; status: string } | undefined) {
-  if (globalRole === "admin") {
-    return true;
-  }
-
-  if (!membership || membership.status !== "active") {
-    return false;
-  }
-
-  return ["owner", "admin", "td"].includes(membership.role);
-}
 
 export default defineEventHandler(async (event) => {
   const slug = getRouterParam(event, "slug");
@@ -76,7 +65,7 @@ export default defineEventHandler(async (event) => {
     .limit(1);
 
   const membership = membershipRows[0];
-  if (!canEditTournament(session.user.role, membership)) {
+  if (!hasTournamentRole(session.user.role, membership, "td")) {
     throw createError({ statusCode: 403, message: "Forbidden" });
   }
 
@@ -118,7 +107,7 @@ export default defineEventHandler(async (event) => {
       facilities: body.facilities ?? null,
       lat: body.lat,
       long: body.long,
-      changedBy: session.user.id as any,
+      changedBy: session.user.id,
       changedAt: Date.now(),
     })
     .where(eq(venue.id, venueId));
