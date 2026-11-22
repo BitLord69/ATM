@@ -89,5 +89,10 @@ Collected visual upgrades to tackle together in a dedicated UI polish pass:
   - Combine search input + filter `<select>` + action buttons into single seamless `join` groups with pill right edges (`rounded-r-full`) across list views (`/dashboard/tournaments`, `/dashboard/tournaments/[slug]/players`, `/admin/users`, and organization/venue pickers).
 - **Overall Visual Identity & "Wow Factor" Refresh:**
   - Move beyond the utilitarian default dark/light DaisyUI look with a cohesive sport/frisbee aesthetic: refined color palette & subtle gradients on hero/headers, custom typography pairing, crisp glass/elevated cards, consistent pill/rounded accents (`rounded-r-full` / `rounded-xl`), and subtle micro-animations.
+  - **Sticky / Pinned Top Navbar:** Keep the main navbar pinned at the top (`sticky top-0 z-40` with subtle backdrop blur) so navigation is always visible while scrolling long forms and leaderboards.
+- **UI Bug Fixes (to include in UI pass):**
+  - **Missing discipline icons across Venue modal & Manage Venues / Overview:** In `venue-editor-fields.vue`, `edit.vue` (*Manage Venues* filter chips), and Overview discipline lists, only **Distance** currently renders its icon because the remaining 6 discipline icons in `use-discipline-catalog.ts` are referenced dynamically and skipped by `@nuxt/icon` (`provider: "none"`). Add all 7 discipline icons to `nuxt.config.ts` `icon.clientBundle.icons`.
+  - **Unify all remaining `<select>` dropdowns:** Upgrade all native `<select>` dropdowns across the app (e.g., Discipline settings, Starting Lists, Players filters, Admin Users filters) to match the crisp, high-contrast `SearchableSelect` / DaisyUI menu look (`bg-base-200 border-primary/50 ring-1 ring-primary/20 shadow-2xl`).
+  - **Auto-dismissing & closable alerts/toasts site-wide:** Standardize all success/error alerts across all forms and admin pages to use a unified closable (`×`) and auto-dismissing (4–5s for success) alert/toast component (`FlashAlert` or DaisyUI `toast`).
 
 

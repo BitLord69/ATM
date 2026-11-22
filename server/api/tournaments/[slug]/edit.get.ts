@@ -1,10 +1,10 @@
-import { and, eq } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 
 import { slugParamSchema } from "#shared/schemas/tournament-edit";
 
 import { auth } from "../../../../lib/auth";
 import db from "../../../../lib/db";
-import { tournament, tournamentMembership, tournamentVenue, venue } from "../../../../lib/db/schema";
+import { tournament, tournamentMembership, tournamentVenue, venue, venueCourseLayout } from "../../../../lib/db/schema";
 import { hasTournamentRole } from "../../../utils/authorization";
 import { distanceKm } from "../../../utils/geo";
 
@@ -140,6 +140,55 @@ export default defineEventHandler(async (event) => {
     });
   }
 
+  const linkedVenueIds = rows
+    .map(row => row.venueId)
+    .filter((id): id is number => id != null);
+
+  const [availableVenues, layoutRows] = await Promise.all([
+    db
+      .select({
+        id: venue.id,
+        name: venue.name,
+        description: venue.description,
+        facilities: venue.facilities,
+        lat: venue.lat,
+        long: venue.long,
+        hasGolf: venue.hasGolf,
+        hasAccuracy: venue.hasAccuracy,
+        hasDistance: venue.hasDistance,
+        hasSCF: venue.hasSCF,
+        hasDiscathon: venue.hasDiscathon,
+        hasDDC: venue.hasDDC,
+        hasFreestyle: venue.hasFreestyle,
+      })
+      .from(venue),
+    linkedVenueIds.length > 0
+      ? db
+          .select({
+            id: venueCourseLayout.id,
+            venueId: venueCourseLayout.venueId,
+            name: venueCourseLayout.name,
+            par: venueCourseLayout.par,
+            holeCount: venueCourseLayout.holeCount,
+          })
+          .from(venueCourseLayout)
+          .where(inArray(venueCourseLayout.venueId, linkedVenueIds))
+          .orderBy(asc(venueCourseLayout.sortOrder), asc(venueCourseLayout.name))
+      : Promise.resolve([]),
+  ]);
+
+  const layoutsByVenueId = new Map<number, Array<{ id: string; name: string; par: number; holeCount: number | null }>>();
+  for (const layout of layoutRows) {
+    const existing = layoutsByVenueId.get(layout.venueId) ?? [];
+    existing.push({
+      id: layout.id,
+      name: layout.name,
+      par: layout.par,
+      holeCount: layout.holeCount,
+    });
+    layoutsByVenueId.set(layout.venueId, existing);
+  }
+
   const venues = rows
     .filter(row => row.venueId != null)
     .map(row => ({
@@ -163,25 +212,8 @@ export default defineEventHandler(async (event) => {
       hasDiscathon: !!row.venueHasDiscathon,
       hasDDC: !!row.venueHasDDC,
       hasFreestyle: !!row.venueHasFreestyle,
+      courseLayouts: layoutsByVenueId.get(row.venueId as number) ?? [],
     }));
-
-  const availableVenues = await db
-    .select({
-      id: venue.id,
-      name: venue.name,
-      description: venue.description,
-      facilities: venue.facilities,
-      lat: venue.lat,
-      long: venue.long,
-      hasGolf: venue.hasGolf,
-      hasAccuracy: venue.hasAccuracy,
-      hasDistance: venue.hasDistance,
-      hasSCF: venue.hasSCF,
-      hasDiscathon: venue.hasDiscathon,
-      hasDDC: venue.hasDDC,
-      hasFreestyle: venue.hasFreestyle,
-    })
-    .from(venue);
 
   const hasTournamentCoordinates = typeof t.lat === "number" && typeof t.long === "number" && t.lat !== 0 && t.long !== 0;
   const availableNearbyVenues = hasTournamentCoordinates

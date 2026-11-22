@@ -52,6 +52,7 @@ export const tournament = sqliteTable(
     golfPoolCount: integer("golf_pool_count").notNull().default(1),
     golfStartEnabled: integer("golf_start_enabled", { mode: "boolean" }).notNull().default(false),
     golfRoundPars: text("golf_round_pars"),
+    golfRoundLayouts: text("golf_round_layouts"),
     hasAccuracy: integer({ mode: "boolean" }),
     accuracyRounds: integer("accuracy_rounds"),
     accuracyCumulativeRounds: integer("accuracy_cumulative_rounds"),

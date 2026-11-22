@@ -145,6 +145,11 @@ const REQUIRED_COLUMNS: ColumnSpec[] = [
   },
   {
     table: "tournaments",
+    name: "golf_round_layouts",
+    ddl: "ALTER TABLE tournaments ADD COLUMN golf_round_layouts TEXT",
+  },
+  {
+    table: "tournaments",
     name: "has_accuracy",
     ddl: "ALTER TABLE tournaments ADD COLUMN has_accuracy INTEGER NOT NULL DEFAULT false",
   },
@@ -374,7 +379,21 @@ async function main() {
     console.log("Updated player.user_id to allow NULL for guest players");
   }
 
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS venue_course_layout (
+      id TEXT PRIMARY KEY NOT NULL,
+      venue_id INTEGER NOT NULL REFERENCES venues(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      par INTEGER NOT NULL,
+      hole_count INTEGER,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    )
+  `);
+
   const requiredIndexes = [
+    "CREATE INDEX IF NOT EXISTS venue_course_layout_venue_id_idx ON venue_course_layout (venue_id)",
     "CREATE INDEX IF NOT EXISTS tournaments_organization_id_idx ON tournaments (organization_id)",
     "CREATE INDEX IF NOT EXISTS tournamentvenues_tournament_id_idx ON tournamentvenues (tournament_id)",
     "CREATE INDEX IF NOT EXISTS tournamentvenues_venue_id_idx ON tournamentvenues (venue_id)",

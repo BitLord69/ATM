@@ -4,3 +4,15 @@
     light --default,
     dark --prefersdark;
 }
+
+/* Replace DaisyUI's harsh white double-border focus outline with a single crisp primary ring */
+.input:focus,
+.input:focus-within,
+.select:focus,
+.select:focus-within,
+.textarea:focus,
+.textarea:focus-within {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--color-primary) 28%, transparent);
+}

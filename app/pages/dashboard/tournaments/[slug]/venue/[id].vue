@@ -1,7 +1,15 @@
 <script setup lang="ts">
-import type { TournamentEditResponse } from "~/types/tournaments";
+import type { VerticalTabConfig } from "~/components/vertical-tabs-layout.vue";
+import type { TournamentEditResponse, VenueCourseLayoutItem } from "~/types/tournaments";
 
 definePageMeta({ ssr: false, layout: "tournament-admin" });
+
+const venueTabs: VerticalTabConfig[] = [
+  { id: "details", label: "General Details" },
+  { id: "disciplines", label: "Disciplines & Course Layouts" },
+  { id: "location", label: "Location & Map" },
+];
+const activeVenueTab = ref("details");
 
 type TournamentVenue = {
   id: number;
@@ -17,6 +25,7 @@ type TournamentVenue = {
   hasDiscathon: boolean;
   hasDDC: boolean;
   hasFreestyle: boolean;
+  courseLayouts: VenueCourseLayoutItem[];
 };
 
 const route = useRoute();
@@ -56,6 +65,9 @@ const venue = computed<TournamentVenue | null>(() => {
     hasDiscathon: !!match.hasDiscathon,
     hasDDC: !!match.hasDDC,
     hasFreestyle: !!match.hasFreestyle,
+    courseLayouts: Array.isArray(match.courseLayouts)
+      ? match.courseLayouts.map((l: VenueCourseLayoutItem) => ({ ...l }))
+      : [],
   };
 });
 
@@ -97,11 +109,40 @@ const form = reactive({
   hasDiscathon: false,
   hasDDC: false,
   hasFreestyle: false,
+  courseLayouts: [] as VenueCourseLayoutItem[],
 });
 
 const saveError = ref<string | null>(null);
 const saveSuccess = ref<string | null>(null);
 const saving = ref(false);
+let successTimer: ReturnType<typeof setTimeout> | null = null;
+
+function dismissSuccess() {
+  saveSuccess.value = null;
+  if (successTimer) {
+    clearTimeout(successTimer);
+    successTimer = null;
+  }
+}
+
+watch(saveSuccess, (message) => {
+  if (successTimer) {
+    clearTimeout(successTimer);
+    successTimer = null;
+  }
+  if (message) {
+    successTimer = setTimeout(() => {
+      saveSuccess.value = null;
+      successTimer = null;
+    }, 4000);
+  }
+});
+
+onBeforeUnmount(() => {
+  if (successTimer) {
+    clearTimeout(successTimer);
+  }
+});
 
 watch(
   venue,
@@ -123,6 +164,7 @@ watch(
     form.hasDiscathon = value.hasDiscathon;
     form.hasDDC = value.hasDDC;
     form.hasFreestyle = value.hasFreestyle;
+    form.courseLayouts = value.courseLayouts.map(l => ({ ...l }));
   },
   { immediate: true },
 );
@@ -168,6 +210,14 @@ async function saveVenue() {
         hasDiscathon: form.hasDiscathon,
         hasDDC: form.hasDDC,
         hasFreestyle: form.hasFreestyle,
+        courseLayouts: form.courseLayouts
+          .filter(l => l.name.trim().length > 0 && Number.isFinite(Number(l.par)))
+          .map(l => ({
+            id: l.id,
+            name: l.name.trim(),
+            par: Number(l.par),
+            holeCount: l.holeCount != null && Number.isFinite(Number(l.holeCount)) ? Number(l.holeCount) : null,
+          })),
       },
     });
 
@@ -208,57 +258,119 @@ async function saveVenue() {
 
     <div
       v-else
-      class="space-y-3"
+      class="space-y-4"
     >
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <NuxtLink
+          :to="`/dashboard/tournaments/${slug}/venues`"
+          class="btn btn-sm btn-ghost"
+        >
+          ← Back to all venues
+        </NuxtLink>
+        <button
+          class="btn btn-sm btn-primary"
+          type="button"
+          :disabled="saving"
+          @click="saveVenue"
+        >
+          <span
+            v-if="saving"
+            class="loading loading-spinner loading-xs"
+          />
+          <span v-else>Save Venue</span>
+        </button>
+      </div>
+
       <div
         v-if="saveError"
-        class="alert alert-error py-2"
+        role="alert"
+        class="alert alert-error py-2 flex items-center justify-between"
       >
         <span class="text-sm">{{ saveError }}</span>
+        <button
+          type="button"
+          class="btn btn-ghost btn-xs btn-circle"
+          aria-label="Close error message"
+          @click="saveError = null"
+        >
+          <Icon
+            name="tabler:x"
+            size="14"
+          />
+        </button>
       </div>
 
       <div
         v-if="saveSuccess"
-        class="alert alert-success py-2"
+        role="status"
+        class="alert alert-success py-2 flex items-center justify-between"
       >
         <span class="text-sm">{{ saveSuccess }}</span>
+        <button
+          type="button"
+          class="btn btn-ghost btn-xs btn-circle"
+          aria-label="Close success message"
+          @click="dismissSuccess"
+        >
+          <Icon
+            name="tabler:x"
+            size="14"
+          />
+        </button>
       </div>
 
-      <div class="card bg-base-200 border border-base-300/60">
-        <div class="card-body space-y-3">
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <VenueEditorFields
-              v-model="form"
-              :tournament-discipline-enabled="tournamentDisciplineEnabled"
-              map-hint="Click map to set this venue location"
-              @map-click="onVenueMapClick"
-            />
-          </div>
+      <VerticalTabsLayout
+        v-model="activeVenueTab"
+        :tabs="venueTabs"
+        :initial-open-tab-ids="['details', 'disciplines']"
+        :session-state-key="`venue-edit:${slug}:${venueId}`"
+      >
+        <template #details>
+          <VenueEditorFields
+            v-model="form"
+            section="details"
+            :tournament-discipline-enabled="tournamentDisciplineEnabled"
+          />
+        </template>
 
-          <div class="flex flex-wrap items-center gap-2">
-            <NuxtLink
-              :to="`/dashboard/tournaments/${slug}/venues`"
-              class="btn btn-sm btn-ghost"
-            >
-              Discard
-            </NuxtLink>
-            <button
-              class="btn btn-sm btn-primary"
-              type="button"
-              :disabled="saving"
-              @click="saveVenue"
-            >
-              <span v-if="saving" class="loading loading-spinner loading-xs" />
-              <span v-else>Save for tournament</span>
-            </button>
-            <NuxtLink
-              :to="`/dashboard/tournaments/${slug}/venues`"
-              class="btn btn-sm btn-outline"
-            >
-              Back to all venues
-            </NuxtLink>
-          </div>
-        </div>
+        <template #disciplines>
+          <VenueEditorFields
+            v-model="form"
+            section="disciplines"
+            :tournament-discipline-enabled="tournamentDisciplineEnabled"
+          />
+        </template>
+
+        <template #location>
+          <VenueEditorFields
+            v-model="form"
+            section="location"
+            :tournament-discipline-enabled="tournamentDisciplineEnabled"
+            map-hint="Click map to set this venue location"
+            @map-click="onVenueMapClick"
+          />
+        </template>
+      </VerticalTabsLayout>
+
+      <div class="flex flex-wrap items-center justify-end gap-2 pt-2">
+        <NuxtLink
+          :to="`/dashboard/tournaments/${slug}/venues`"
+          class="btn btn-sm btn-ghost"
+        >
+          Discard
+        </NuxtLink>
+        <button
+          class="btn btn-sm btn-primary"
+          type="button"
+          :disabled="saving"
+          @click="saveVenue"
+        >
+          <span
+            v-if="saving"
+            class="loading loading-spinner loading-xs"
+          />
+          <span v-else>Save Venue</span>
+        </button>
       </div>
     </div>
   </div>

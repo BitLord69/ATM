@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { LMap, LTileLayer } from "@vue-leaflet/vue-leaflet";
-import { nextTick, ref, toRefs, watch } from "vue";
+import { nextTick, onBeforeUnmount, onErrorCaptured, onMounted, ref, toRefs, watch } from "vue";
 
 import { MAP_TILE_ATTRIBUTION, MAP_TILE_URL } from "~/composables/use-leaflet-map";
 
@@ -29,13 +29,35 @@ const emit = defineEmits<{
 const { center, zoom, height, bounds, boundsOptions, mapKey, withCard } = toRefs(props);
 
 const leafletMap = ref<any | null>(null);
+const isMounted = ref(false);
+let isUnmounted = false;
+
+onMounted(() => {
+  isMounted.value = true;
+});
+
+// @vue-leaflet/vue-leaflet initializes L.map() asynchronously after import("leaflet");
+// if the component unmounts or HMR reloads mid-init, Leaflet throws "Map container not found."
+onErrorCaptured((err) => {
+  if (err instanceof Error && err.message.includes("Map container not found")) {
+    return false;
+  }
+  return true;
+});
 
 function onMapClick(event: any) {
   emit("mapClick", event);
 }
 
 function fitToBounds() {
-  if (!leafletMap.value || !bounds.value) {
+  if (isUnmounted || !leafletMap.value || !bounds.value) {
+    return;
+  }
+
+  const container = typeof leafletMap.value.getContainer === "function"
+    ? leafletMap.value.getContainer()
+    : null;
+  if (!container || !container.isConnected) {
     return;
   }
 
@@ -44,9 +66,33 @@ function fitToBounds() {
 }
 
 function onMapReady(map: any) {
+  if (isUnmounted) {
+    return;
+  }
   leafletMap.value = map;
   void nextTick(fitToBounds);
 }
+
+function recenter(targetCenter?: [number, number], targetZoom?: number) {
+  if (isUnmounted || !leafletMap.value) {
+    return;
+  }
+  const nextCenter = targetCenter ?? center.value;
+  const nextZoom = targetZoom ?? zoom.value;
+  if (typeof leafletMap.value.setView === "function") {
+    leafletMap.value.setView(nextCenter, nextZoom, { animate: true });
+  }
+}
+
+defineExpose({
+  recenter,
+});
+
+onBeforeUnmount(() => {
+  isUnmounted = true;
+  isMounted.value = false;
+  leafletMap.value = null;
+});
 
 watch(
   [bounds, boundsOptions],
@@ -61,6 +107,7 @@ watch(
   <div v-if="withCard" class="card bg-base-200">
     <div class="card-body p-0">
       <LMap
+        v-if="isMounted"
         :key="mapKey"
         :zoom="zoom"
         :center="center"
@@ -80,7 +127,7 @@ watch(
   </div>
 
   <LMap
-    v-else
+    v-else-if="isMounted"
     :key="mapKey"
     :zoom="zoom"
     :center="center"

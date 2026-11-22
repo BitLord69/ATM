@@ -4,6 +4,13 @@ export const slugParamSchema = z.object({
   slug: z.string().trim().min(1, "Tournament slug is required"),
 });
 
+export const venueCourseLayoutInputSchema = z.object({
+  id: z.string().trim().min(1).optional(),
+  name: z.string().trim().min(1, "Layout name is required").max(100),
+  par: z.number().int().min(18, "Par must be at least 18").max(150, "Par must be at most 150"),
+  holeCount: z.number().int().min(1).max(72).nullable().optional(),
+});
+
 export const venueInputSchema = z.object({
   id: z.number().int().positive().optional(),
   name: z.string().trim().min(1, "Venue name is required"),
@@ -18,6 +25,7 @@ export const venueInputSchema = z.object({
   hasDiscathon: z.boolean().optional(),
   hasDDC: z.boolean().optional(),
   hasFreestyle: z.boolean().optional(),
+  courseLayouts: z.array(venueCourseLayoutInputSchema).max(20).optional(),
 });
 
 export const editTournamentBodySchema = z.object({

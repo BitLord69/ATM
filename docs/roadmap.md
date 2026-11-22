@@ -53,9 +53,9 @@ This document is the living Command Center for ATM development, synchronized wit
 
 **Goal:** Expand the M1 architecture to the remaining individual field/track disciplines with live scoring and optional score validation.
 
-- [ ] **M2.1 – Accuracy & Distance Live Scoring:** Throw-by-throw / station-by-station or round total entry, higher-is-better ranking, and cumulative cuts.
+- [ ] **M2.1 – Accuracy & Distance Live Scoring:** Throw-by-throw / station-by-station or round total entry, higher-is-better ranking, cumulative cuts, and optional venue capacity metadata (e.g., number of Accuracy targets/stations).
 - [ ] **M2.2 – Self-Caught Flight (SCF):** Enter `MTA` (seconds) and `TRC` (meters) with automatic WFDF calculation `SCF = (MTA * 5.5) + TRC`.
-- [ ] **M2.3 – Discathon:** Time entry (`MM:SS` / `MM:SS.ss`), lower-is-better ranking, and finals progression.
+- [ ] **M2.3 – Discathon:** Time entry (`MM:SS` / `MM:SS.ss`), lower-is-better ranking, finals progression, and optional zoomed-in course route / polyline overlay on the venue map.
 - [ ] **M2.4 – Optional Score Validation Mode (`Validator` Role):** Per-tournament/discipline toggle requiring a Validator to approve live-entered scores before final calculation.
 
 ---
@@ -79,7 +79,7 @@ This document is the living Command Center for ATM development, synchronized wit
 
 - [ ] **M4.1 – Team Entity (`tournament_team`) & Partner Pairing:** 1–3 players per team, `[ no partner ]` placeholder, Mixed Team policy (`mixed_team`), and fast keyboard-first pairing UI.
 - [ ] **M4.2 – HARV Fast Place-Per-Round Mode (DDC & Freestyle):** Enter pool/round finishing place (`Round 1` → `Semi` → `Final`), automatic tie-splitting across pools, and Team Winner Bonus (`+0.5 * (teamSize - 1)`).
-- [ ] **M4.3 – Full DDC Pool Play / Round Robin Mode (Optional):** Snake-seeded pools, court schedules, match scores, H2H + Point Differential tiebreakers.
+- [ ] **M4.3 – Full DDC Pool Play / Round Robin Mode (Optional):** Snake-seeded pools, configurable number of DDC courts per venue, court schedules, match scores, H2H + Point Differential tiebreakers.
 
 ---
 

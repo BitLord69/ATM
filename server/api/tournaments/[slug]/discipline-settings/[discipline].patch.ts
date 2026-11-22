@@ -118,6 +118,12 @@ export default defineEventHandler(async (event) => {
         : [];
       updatePayload.golfRoundPars = JSON.stringify(trimmedPars);
     }
+    if (parsed.data.roundLayouts !== undefined) {
+      const trimmedLayouts = parsed.data.rounds
+        ? parsed.data.roundLayouts.slice(0, parsed.data.rounds)
+        : [];
+      updatePayload.golfRoundLayouts = JSON.stringify(trimmedLayouts);
+    }
   }
 
   await db

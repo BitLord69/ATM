@@ -1,4 +1,4 @@
-import { int, integer, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { index, int, integer, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 import { user } from "./auth";
 
@@ -20,3 +20,20 @@ export const venue = sqliteTable("venues", {
   createdAt: int().notNull().$default(() => Date.now()),
   changedAt: int().notNull().$default(() => Date.now()).$onUpdate(() => Date.now()),
 });
+
+export const venueCourseLayout = sqliteTable(
+  "venue_course_layout",
+  {
+    id: text("id").primaryKey(),
+    venueId: integer("venue_id").notNull().references(() => venue.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    par: integer("par").notNull(),
+    holeCount: integer("hole_count"),
+    sortOrder: integer("sort_order").notNull().default(0),
+    createdAt: integer("created_at").notNull().$default(() => Date.now()),
+    updatedAt: integer("updated_at").notNull().$default(() => Date.now()).$onUpdate(() => Date.now()),
+  },
+  table => [
+    index("venue_course_layout_venue_id_idx").on(table.venueId),
+  ],
+);
