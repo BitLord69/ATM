@@ -68,6 +68,17 @@ Returns all tournaments the user is a member of, enriched with:
 
 Use these endpoints as the source of truth for UI gating of management actions.
 
+### Registration & Player Management Endpoints
+
+- `GET /api/tournaments/:slug/my-registration` — Publicly callable; returns `{ authenticated: false }` for guests (no DB queries), or the signed-in user's `player` profile, `playerNumber`, entries, and derived minor divisions.
+- `GET /api/tournaments/:slug/entries` — Requires at least `viewer` role (or global `admin`). Returns grouped player registrations, discipline entries, offered major divisions, and `canManage` (`scorer`+). Does **not** expose platform-wide user lists.
+- `GET /api/tournaments/:slug/user-search?q=` — Requires `scorer` role or higher (or global `admin`). Requires at least 2 characters, returns at most 20 non-banned users with minimal fields (`id`, `name`, `email`, `country`).
+- `POST /api/tournaments/:slug/entries` — Requires authentication.
+  - Regular signed-in users may self-register only while `isRegistrationOpen` is `true` (calculated from `registrationOpenDate`, `registrationCloseDate`, `startDate`, `closedAt`, and `tournament_registration_lock`).
+  - `scorer`+ (or global `admin`) may register existing users (`userId` / `playerId`) or offline guest players (`guestPlayer`, stored with `player.userId = null`) regardless of registration window/lock.
+  - All validation runs before any database write; all writes execute atomically via `db.batch(...)`.
+- `PATCH /api/tournaments/:slug/entries/:id` — Route param `:id` is the `player.id`. Regular users may edit or withdraw their own registration while `isRegistrationOpen` is `true`; `scorer`+ (or global `admin`) may edit, withdraw, or restore any player's registration at any time. All writes execute atomically via `db.batch(...)`.
+
 ## Frontend Components
 
 ### Store: `app/stores/tournament.ts`

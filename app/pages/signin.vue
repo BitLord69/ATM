@@ -6,6 +6,8 @@ definePageMeta({
 });
 
 const authStore = useAuthStore();
+const route = useRoute();
+const redirectPath = computed(() => getSafeRedirectPath(route.query.redirect) ?? "/dashboard");
 const email = ref("");
 const password = ref("");
 const status = ref<{ type: "error"; message: string } | null>(null);
@@ -27,7 +29,7 @@ async function handleEmailSignIn() {
     return;
   }
 
-  await navigateTo("/dashboard");
+  await navigateTo(redirectPath.value);
 }
 
 async function handleForgotPassword() {

@@ -1,12 +1,15 @@
 import type { DivisionPolicyConfig } from "./division-policy";
 
 import {
+  getAgeOnEventDate,
+  normalizeGenderCategory,
+  parseBirthDate,
+} from "#shared/utils/division-age";
 
+import {
   normalizeDivisionPolicy,
   toUpperTrimmed,
 } from "./division-policy";
-
-export type GenderCategory = "women" | "open";
 
 export type PlayerEligibilityProfile = {
   dateOfBirth?: string | null;
@@ -31,46 +34,13 @@ export type MajorDivisionValidationResult = {
     | "age_not_eligible";
 };
 
-function normalizeGenderCategory(value: string | null | undefined): GenderCategory {
-  const normalized = value?.trim().toLowerCase() ?? "";
-  if (["women", "woman", "female", "f", "fpo"].includes(normalized)) {
-    return "women";
-  }
-  return "open";
-}
-
-function parseBirthDate(value: string | null | undefined): Date | null {
-  if (!value) {
-    return null;
-  }
-
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    return null;
-  }
-
-  return parsed;
-}
-
-function getAgeOnEventDate(
-  dateOfBirth: Date,
-  eventDate: Date,
-  mode: DivisionPolicyConfig["ageReferenceMode"],
-) {
-  if (mode === "calendar_year") {
-    return eventDate.getUTCFullYear() - dateOfBirth.getUTCFullYear();
-  }
-
-  let age = eventDate.getUTCFullYear() - dateOfBirth.getUTCFullYear();
-  const eventMonth = eventDate.getUTCMonth();
-  const birthMonth = dateOfBirth.getUTCMonth();
-
-  if (eventMonth < birthMonth || (eventMonth === birthMonth && eventDate.getUTCDate() < dateOfBirth.getUTCDate())) {
-    age -= 1;
-  }
-
-  return age;
-}
+export const MAJOR_DIVISION_REASON_LABELS: Record<MajorDivisionValidationResult["reason"], string> = {
+  ok: "eligible",
+  division_not_offered: "this division is not offered in this tournament",
+  missing_birth_date: "date of birth is required for age-protected divisions",
+  gender_not_eligible: "selected gender category is not eligible for this division",
+  age_not_eligible: "player age does not meet the requirements for this division",
+};
 
 function parseAgeProtectedThreshold(code: string) {
   const match = code.match(/^(MP|FP|MA|FA|MJ|FJ)(\d{2})$/);

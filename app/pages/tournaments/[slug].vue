@@ -5,10 +5,11 @@
  */
 
 import type { TournamentViewTabId } from "~/schemas/ui/tournament-view-tabs";
+import type { MyRegistrationResponse, TournamentRegistrationInfo } from "~/types/tournament-registration";
 
 import { tournamentViewTabs } from "~/schemas/ui/tournament-view-tabs";
 
-type TournamentDetail = {
+type TournamentDetail = TournamentRegistrationInfo & {
   id: number;
   name: string;
   slug: string;
@@ -26,21 +27,9 @@ type TournamentDetail = {
   directorName: string | null;
   directorEmail: string | null;
   directorPhone: string | null;
-  startDate: number | null;
   endDate: number | null;
-  registrationOpenDate: number | null;
-  registrationCloseDate: number | null;
   closedAt: number | null;
   isSanctioned: boolean;
-  divisionOpen: boolean;
-  divisionWomen: boolean;
-  divisionMaster: boolean;
-  divisionGrandMaster: boolean;
-  divisionSeniorGrandMaster: boolean;
-  divisionLegend: boolean;
-  divisionJunior: boolean;
-  keepJuniorsSeparate: boolean;
-  showDivisionInResults: boolean;
   hasGolf: boolean;
   hasAccuracy: boolean;
   hasDistance: boolean;
@@ -51,19 +40,7 @@ type TournamentDetail = {
   organizationId: string;
   status: "active" | "future" | "past";
   isActive: boolean;
-  majorDivisions: Array<{ code: string; label: string }>;
-  offeredDivisionCodes: string[];
-  ageReferenceMode: "calendar_year" | "exact_date";
-  enabledDisciplines: Array<{ key: string; label: string }>;
   isRegistrationLocked: boolean;
-  isRegistrationOpen: boolean;
-  registrationStatusReason:
-    | "open"
-    | "not_yet_open"
-    | "registration_closed_date"
-    | "locked_by_staff"
-    | "tournament_started"
-    | "tournament_closed";
   venues: Array<{
     id: number;
     name: string;
@@ -72,34 +49,6 @@ type TournamentDetail = {
     lat: number;
     long: number;
   }>;
-};
-
-type MyRegistrationResponse = {
-  authenticated: boolean;
-  profile: {
-    playerId: string | null;
-    displayName: string;
-    country: string;
-    email: string;
-    pdgaNumber: string;
-    homeClub: string;
-    dateOfBirth: string;
-    genderCategory: "open" | "women";
-  } | null;
-  playerNumber: number | null;
-  entries: Array<{
-    id: string;
-    discipline: string;
-    majorDivision: string;
-    minorDivisionTags: string[];
-    primaryMinorDivision: string | null;
-    activeCompetitiveDivision: string;
-    status: "registered" | "withdrawn" | string;
-    createdAt: number;
-    updatedAt: number;
-  }>;
-  derivedMinorDivisions: string[];
-  primaryMinorDivision: string | null;
 };
 
 const route = useRoute();
@@ -180,19 +129,7 @@ function formatDateRange(start: number | null | undefined, end: number | null | 
 }
 
 function formatRegistrationDateRange(start: number | null | undefined, end: number | null | undefined) {
-  if (!start && !end) {
-    return "Open until tournament start";
-  }
-
-  if (start && end) {
-    return `${formatDate(start)} - ${formatDate(end)}`;
-  }
-
-  if (start) {
-    return `Opens ${formatDate(start)}`;
-  }
-
-  return `Closes ${formatDate(end)}`;
+  return formatRegistrationWindow(start, end, formatDate);
 }
 
 const tournamentDirectorEmail = computed(() => tournament.value?.directorEmail || tournament.value?.contactEmail || null);
@@ -223,190 +160,13 @@ const hasDirectorData = computed(() => {
   return !!(tournament.value.directorName || tournament.value.directorEmail || tournament.value.directorPhone);
 });
 
-// Self-registration state
-const regMajorDivision = ref("OPEN");
-const regSelectedDisciplines = ref<string[]>([]);
-const regDisplayName = ref("");
-const regCountry = ref("");
-const regDateOfBirth = ref("");
-const regGenderCategory = ref<"open" | "women">("open");
-const regPdgaNumber = ref("");
-const regHomeClub = ref("");
-
-const submittingRegistration = ref(false);
-const withdrawingRegistration = ref(false);
-const registrationError = ref<string | null>(null);
-const registrationSuccess = ref<string | null>(null);
-
-const activeEntries = computed(() =>
-  (myRegistration.value?.entries || []).filter(entry => entry.status === "registered"),
+const isCurrentlyRegistered = computed(() =>
+  (myRegistration.value?.entries ?? []).some(entry => entry.status === "registered"),
 );
-const isCurrentlyRegistered = computed(() => activeEntries.value.length > 0);
+const registrationStatusBadge = computed(() => getRegistrationStatusBadge(tournament.value?.registrationStatusReason));
 
-function syncRegistrationFormFromData() {
-  const profile = myRegistration.value?.profile;
-  if (profile) {
-    regDisplayName.value = profile.displayName || "";
-    regCountry.value = profile.country || "";
-    regDateOfBirth.value = profile.dateOfBirth || "";
-    regGenderCategory.value = profile.genderCategory || "open";
-    regPdgaNumber.value = profile.pdgaNumber || "";
-    regHomeClub.value = profile.homeClub || "";
-  }
-
-  const currentActive = activeEntries.value;
-  if (currentActive.length > 0) {
-    regMajorDivision.value = currentActive[0]?.majorDivision || tournament.value?.majorDivisions?.[0]?.code || "OPEN";
-    regSelectedDisciplines.value = currentActive.map(e => e.discipline);
-  }
-  else {
-    regMajorDivision.value = tournament.value?.majorDivisions?.[0]?.code || "OPEN";
-    regSelectedDisciplines.value = (tournament.value?.enabledDisciplines || []).map(d => d.key);
-  }
-}
-
-watch(
-  [() => myRegistration.value, () => tournament.value],
-  () => {
-    syncRegistrationFormFromData();
-  },
-  { immediate: true },
-);
-
-// Live client-side preview of derived minor divisions based on birth date & gender
-const previewMinorDivisions = computed(() => {
-  if (!regDateOfBirth.value) {
-    return [] as string[];
-  }
-  const birthDate = new Date(regDateOfBirth.value);
-  if (Number.isNaN(birthDate.getTime())) {
-    return [] as string[];
-  }
-  const eventDate = tournament.value?.startDate ? new Date(tournament.value.startDate) : new Date();
-  let age = eventDate.getUTCFullYear() - birthDate.getUTCFullYear();
-  if (tournament.value?.ageReferenceMode === "exact_date") {
-    const eventMonth = eventDate.getUTCMonth();
-    const birthMonth = birthDate.getUTCMonth();
-    if (eventMonth < birthMonth || (eventMonth === birthMonth && eventDate.getUTCDate() < birthDate.getUTCDate())) {
-      age -= 1;
-    }
-  }
-
-  const adultPrefix = regGenderCategory.value === "women" ? "FP" : "MP";
-  const juniorPrefix = regGenderCategory.value === "women" ? "FJ" : "MJ";
-  const tags: string[] = [];
-
-  if (age <= 18) {
-    tags.push(`${juniorPrefix}18`);
-  }
-  for (const threshold of [40, 50, 55, 60, 65, 70, 75, 80]) {
-    if (age >= threshold) {
-      tags.push(`${adultPrefix}${threshold}`);
-    }
-  }
-  return tags;
-});
-
-function selectAllDisciplines() {
-  regSelectedDisciplines.value = (tournament.value?.enabledDisciplines || []).map(d => d.key);
-  registrationError.value = null;
-}
-
-const isFullOverallSelected = computed(() => {
-  const enabled = tournament.value?.enabledDisciplines || [];
-  return enabled.length > 0 && enabled.every(d => regSelectedDisciplines.value.includes(d.key));
-});
-
-const registrationStatusBadge = computed(() => {
-  const reason = tournament.value?.registrationStatusReason;
-  switch (reason) {
-    case "open":
-      return { label: "Registration Open", badgeClass: "badge-success" };
-    case "not_yet_open":
-      return { label: "Not Yet Open", badgeClass: "badge-warning" };
-    case "registration_closed_date":
-      return { label: "Registration Closed", badgeClass: "badge-neutral" };
-    case "locked_by_staff":
-      return { label: "Registration Locked", badgeClass: "badge-warning" };
-    case "tournament_started":
-      return { label: "Tournament In Progress", badgeClass: "badge-info" };
-    case "tournament_closed":
-      return { label: "Tournament Finalized", badgeClass: "badge-ghost" };
-    default:
-      return { label: "Closed", badgeClass: "badge-neutral" };
-  }
-});
-
-async function submitSelfRegistration() {
-  if (!tournament.value || submittingRegistration.value) {
-    return;
-  }
-
-  registrationError.value = null;
-  registrationSuccess.value = null;
-
-  if (regSelectedDisciplines.value.length === 0) {
-    registrationError.value = "Please select at least one discipline to enter.";
-    return;
-  }
-
-  submittingRegistration.value = true;
-  try {
-    await $fetch(`/api/tournaments/${slug}/entries`, {
-      method: "POST",
-      body: {
-        majorDivision: regMajorDivision.value,
-        disciplines: regSelectedDisciplines.value,
-        profile: {
-          displayName: regDisplayName.value.trim() || undefined,
-          country: regCountry.value.trim() || null,
-          dateOfBirth: regDateOfBirth.value.trim() || null,
-          genderCategory: regGenderCategory.value,
-          pdgaNumber: regPdgaNumber.value.trim() || null,
-          homeClub: regHomeClub.value.trim() || null,
-        },
-      },
-    });
-
-    await Promise.all([refreshMyRegistration(), refreshTournament()]);
-    registrationSuccess.value = isCurrentlyRegistered.value
-      ? "Your tournament registration has been saved."
-      : "Registration updated.";
-  }
-  catch (err: any) {
-    registrationError.value = err?.data?.message || err?.message || "Failed to save registration.";
-  }
-  finally {
-    submittingRegistration.value = false;
-  }
-}
-
-async function withdrawSelfRegistration() {
-  const playerId = myRegistration.value?.profile?.playerId;
-  if (!playerId || withdrawingRegistration.value) {
-    return;
-  }
-
-  registrationError.value = null;
-  registrationSuccess.value = null;
-  withdrawingRegistration.value = true;
-
-  try {
-    await $fetch(`/api/tournaments/${slug}/entries/${playerId}`, {
-      method: "PATCH",
-      body: {
-        status: "withdrawn",
-      },
-    });
-    await refreshMyRegistration();
-    registrationSuccess.value = "You have withdrawn from this tournament.";
-  }
-  catch (err: any) {
-    registrationError.value = err?.data?.message || err?.message || "Failed to withdraw registration.";
-  }
-  finally {
-    withdrawingRegistration.value = false;
-  }
+async function handleRegistrationUpdated() {
+  await Promise.all([refreshMyRegistration(), refreshTournament()]);
 }
 </script>
 
@@ -676,394 +436,12 @@ async function withdrawSelfRegistration() {
           </template>
 
           <template #registration>
-            <div class="space-y-6">
-              <!-- Registration Window Banner -->
-              <div class="card bg-base-200 border border-base-300">
-                <div class="card-body p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div>
-                    <div class="flex items-center gap-2">
-                      <h2
-                        id="self-registration-heading"
-                        class="text-lg font-bold"
-                      >
-                        Player Registration
-                      </h2>
-                      <span
-                        class="badge"
-                        :class="registrationStatusBadge.badgeClass"
-                      >
-                        {{ registrationStatusBadge.label }}
-                      </span>
-                    </div>
-                    <p class="text-sm opacity-75 mt-1">
-                      {{ formatRegistrationDateRange(tournament.registrationOpenDate, tournament.registrationCloseDate) }}
-                    </p>
-                  </div>
-
-                  <div
-                    v-if="isCurrentlyRegistered"
-                    class="flex flex-wrap items-center gap-2"
-                  >
-                    <span class="badge badge-success gap-1">
-                      <Icon
-                        name="tabler:check"
-                        size="14"
-                      />
-                      Registered ({{ activeEntries.length }} {{ activeEntries.length === 1 ? "discipline" : "disciplines" }})
-                    </span>
-                    <span
-                      v-if="myRegistration?.playerNumber != null"
-                      class="badge badge-outline font-mono"
-                    >
-                      Player #{{ myRegistration.playerNumber }}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Feedback Alerts -->
-              <div
-                v-if="registrationError"
-                role="alert"
-                aria-live="polite"
-                class="alert alert-error"
-              >
-                <Icon
-                  name="tabler:alert-circle"
-                  size="20"
-                />
-                <span>{{ registrationError }}</span>
-              </div>
-
-              <div
-                v-if="registrationSuccess"
-                role="status"
-                aria-live="polite"
-                class="alert alert-success"
-              >
-                <Icon
-                  name="tabler:circle-check"
-                  size="20"
-                />
-                <span>{{ registrationSuccess }}</span>
-              </div>
-
-              <!-- Guest / Unauthenticated View -->
-              <div
-                v-if="!myRegistration?.authenticated"
-                class="card bg-base-100 border border-base-300"
-              >
-                <div class="card-body space-y-3">
-                  <h3 class="card-title text-base">
-                    Sign in to Register Online
-                  </h3>
-                  <p class="text-sm opacity-80">
-                    Sign in with your player account to choose your division and disciplines. If you don't have an account, the Tournament Director can also register you as a guest player.
-                  </p>
-                  <div class="card-actions">
-                    <NuxtLink
-                      :to="`/signin?redirect=${encodeURIComponent(`/tournaments/${slug}`)}`"
-                      class="btn btn-primary btn-sm"
-                    >
-                      Sign In
-                    </NuxtLink>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Signed-in Player Registration Form -->
-              <form
-                v-else
-                aria-labelledby="self-registration-heading"
-                class="card bg-base-100 border border-base-300"
-                @submit.prevent="submitSelfRegistration"
-              >
-                <div class="card-body space-y-6">
-                  <!-- Profile Details for Eligibility & Minor Divisions -->
-                  <fieldset
-                    class="grid grid-cols-1 sm:grid-cols-2 gap-4 border border-base-300 rounded-box p-4"
-                    :disabled="!tournament.isRegistrationOpen || submittingRegistration"
-                  >
-                    <legend class="px-2 text-sm font-semibold">
-                      1. Player Profile & Eligibility Details
-                    </legend>
-
-                    <div class="flex flex-col gap-1">
-                      <label
-                        for="reg-display-name"
-                        class="text-sm font-medium"
-                      >
-                        Player Name <span aria-hidden="true">*</span>
-                      </label>
-                      <input
-                        id="reg-display-name"
-                        v-model="regDisplayName"
-                        name="displayName"
-                        type="text"
-                        required
-                        autocomplete="name"
-                        class="input input-bordered w-full"
-                      >
-                    </div>
-
-                    <div class="flex flex-col gap-1">
-                      <label
-                        for="reg-country"
-                        class="text-sm font-medium"
-                      >
-                        Country
-                      </label>
-                      <input
-                        id="reg-country"
-                        v-model="regCountry"
-                        name="country"
-                        type="text"
-                        autocomplete="country-name"
-                        placeholder="e.g. Sweden"
-                        class="input input-bordered w-full"
-                      >
-                    </div>
-
-                    <div class="flex flex-col gap-1">
-                      <label
-                        for="reg-dob"
-                        class="text-sm font-medium"
-                      >
-                        Date of Birth (for Age/Minor Divisions)
-                      </label>
-                      <input
-                        id="reg-dob"
-                        v-model="regDateOfBirth"
-                        name="dateOfBirth"
-                        type="date"
-                        autocomplete="bday"
-                        class="input input-bordered w-full"
-                      >
-                    </div>
-
-                    <fieldset class="flex flex-col gap-2">
-                      <legend class="text-sm font-medium">
-                        Gender Eligibility Category
-                      </legend>
-                      <div class="flex items-center gap-6 pt-1">
-                        <div class="flex items-center gap-2">
-                          <input
-                            id="reg-gender-open"
-                            v-model="regGenderCategory"
-                            type="radio"
-                            name="genderCategory"
-                            value="open"
-                            class="radio radio-primary radio-sm"
-                          >
-                          <label
-                            for="reg-gender-open"
-                            class="text-sm cursor-pointer"
-                          >Open / Mixed</label>
-                        </div>
-                        <div class="flex items-center gap-2">
-                          <input
-                            id="reg-gender-women"
-                            v-model="regGenderCategory"
-                            type="radio"
-                            name="genderCategory"
-                            value="women"
-                            class="radio radio-primary radio-sm"
-                          >
-                          <label
-                            for="reg-gender-women"
-                            class="text-sm cursor-pointer"
-                          >Women</label>
-                        </div>
-                      </div>
-                    </fieldset>
-
-                    <div class="flex flex-col gap-1">
-                      <label
-                        for="reg-pdga"
-                        class="text-sm font-medium"
-                      >
-                        PDGA Number (optional)
-                      </label>
-                      <input
-                        id="reg-pdga"
-                        v-model="regPdgaNumber"
-                        name="pdgaNumber"
-                        type="text"
-                        inputmode="numeric"
-                        autocorrect="off"
-                        autocapitalize="none"
-                        spellcheck="false"
-                        class="input input-bordered w-full"
-                      >
-                    </div>
-
-                    <div class="flex flex-col gap-1">
-                      <label
-                        for="reg-home-club"
-                        class="text-sm font-medium"
-                      >
-                        Home Club (optional)
-                      </label>
-                      <input
-                        id="reg-home-club"
-                        v-model="regHomeClub"
-                        name="homeClub"
-                        type="text"
-                        class="input input-bordered w-full"
-                      >
-                    </div>
-                  </fieldset>
-
-                  <!-- Major Division Selection & Derived Minor Divisions -->
-                  <fieldset
-                    class="border border-base-300 rounded-box p-4 space-y-3"
-                    :disabled="!tournament.isRegistrationOpen || submittingRegistration"
-                  >
-                    <legend class="px-2 text-sm font-semibold">
-                      2. Division Selection
-                    </legend>
-
-                    <div class="flex flex-wrap gap-4">
-                      <div
-                        v-for="div in tournament.majorDivisions"
-                        :key="div.code"
-                        class="flex items-center gap-2 border border-base-300 rounded-lg px-4 py-2.5"
-                      >
-                        <input
-                          :id="`reg-major-${div.code}`"
-                          v-model="regMajorDivision"
-                          type="radio"
-                          name="majorDivision"
-                          :value="div.code"
-                          class="radio radio-primary"
-                        >
-                        <label
-                          :for="`reg-major-${div.code}`"
-                          class="font-medium cursor-pointer"
-                        >
-                          {{ div.label }} <span class="text-xs opacity-60">({{ div.code }})</span>
-                        </label>
-                      </div>
-                    </div>
-
-                    <div class="bg-base-200/70 rounded-lg p-3 text-sm flex flex-wrap items-center justify-between gap-2">
-                      <div>
-                        <span class="font-medium">Automatic Age / Minor Division Tags:</span>
-                        <p class="text-xs opacity-70">
-                          Automatically derived from your birth year and gender category.
-                        </p>
-                      </div>
-                      <div class="flex flex-wrap gap-1.5">
-                        <template v-if="previewMinorDivisions.length > 0">
-                          <span
-                            v-for="tag in previewMinorDivisions"
-                            :key="tag"
-                            class="badge badge-secondary badge-sm"
-                          >
-                            {{ tag }}
-                          </span>
-                        </template>
-                        <span
-                          v-else
-                          class="text-xs opacity-60 italic"
-                        >
-                          {{ regDateOfBirth ? "No age-protected minor division applies" : "Enter Date of Birth to see eligible age divisions" }}
-                        </span>
-                      </div>
-                    </div>
-                  </fieldset>
-
-                  <!-- Discipline Selection -->
-                  <fieldset
-                    class="border border-base-300 rounded-box p-4 space-y-3"
-                    :disabled="!tournament.isRegistrationOpen || submittingRegistration"
-                  >
-                    <legend class="px-2 text-sm font-semibold">
-                      3. Select Disciplines
-                    </legend>
-
-                    <div class="flex flex-wrap items-center justify-between gap-2">
-                      <p class="text-xs opacity-75">
-                        Choose which disciplines you want to compete in, or select all for Full Overall.
-                      </p>
-                      <button
-                        type="button"
-                        class="btn btn-xs"
-                        :class="isFullOverallSelected ? 'btn-secondary' : 'btn-outline'"
-                        @click="selectAllDisciplines"
-                      >
-                        <Icon
-                          name="tabler:checks"
-                          size="14"
-                        />
-                        Select All / Full Overall
-                      </button>
-                    </div>
-
-                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
-                      <div
-                        v-for="disc in tournament.enabledDisciplines"
-                        :key="disc.key"
-                        class="flex items-center gap-2.5 border border-base-300 rounded-lg px-3 py-2"
-                      >
-                        <input
-                          :id="`reg-disc-${disc.key}`"
-                          v-model="regSelectedDisciplines"
-                          type="checkbox"
-                          name="disciplines"
-                          :value="disc.key"
-                          class="checkbox checkbox-primary checkbox-sm"
-                        >
-                        <label
-                          :for="`reg-disc-${disc.key}`"
-                          class="text-sm font-medium cursor-pointer flex-1"
-                        >
-                          {{ disc.label }}
-                        </label>
-                      </div>
-                    </div>
-                  </fieldset>
-
-                  <!-- Form Actions -->
-                  <div class="flex flex-wrap items-center justify-between gap-3 pt-2">
-                    <div>
-                      <button
-                        v-if="isCurrentlyRegistered && tournament.isRegistrationOpen"
-                        type="button"
-                        class="btn btn-error btn-outline btn-sm"
-                        :disabled="withdrawingRegistration || submittingRegistration"
-                        @click="withdrawSelfRegistration"
-                      >
-                        <span
-                          v-if="withdrawingRegistration"
-                          class="loading loading-spinner loading-xs"
-                        />
-                        Withdraw Registration
-                      </button>
-                    </div>
-
-                    <button
-                      v-if="tournament.isRegistrationOpen"
-                      type="submit"
-                      class="btn btn-primary"
-                      :disabled="submittingRegistration"
-                    >
-                      <span
-                        v-if="submittingRegistration"
-                        class="loading loading-spinner loading-xs"
-                      />
-                      {{ isCurrentlyRegistered ? "Update Registration" : "Confirm Registration" }}
-                    </button>
-                    <p
-                      v-else
-                      class="text-xs opacity-70 italic"
-                    >
-                      Online self-registration is currently closed. Please contact the Tournament Director for changes.
-                    </p>
-                  </div>
-                </div>
-              </form>
-            </div>
+            <TournamentRegistrationPanel
+              :slug="slug"
+              :tournament="tournament"
+              :my-registration="myRegistration"
+              @updated="handleRegistrationUpdated"
+            />
           </template>
 
           <template #contacts>

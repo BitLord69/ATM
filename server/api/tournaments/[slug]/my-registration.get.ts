@@ -12,31 +12,34 @@ import {
 } from "../../../../lib/db/schema";
 import { deriveMinorDivisions } from "../../../utils/division-derivation";
 import { normalizeDivisionPolicy } from "../../../utils/division-policy";
+import { safeParseMinorTags } from "../../../utils/tournament-registration-context";
 
-function safeParseMinorTags(raw: string | null | undefined) {
-  if (!raw) {
-    return [] as string[];
-  }
-  try {
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed.filter(item => typeof item === "string") : [];
-  }
-  catch {
-    return [];
-  }
-}
+const UNAUTHENTICATED_RESPONSE = {
+  authenticated: false,
+  profile: null,
+  playerNumber: null,
+  entries: [],
+  derivedMinorDivisions: [] as string[],
+  primaryMinorDivision: null as string | null,
+};
 
+/**
+ * Returns the signed-in user's player profile and entries for a tournament.
+ * Guests get a cheap unauthenticated response without any database lookups.
+ */
 export default defineEventHandler(async (event) => {
   const slug = getRouterParam(event, "slug");
   if (!slug) {
     throw createError({ statusCode: 400, message: "Tournament slug is required" });
   }
 
+  const session = await auth.api.getSession({ headers: event.headers });
+  if (!session?.user) {
+    return UNAUTHENTICATED_RESPONSE;
+  }
+
   const tournamentRows = await db
-    .select({
-      id: tournament.id,
-      startDate: tournament.startDate,
-    })
+    .select({ id: tournament.id, startDate: tournament.startDate })
     .from(tournament)
     .where(eq(tournament.slug, slug))
     .limit(1);
@@ -46,22 +49,9 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 404, message: "Tournament not found" });
   }
 
-  const session = await auth.api.getSession({ headers: event.headers });
-  if (!session?.user) {
-    return {
-      authenticated: false,
-      profile: null,
-      playerNumber: null,
-      entries: [],
-      derivedMinorDivisions: [] as string[],
-      primaryMinorDivision: null as string | null,
-    };
-  }
-
   const [userRows, playerRows, policyRows] = await Promise.all([
     db
       .select({
-        id: user.id,
         name: user.name,
         email: user.email,
         country: user.country,
@@ -105,7 +95,7 @@ export default defineEventHandler(async (event) => {
     pdgaNumber: existingPlayer?.pdgaNumber || currentUser?.pdgaNumber || "",
     homeClub: existingPlayer?.homeClub || currentUser?.homeClub || "",
     dateOfBirth: existingPlayer?.dateOfBirth || currentUser?.dateOfBirth || "",
-    genderCategory: (existingPlayer?.genderCategory || currentUser?.genderCategory || "open") as "open" | "women",
+    genderCategory: ((existingPlayer?.genderCategory || currentUser?.genderCategory) === "women" ? "women" : "open") as "open" | "women",
   };
 
   const policy = normalizeDivisionPolicy({
@@ -113,10 +103,7 @@ export default defineEventHandler(async (event) => {
   });
 
   const derived = deriveMinorDivisions(
-    {
-      dateOfBirth: profile.dateOfBirth,
-      genderCategory: profile.genderCategory,
-    },
+    { dateOfBirth: profile.dateOfBirth, genderCategory: profile.genderCategory },
     foundTournament.startDate,
     policy,
   );
@@ -146,24 +133,12 @@ export default defineEventHandler(async (event) => {
         updatedAt: eventEntry.updatedAt,
       })
       .from(eventEntry)
-      .where(
-        and(
-          eq(eventEntry.tournamentId, foundTournament.id),
-          eq(eventEntry.playerId, existingPlayer.id),
-        ),
-      )
+      .where(and(eq(eventEntry.tournamentId, foundTournament.id), eq(eventEntry.playerId, existingPlayer.id)))
       .orderBy(asc(eventEntry.discipline)),
     db
-      .select({
-        playerNumber: tournamentPlayerNumber.playerNumber,
-      })
+      .select({ playerNumber: tournamentPlayerNumber.playerNumber })
       .from(tournamentPlayerNumber)
-      .where(
-        and(
-          eq(tournamentPlayerNumber.tournamentId, foundTournament.id),
-          eq(tournamentPlayerNumber.playerId, existingPlayer.id),
-        ),
-      )
+      .where(and(eq(tournamentPlayerNumber.tournamentId, foundTournament.id), eq(tournamentPlayerNumber.playerId, existingPlayer.id)))
       .limit(1),
   ]);
 

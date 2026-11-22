@@ -1,17 +1,15 @@
-export type AgeReferenceMode = "calendar_year" | "exact_date";
+import type { AgeReferenceMode, DivisionAgePolicy } from "#shared/utils/division-age";
 
-export type DivisionPolicyConfig = {
-  ageReferenceMode: AgeReferenceMode;
-  ageThresholds: number[];
-  juniorMaxAge: number;
+import { DEFAULT_DIVISION_AGE_POLICY } from "#shared/utils/division-age";
+
+export type DivisionPolicyConfig = DivisionAgePolicy & {
   mpoAliases: string[];
   womenDivisionCodes: string[];
 };
 
 export const DEFAULT_DIVISION_POLICY: DivisionPolicyConfig = {
-  ageReferenceMode: "calendar_year",
-  ageThresholds: [40, 50, 55, 60, 65, 70, 75, 80],
-  juniorMaxAge: 18,
+  ...DEFAULT_DIVISION_AGE_POLICY,
+  ageThresholds: [...DEFAULT_DIVISION_AGE_POLICY.ageThresholds],
   mpoAliases: ["MPO", "OPEN"],
   womenDivisionCodes: ["FPO", "WOMEN"],
 };

@@ -2,10 +2,7 @@ import { eq } from "drizzle-orm";
 
 import db from "../../../lib/db";
 import {
-  divisionPolicy,
   tournament,
-  tournamentDivision,
-  tournamentRegistrationLock,
   tournamentVenue,
   venue,
 } from "../../../lib/db/schema";
@@ -13,8 +10,8 @@ import { getTournamentStatus } from "../../utils/authorization";
 import {
   getEnabledTournamentDisciplines,
   getTournamentRegistrationStatus,
-  mapPolicyFromDb,
 } from "../../utils/division-policy";
+import { loadDivisionPolicyContext, loadRegistrationLocked } from "../../utils/tournament-registration-context";
 
 /**
  * Public API endpoint - returns tournament details by slug
@@ -87,50 +84,32 @@ export default defineEventHandler(async (event) => {
   }
   const tournamentStatus = getTournamentStatus(t.startDate, t.endDate);
 
-  // Fetch associated venues for discipline locations
-  const venues = await db
-    .select({
-      id: venue.id,
-      name: venue.name,
-      description: venue.description,
-      facilities: venue.facilities,
-      lat: venue.lat,
-      long: venue.long,
-      hasGolf: tournamentVenue.hasGolf,
-      hasAccuracy: tournamentVenue.hasAccuracy,
-      hasDistance: tournamentVenue.hasDistance,
-      hasSCF: tournamentVenue.hasSCF,
-      hasDiscathon: tournamentVenue.hasDiscathon,
-      hasDDC: tournamentVenue.hasDDC,
-      hasFreestyle: tournamentVenue.hasFreestyle,
-    })
-    .from(tournamentVenue)
-    .innerJoin(venue, eq(tournamentVenue.venueId, venue.id))
-    .where(eq(tournamentVenue.tournamentId, t.id));
-
-  const [policyRows, offeredRows, lockRows] = await Promise.all([
-    db
-      .select({ ageReferenceMode: divisionPolicy.ageReferenceMode })
-      .from(divisionPolicy)
-      .where(eq(divisionPolicy.tournamentId, t.id))
-      .limit(1),
+  const [venues, policyContext, isLocked] = await Promise.all([
+    // Associated venues for discipline locations
     db
       .select({
-        code: tournamentDivision.code,
-        label: tournamentDivision.label,
-        isEnabled: tournamentDivision.isEnabled,
+        id: venue.id,
+        name: venue.name,
+        description: venue.description,
+        facilities: venue.facilities,
+        lat: venue.lat,
+        long: venue.long,
+        hasGolf: tournamentVenue.hasGolf,
+        hasAccuracy: tournamentVenue.hasAccuracy,
+        hasDistance: tournamentVenue.hasDistance,
+        hasSCF: tournamentVenue.hasSCF,
+        hasDiscathon: tournamentVenue.hasDiscathon,
+        hasDDC: tournamentVenue.hasDDC,
+        hasFreestyle: tournamentVenue.hasFreestyle,
       })
-      .from(tournamentDivision)
-      .where(eq(tournamentDivision.tournamentId, t.id)),
-    db
-      .select({ isLocked: tournamentRegistrationLock.isLocked })
-      .from(tournamentRegistrationLock)
-      .where(eq(tournamentRegistrationLock.tournamentId, t.id))
-      .limit(1),
+      .from(tournamentVenue)
+      .innerJoin(venue, eq(tournamentVenue.venueId, venue.id))
+      .where(eq(tournamentVenue.tournamentId, t.id)),
+    loadDivisionPolicyContext(t),
+    loadRegistrationLocked(t.id),
   ]);
 
-  const policyContext = mapPolicyFromDb(policyRows[0], offeredRows, t);
-  const registrationState = getTournamentRegistrationStatus(t, !!lockRows[0]?.isLocked);
+  const registrationState = getTournamentRegistrationStatus(t, isLocked);
   const enabledDisciplines = getEnabledTournamentDisciplines(t);
 
   return {
@@ -141,6 +120,11 @@ export default defineEventHandler(async (event) => {
     majorDivisions: policyContext.majorDivisions,
     offeredDivisionCodes: policyContext.offeredDivisionCodes,
     ageReferenceMode: policyContext.config.ageReferenceMode,
+    divisionAgePolicy: {
+      ageReferenceMode: policyContext.config.ageReferenceMode,
+      ageThresholds: policyContext.config.ageThresholds,
+      juniorMaxAge: policyContext.config.juniorMaxAge,
+    },
     enabledDisciplines,
     isRegistrationLocked: registrationState.isRegistrationLocked,
     isRegistrationOpen: registrationState.isRegistrationOpen,

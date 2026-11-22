@@ -76,12 +76,14 @@ export const useAuthStore = defineStore("useAuthStore", () => {
   const currentUser = ref<any>(null);
   const authClient = useAuthClient();
 
-  async function signInSocial(provider: socialLoginProvider) {
+  async function signInSocial(provider: socialLoginProvider, redirectPath?: string | null) {
     loading.value = true;
     try {
+      const basePath = redirectPath || "/dashboard";
+      const separator = basePath.includes("?") ? "&" : "?";
       const { error } = await authClient.signIn.social({
         provider,
-        callbackURL: `/dashboard?socialConnected=${encodeURIComponent(provider)}`,
+        callbackURL: `${basePath}${separator}socialConnected=${encodeURIComponent(provider)}`,
         errorCallbackURL: "/error?flow=social",
       });
 

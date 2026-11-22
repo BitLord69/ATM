@@ -1,36 +1,36 @@
-import { and, asc, eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 
 import { auth } from "../../../../lib/auth";
 import db from "../../../../lib/db";
-import {
-  divisionPolicy,
-  eventEntry,
-  player,
-  tournament,
-  tournamentDivision,
-  tournamentMembership,
-  tournamentPlayerNumber,
-  user,
-} from "../../../../lib/db/schema";
+import { eventEntry, player, tournamentPlayerNumber, user } from "../../../../lib/db/schema";
 import { hasTournamentRole } from "../../../utils/authorization";
+import { getEnabledTournamentDisciplines } from "../../../utils/division-policy";
 import {
-  getEnabledTournamentDisciplines,
-  mapPolicyFromDb,
-} from "../../../utils/division-policy";
+  loadDivisionPolicyContext,
+  loadRegistrationTournament,
+  loadTournamentMembership,
+  safeParseMinorTags,
+} from "../../../utils/tournament-registration-context";
 
-function safeParseMinorTags(raw: string | null | undefined) {
-  if (!raw) {
-    return [] as string[];
-  }
-
-  try {
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed.filter(item => typeof item === "string") : [];
-  }
-  catch {
-    return [];
-  }
-}
+type PlayerGroup = {
+  playerId: string;
+  userId: string | null;
+  isGuest: boolean;
+  displayName: string;
+  country: string | null;
+  email: string | null;
+  pdgaNumber: string | null;
+  homeClub: string | null;
+  dateOfBirth: string | null;
+  genderCategory: string | null;
+  playerNumber: number | null;
+  majorDivision: string;
+  minorDivisionTags: string[];
+  primaryMinorDivision: string | null;
+  activeDisciplines: string[];
+  withdrawnDisciplines: string[];
+  overallStatus: "registered" | "withdrawn";
+};
 
 export default defineEventHandler(async (event) => {
   const slug = getRouterParam(event, "slug");
@@ -43,52 +43,14 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 401, message: "Unauthorized" });
   }
 
-  const tournamentRows = await db
-    .select({
-      id: tournament.id,
-      divisionOpen: tournament.divisionOpen,
-      divisionWomen: tournament.divisionWomen,
-      divisionMaster: tournament.divisionMaster,
-      divisionGrandMaster: tournament.divisionGrandMaster,
-      divisionSeniorGrandMaster: tournament.divisionSeniorGrandMaster,
-      divisionLegend: tournament.divisionLegend,
-      divisionJunior: tournament.divisionJunior,
-      keepJuniorsSeparate: tournament.keepJuniorsSeparate,
-      hasGolf: tournament.hasGolf,
-      hasAccuracy: tournament.hasAccuracy,
-      hasDistance: tournament.hasDistance,
-      hasSCF: tournament.hasSCF,
-      hasDiscathon: tournament.hasDiscathon,
-      hasDDC: tournament.hasDDC,
-      hasFreestyle: tournament.hasFreestyle,
-    })
-    .from(tournament)
-    .where(eq(tournament.slug, slug))
-    .limit(1);
+  const foundTournament = await loadRegistrationTournament(slug);
+  const membership = await loadTournamentMembership(foundTournament.id, session.user.id);
 
-  const foundTournament = tournamentRows[0];
-  if (!foundTournament) {
-    throw createError({ statusCode: 404, message: "Tournament not found" });
-  }
-
-  const membershipRows = await db
-    .select({ role: tournamentMembership.role, status: tournamentMembership.status })
-    .from(tournamentMembership)
-    .where(
-      and(
-        eq(tournamentMembership.tournamentId, foundTournament.id),
-        eq(tournamentMembership.userId, session.user.id),
-      ),
-    )
-    .limit(1);
-
-  if (!hasTournamentRole(session.user.role, membershipRows[0], "viewer")) {
+  if (!hasTournamentRole(session.user.role, membership, "viewer")) {
     throw createError({ statusCode: 403, message: "Forbidden" });
   }
 
-  const canManage = hasTournamentRole(session.user.role, membershipRows[0], "scorer");
-
-  const [rows, numberRows, policyRows, offeredRows, allUsers] = await Promise.all([
+  const [rows, numberRows, policyContext] = await Promise.all([
     db
       .select({
         id: eventEntry.id,
@@ -124,39 +86,10 @@ export default defineEventHandler(async (event) => {
       })
       .from(tournamentPlayerNumber)
       .where(eq(tournamentPlayerNumber.tournamentId, foundTournament.id)),
-    db
-      .select({ ageReferenceMode: divisionPolicy.ageReferenceMode })
-      .from(divisionPolicy)
-      .where(eq(divisionPolicy.tournamentId, foundTournament.id))
-      .limit(1),
-    db
-      .select({
-        code: tournamentDivision.code,
-        label: tournamentDivision.label,
-        isEnabled: tournamentDivision.isEnabled,
-      })
-      .from(tournamentDivision)
-      .where(eq(tournamentDivision.tournamentId, foundTournament.id)),
-    canManage
-      ? db
-          .select({
-            id: user.id,
-            name: user.name,
-            email: user.email,
-            country: user.country,
-            pdgaNumber: user.pdgaNumber,
-            homeClub: user.homeClub,
-            dateOfBirth: user.dateOfBirth,
-            genderCategory: user.genderCategory,
-          })
-          .from(user)
-          .orderBy(asc(user.name))
-      : Promise.resolve([]),
+    loadDivisionPolicyContext(foundTournament),
   ]);
 
   const numberByPlayerId = new Map(numberRows.map(row => [row.playerId, row.playerNumber]));
-  const policyContext = mapPolicyFromDb(policyRows[0], offeredRows, foundTournament);
-  const enabledDisciplines = getEnabledTournamentDisciplines(foundTournament);
 
   const normalizedEntries = rows.map(row => ({
     ...row,
@@ -168,26 +101,8 @@ export default defineEventHandler(async (event) => {
     minorDivisionTags: safeParseMinorTags(row.minorDivisionTags),
   }));
 
-  // Group entries by player for convenient player-centric management
-  const playersMap = new Map<string, {
-    playerId: string;
-    userId: string | null;
-    isGuest: boolean;
-    displayName: string;
-    country: string | null;
-    email: string | null;
-    pdgaNumber: string | null;
-    homeClub: string | null;
-    dateOfBirth: string | null;
-    genderCategory: string | null;
-    playerNumber: number | null;
-    majorDivision: string;
-    minorDivisionTags: string[];
-    primaryMinorDivision: string | null;
-    activeDisciplines: string[];
-    withdrawnDisciplines: string[];
-    overallStatus: "registered" | "withdrawn";
-  }>();
+  // Group entries by player for player-centric management
+  const playersMap = new Map<string, PlayerGroup>();
 
   for (const entry of normalizedEntries) {
     let group = playersMap.get(entry.playerId);
@@ -228,10 +143,10 @@ export default defineEventHandler(async (event) => {
 
   return {
     tournamentId: foundTournament.id,
+    canManage: hasTournamentRole(session.user.role, membership, "scorer"),
     majorDivisions: policyContext.majorDivisions,
-    enabledDisciplines,
+    enabledDisciplines: getEnabledTournamentDisciplines(foundTournament),
     entries: normalizedEntries,
     players: [...playersMap.values()].sort((a, b) => a.displayName.localeCompare(b.displayName)),
-    availableUsers: allUsers,
   };
 });

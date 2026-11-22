@@ -308,6 +308,11 @@ const REQUIRED_COLUMNS: ColumnSpec[] = [
     name: "email",
     ddl: "ALTER TABLE player ADD COLUMN email TEXT",
   },
+  {
+    table: "session",
+    name: "active_organization_id",
+    ddl: "ALTER TABLE session ADD COLUMN active_organization_id TEXT",
+  },
 ];
 
 async function tableColumns(db: ReturnType<typeof createClient>, table: string) {
@@ -378,6 +383,7 @@ async function main() {
     "CREATE INDEX IF NOT EXISTS tournament_membership_tournament_id_idx ON tournament_membership (tournament_id)",
     "CREATE INDEX IF NOT EXISTS tournament_membership_organization_id_idx ON tournament_membership (organization_id)",
     "CREATE INDEX IF NOT EXISTS tournament_membership_user_tournament_idx ON tournament_membership (user_id, tournament_id)",
+    "CREATE INDEX IF NOT EXISTS event_entry_tournament_status_idx ON event_entry (tournament_id, status)",
   ];
 
   for (const indexDdl of requiredIndexes) {

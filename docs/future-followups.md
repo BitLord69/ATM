@@ -34,6 +34,19 @@ This file mirrors active follow-up notes tracked in repository memory so they ar
   - Replaced sequential `UPDATE` loops in `server/api/tournaments/[slug]/starting-lists/reorder.patch.ts` and `server/api/tournaments/[slug]/edit.patch.ts` with `db.batch(...)`.
   - Centralized `hasTournamentRole(...)` in `server/utils/authorization.ts` across all 16 `server/api/tournaments/[slug]/**` routes, fixed `changedBy` column type (`text()`) in `tournament.ts`, `venue.ts`, and `tournament-venue.ts`, and added `useSnapshotDirtyState` + `useUnsavedChangesGuard` to `app/pages/dashboard/tournaments/[slug]/disciplines/[discipline].vue`.
 
+- **Completed (2026-11-22):**
+  - Replaced unbounded `availableUsers` in `GET /api/tournaments/[slug]/entries` with a scoped `GET /api/tournaments/[slug]/user-search?q=` endpoint (`scorer`+, min 2 chars, limit 20, non-banned, minimal fields).
+  - Refactored `POST /api/tournaments/[slug]/entries` and `PATCH /api/tournaments/[slug]/entries/[id]` to validate all inputs before any DB writes and execute all mutations atomically in a single `db.batch(...)`.
+  - Consolidated age/minor-division derivation in `shared/utils/division-age.ts` (shared between server and client live preview using server-provided `divisionAgePolicy`).
+  - Extracted `server/utils/tournament-registration-context.ts`, `app/utils/api-error.ts`, `app/utils/registration-status.ts`, `app/components/tournament-registration-panel.vue`, `app/components/player-registration-form.vue`, and `app/components/registered-players-table.vue`.
+  - Tightened Zod validation (`z.email()`, `z.iso.date()`), added safe `?redirect=` support in `signin.vue` / `auth-button.vue`, parallelized registration queries, skipped DB queries for guests in `my-registration.get.ts`, and added `event_entry_tournament_status_idx` (`0027_event_entry_status_index.sql`).
+  - Note: migration `0026_guest_player_support.sql` uses LibSQL/Turso `ALTER TABLE ... ALTER COLUMN` syntax (supported by Turso and `@libsql/client`, not standard `sqlite3` CLI).
+- **Approved Registration & Security Follow-up Ideas (2026-11-22):**
+  - **Registration Audit Log (`event_entry_history`):** Record who changed a player's division, disciplines, or status (`registered` / `withdrawn`) and when, to resolve disputes over late withdrawals or division changes.
+  - **Guest-to-Account Merge:** When an offline/guest player later signs up with a matching email address, offer to merge their guest `player` row (and historical entries/stats for M6) into their new `user` account.
+  - **Gender Category Policy Decision:** Document and optionally enforce whether `genderCategory` for Women / FPx divisions is self-declared or requires TD verification.
+  - **Rate Limiting on Self-Registration:** Add per-user/IP rate limiting on `POST /api/tournaments/[slug]/entries` for regular players to guard against automated spam while registration is open.
+
 ## Social Auth
 
 - Future UX TODO: when user home/profile page is created, show a persistent badge with connected social provider(s) (GitHub/Google/Facebook) and add a button to disconnect linked social login providers (if provider/API supports unlink).
