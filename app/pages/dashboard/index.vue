@@ -385,17 +385,29 @@ onMounted(async () => {
     <ClientOnly>
       <TournamentSelectorModal />
 
-      <div class="mb-6">
-        <h1 class="text-3xl font-bold mb-2">
-          My dashboard
-        </h1>
-        <p
-          v-if="tournamentStore.activeTournament"
-          class="text-lg opacity-70"
+      <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 class="text-3xl font-bold mb-2">
+            My dashboard
+          </h1>
+          <p
+            v-if="tournamentStore.activeTournament"
+            class="text-lg opacity-70"
+          >
+            Active Tournament: <span class="font-semibold">{{ tournamentStore.activeTournament.tournamentName }}</span>
+            <span class="badge badge-primary ml-2">{{ tournamentStore.activeTournament.role }}</span>
+          </p>
+        </div>
+        <NuxtLink
+          to="/dashboard/tournaments/new"
+          class="btn btn-primary btn-sm gap-1.5 self-start sm:self-auto"
         >
-          Active Tournament: <span class="font-semibold">{{ tournamentStore.activeTournament.tournamentName }}</span>
-          <span class="badge badge-primary ml-2">{{ tournamentStore.activeTournament.role }}</span>
-        </p>
+          <Icon
+            name="tabler:plus"
+            size="16"
+          />
+          Create a Tournament
+        </NuxtLink>
       </div>
 
       <VerticalTabsLayout

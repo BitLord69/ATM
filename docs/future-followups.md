@@ -46,6 +46,7 @@ This file mirrors active follow-up notes tracked in repository memory so they ar
   - **Guest-to-Account Merge:** When an offline/guest player later signs up with a matching email address, offer to merge their guest `player` row (and historical entries/stats for M6) into their new `user` account.
   - **Gender Category Policy Decision:** Document and optionally enforce whether `genderCategory` for Women / FPx divisions is self-declared or requires TD verification.
   - **Rate Limiting on Self-Registration:** Add per-user/IP rate limiting on `POST /api/tournaments/[slug]/entries` for regular players to guard against automated spam while registration is open.
+  - **Change Tournament Organization (Owner / Global Admin):** Allow a tournament `owner` or global `admin` to transfer/reassign an existing tournament's `organizationId` in `/dashboard/tournaments/[slug]/edit`, atomically updating both `tournaments.organization_id` and `tournament_membership.organization_id`.
 
 ## Social Auth
 
@@ -64,5 +65,29 @@ This file mirrors active follow-up notes tracked in repository memory so they ar
 ## Testing & Community (Discord)
 
 - Discord Server & Changelog Workflow TODO: once ATM is ready for external testing, set up a dedicated Discord server/channel for testers and tournament directors, and use the `.agents/rules/changelog-format.md` template to post structured release notes and testing updates.
+
+## UI Refresh & Polish Wishlist
+
+Collected visual upgrades to tackle together in a dedicated UI polish pass:
+
+- **DaisyUI `swap` (`swap-rotate` / `swap-flip`):**
+  - Lock/unlock toggles for tournament registration and starting lists (animated padlock swap).
+  - Password visibility toggle (eye icon) on sign-in and profile pages.
+  - Presentation mode (M5) play/pause toggle for auto-rotating slides.
+- **DaisyUI `hover-3d` (3D tilt cards on hover):**
+  - Player Profile "trading cards" (M6) showcasing avatar, country, PDGA #, personal bests, and wins.
+  - Featured Upcoming Tournament cards on the landing page and/or Podium cards (1st / 2nd / 3rd place) in public tournament results (M1.5).
+- **DaisyUI `steps` (Guided multi-step wizards):**
+  - Public player registration flow (`/tournaments/[slug]`): 1. Profile → 2. Division → 3. Disciplines.
+  - Account onboarding (`/accept-invite`): 1. Account/Password → 2. Player Profile → 3. Done.
+  - Starting lists & pool generation (M1.3): 1. Discipline & Round → 2. Pool Assignment → 3. Review & Lock.
+- **DaisyUI `skeleton` (Content-shaped loading states):**
+  - Replace plain spinners with skeleton placeholders for tournament card grids (`/tournaments`, `/dashboard`), player & entry tables (`/dashboard/tournaments/[slug]/players`), and public leaderboards (M1.5) to make loading feel smoother and minimize layout shift (CLS).
+- **DaisyUI `tooltip` with rich `tooltip-content` (used sparingly):**
+  - Contextual rule/formula hints, e.g., SCF calculation `(MTA × 5.5) + TRC`, derived age/minor division badges (`MP40`, `MJ18` age cutoff explanation), or Overall tie-breaking / Playoff indicators.
+- **DaisyUI `join` (Unified search & filter bars):**
+  - Combine search input + filter `<select>` + action buttons into single seamless `join` groups with pill right edges (`rounded-r-full`) across list views (`/dashboard/tournaments`, `/dashboard/tournaments/[slug]/players`, `/admin/users`, and organization/venue pickers).
+- **Overall Visual Identity & "Wow Factor" Refresh:**
+  - Move beyond the utilitarian default dark/light DaisyUI look with a cohesive sport/frisbee aesthetic: refined color palette & subtle gradients on hero/headers, custom typography pairing, crisp glass/elevated cards, consistent pill/rounded accents (`rounded-r-full` / `rounded-xl`), and subtle micro-animations.
 
 

@@ -2,7 +2,7 @@ import fs from "node:fs";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { organization } from "better-auth/plugins";
-import { and, eq, gt } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import nodemailer from "nodemailer";
 
 import { normalizePersistedUserRole } from "#shared/types/auth";
@@ -50,25 +50,10 @@ if (!didLogAuthProviderConfig) {
   );
 }
 
-async function hasValidPendingInvitation(email: string) {
-  const pendingInvitation = await db
-    .select({ id: schema.invitation.id })
-    .from(schema.invitation)
-    .where(and(
-      eq(schema.invitation.email, email),
-      eq(schema.invitation.status, "pending"),
-      gt(schema.invitation.expiresAt, Date.now()),
-    ))
-    .limit(1);
-
-  return pendingInvitation.length > 0;
-}
-
 async function canCreateSessionForUser(userId: string): Promise<true | "banned" | false> {
   const rows = await db
     .select({
       email: schema.user.email,
-      role: schema.user.role,
       banned: schema.user.banned,
     })
     .from(schema.user)
@@ -84,22 +69,7 @@ async function canCreateSessionForUser(userId: string): Promise<true | "banned" 
     return "banned";
   }
 
-  // Global admins bypass invitation checks.
-  if (normalizePersistedUserRole(user.role) === "admin") {
-    return true;
-  }
-
-  const membership = await db
-    .select({ id: schema.member.id })
-    .from(schema.member)
-    .where(eq(schema.member.userId, userId))
-    .limit(1);
-
-  if (membership.length > 0) {
-    return true;
-  }
-
-  return hasValidPendingInvitation(user.email);
+  return true;
 }
 
 // your drizzle instance
@@ -187,11 +157,6 @@ export const auth = betterAuth({
           if (bannedUser.length > 0) {
             return false;
           }
-
-          const allowed = await hasValidPendingInvitation(email);
-          if (!allowed) {
-            return false;
-          }
         },
       },
     },
@@ -262,17 +227,17 @@ export const auth = betterAuth({
     github: {
       clientId: env.AUTH_GITHUB_CLIENT_ID,
       clientSecret: env.AUTH_GITHUB_CLIENT_SECRET,
-      disableImplicitSignUp: true,
+      disableImplicitSignUp: false,
     },
     facebook: {
       clientId: env.FACEBOOK_CLIENT_ID,
       clientSecret: env.FACEBOOK_CLIENT_SECRET,
-      disableImplicitSignUp: true,
+      disableImplicitSignUp: false,
     },
     google: {
       clientId: env.GOOGLE_CLIENT_ID,
       clientSecret: env.GOOGLE_CLIENT_SECRET,
-      disableImplicitSignUp: true,
+      disableImplicitSignUp: false,
     },
   },
   plugins: [

@@ -128,7 +128,7 @@ const tournamentsWithCoordinates = computed(() =>
         </div>
 
         <!-- Call to Action Buttons -->
-        <div class="flex flex-col sm:flex-row gap-4 justify-center my-8">
+        <div class="flex flex-col sm:flex-row flex-wrap gap-4 justify-center my-8">
           <NuxtLink
             to="/tournaments"
             class="btn btn-primary btn-lg gap-2"
@@ -138,6 +138,18 @@ const tournamentsWithCoordinates = computed(() =>
               size="24"
             />
             Browse Tournaments
+          </NuxtLink>
+          <NuxtLink
+            :to="authUiReady && authStore.isSignedIn
+              ? '/dashboard/tournaments/new'
+              : { path: '/signin', query: { mode: 'signup', redirect: '/dashboard/tournaments/new' } }"
+            class="btn btn-secondary btn-lg gap-2"
+          >
+            <Icon
+              name="tabler:plus"
+              size="24"
+            />
+            Create a Tournament
           </NuxtLink>
           <NuxtLink
             v-if="authUiReady && !authStore.isSignedIn"

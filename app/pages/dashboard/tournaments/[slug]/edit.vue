@@ -131,6 +131,24 @@ const cloneDraft = reactive({
   endDate: "",
   includeVenues: true,
 });
+
+watch(() => form.startDate, (newStart, oldStart) => {
+  if (newStart && (!form.endDate || form.endDate < newStart || form.endDate === oldStart)) {
+    form.endDate = newStart;
+  }
+});
+
+watch(() => form.registrationOpenDate, (newOpen, oldOpen) => {
+  if (newOpen && (!form.registrationCloseDate || form.registrationCloseDate < newOpen || form.registrationCloseDate === oldOpen)) {
+    form.registrationCloseDate = newOpen;
+  }
+});
+
+watch(() => cloneDraft.startDate, (newStart, oldStart) => {
+  if (newStart && (!cloneDraft.endDate || cloneDraft.endDate < newStart || cloneDraft.endDate === oldStart)) {
+    cloneDraft.endDate = newStart;
+  }
+});
 const venueEditScope = ref<"tournament" | "global">("tournament");
 const isExistingVenueDraft = computed(() => !!venueDraft.value?.id);
 const isAddingExistingVenue = computed(() => venueModalMode.value === "add" && isExistingVenueDraft.value);
@@ -660,6 +678,14 @@ const filteredAvailableVenues = computed(() => {
     selectedVenueDisciplineFilters.value.some(key => !!venue[key]),
   );
 });
+
+const existingVenueOptions = computed(() =>
+  filteredAvailableVenues.value.map(existing => ({
+    value: String(existing.id),
+    label: existing.name,
+    sublabel: `${existing.lat.toFixed(3)}, ${existing.long.toFixed(3)}`,
+  })),
+);
 
 watch(
   venueDisciplineFilterOptions,
@@ -1408,6 +1434,7 @@ async function saveTournament(closeTournament = false) {
                       v-model="form.endDate"
                       class="input input-bordered w-full"
                       type="date"
+                      :min="form.startDate || undefined"
                     >
                   </FormField>
                   <FormField label="Registration opening date">
@@ -1422,6 +1449,7 @@ async function saveTournament(closeTournament = false) {
                       v-model="form.registrationCloseDate"
                       class="input input-bordered w-full"
                       type="date"
+                      :min="form.registrationOpenDate || undefined"
                     >
                   </FormField>
                 </div>
@@ -1787,21 +1815,15 @@ async function saveTournament(closeTournament = false) {
 
                   <div class="flex flex-wrap items-center gap-2">
                     <div class="flex items-center gap-2">
-                      <select
-                        v-model="selectedExistingVenueId"
-                        class="select select-bordered select-sm min-w-65 bg-base-100 text-base-content border-base-300 hover:border-base-content/40 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                      >
-                        <option value="">
-                          Use existing venue
-                        </option>
-                        <option
-                          v-for="existing in filteredAvailableVenues"
-                          :key="existing.id"
-                          :value="String(existing.id)"
-                        >
-                          {{ existing.name }} ({{ existing.lat.toFixed(3) }}, {{ existing.long.toFixed(3) }})
-                        </option>
-                      </select>
+                      <div class="min-w-65">
+                        <SearchableSelect
+                          v-model="selectedExistingVenueId"
+                          :options="existingVenueOptions"
+                          size="sm"
+                          placeholder="Search or select existing venue..."
+                          empty-text="No matching venues"
+                        />
+                      </div>
                       <button
                         class="btn btn-sm btn-outline"
                         type="button"
@@ -2022,6 +2044,7 @@ async function saveTournament(closeTournament = false) {
                 v-model="cloneDraft.endDate"
                 class="input input-bordered w-full"
                 type="date"
+                :min="cloneDraft.startDate || undefined"
                 required
               >
             </FormField>

@@ -127,6 +127,31 @@ export const useAuthStore = defineStore("useAuthStore", () => {
     }
   }
 
+  async function signUpEmail(name: string, email: string, password: string) {
+    loading.value = true;
+
+    try {
+      const { error } = await authClient.signUp.email({
+        name,
+        email,
+        password,
+      });
+
+      if (error) {
+        return { ok: false, error: error.message || "Unable to create account." };
+      }
+
+      const session = await authClient.getSession();
+      isSignedIn.value = !!session.data;
+      currentUser.value = session.data?.user || null;
+
+      return { ok: true, error: null };
+    }
+    finally {
+      loading.value = false;
+    }
+  }
+
   async function requestPasswordReset(email: string) {
     loading.value = true;
 
@@ -202,6 +227,7 @@ export const useAuthStore = defineStore("useAuthStore", () => {
     currentUser,
     signInSocial,
     signInEmail,
+    signUpEmail,
     requestPasswordReset,
     signOut,
     checkSession,

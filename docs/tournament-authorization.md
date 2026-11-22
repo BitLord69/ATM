@@ -70,6 +70,8 @@ Use these endpoints as the source of truth for UI gating of management actions.
 
 ### Registration & Player Management Endpoints
 
+- **Open Self-Registration:** Any non-banned user may create an account via email/password or OAuth (`GitHub`, `Google`, `Facebook`) without requiring a prior admin invitation.
+- `POST /api/tournaments` — Open to any authenticated, non-banned user. Creates a new tournament (auto-creating a personal/club `organization` + `member` row if the user has none), generates a unique slug, and assigns the creator as `owner` in `tournament_membership`.
 - `GET /api/tournaments/:slug/my-registration` — Publicly callable; returns `{ authenticated: false }` for guests (no DB queries), or the signed-in user's `player` profile, `playerNumber`, entries, and derived minor divisions.
 - `GET /api/tournaments/:slug/entries` — Requires at least `viewer` role (or global `admin`). Returns grouped player registrations, discipline entries, offered major divisions, and `canManage` (`scorer`+). Does **not** expose platform-wide user lists.
 - `GET /api/tournaments/:slug/user-search?q=` — Requires `scorer` role or higher (or global `admin`). Requires at least 2 characters, returns at most 20 non-banned users with minimal fields (`id`, `name`, `email`, `country`).

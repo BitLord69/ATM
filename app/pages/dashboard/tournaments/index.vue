@@ -76,9 +76,21 @@ onMounted(async () => {
           Select a tournament to open its admin workspace.
         </p>
       </div>
-      <NuxtLink to="/dashboard" class="btn btn-ghost btn-sm self-start md:self-auto">
-        Back to my dashboard
-      </NuxtLink>
+      <div class="flex flex-wrap items-center gap-2 self-start md:self-auto">
+        <NuxtLink
+          to="/dashboard/tournaments/new"
+          class="btn btn-primary btn-sm gap-1.5"
+        >
+          <Icon
+            name="tabler:plus"
+            size="16"
+          />
+          New Tournament
+        </NuxtLink>
+        <NuxtLink to="/dashboard" class="btn btn-ghost btn-sm">
+          Back to my dashboard
+        </NuxtLink>
+      </div>
     </div>
 
     <div class="mb-5 grid gap-3 md:grid-cols-[1fr_auto] md:items-end">
