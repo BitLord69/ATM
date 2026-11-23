@@ -32,13 +32,10 @@ This document is the living Command Center for ATM development, synchronized wit
   - Supported Round 1 pool assignment with `Manual (unassigned)` as default (with 1-click `A | B | C` pool buttons per player row to match external Tjing/UDisc pools), plus optional `By division` and `Random` auto-assignment.
   - Supported Round 2+ generation respecting the tournament's Pool Mode (`static` inherits previous round pools; `dynamic` tiers across pools with optional cut size) and optional Golf Start ordering (`↑ / ↓`).
 
-- [ ] **M1.4 – Disc Golf Round Score Entry (Strokes, Par, Statuses & Playoffs)** (`#62`)
-  - Database schema & API for round scores (`LOWER_IS_BETTER`).
-  - Fast Scorer/TD entry UI per round (filterable by Pool and Division):
-    - Enter total strokes per round (e.g., `54`) + optional Course Par per round.
-    - No separate validation step required (scores are already validated in the external app and appear immediately once saved).
-    - Support special statuses: `DNS` (Did Not Start), `DNF` (Did Not Finish), `SCR` (Scratched).
-    - Support `Playoff` tie-breaking for podium ties (places 1–3).
+- [x] **M1.4 – Disc Golf Round Score Entry (Strokes, Par, Statuses & Playoffs)** (`#62`)
+  - Added `event_round_score` table and `event_entry.playoff_rank` (`0031_event_round_scores.sql`, synced locally and to Turso Cloud).
+  - Built `server/utils/golf-scoring.ts` (`LOWER_IS_BETTER`, `+/- Par`, `DNS`/`DNF`/`SCR`, podium playoff tie-breakers for places 1–3) and wired real cumulative standings into M1.3's dynamic Round 2+ pool generation.
+  - Built `GET`/`PUT /api/tournaments/[slug]/scores/golf` and the fast keyboard-first Scorer/TD UI at `/dashboard/tournaments/[slug]/scores/golf` (accordion layout, pool/division/search filters, live `+/- Par`, 1-click statuses, automatic podium playoff panel, and live standings preview).
 
 - [ ] **M1.5 – Public Disc Golf Results & Pool View on Tournament Page** (`#63`)
   - Public view on `/tournaments/[slug]` showing:
@@ -52,6 +49,8 @@ This document is the living Command Center for ATM development, synchronized wit
 ## Milestone 2 (M2): Individual Disciplines & Live Scoring
 
 **Goal:** Expand the M1 architecture to the remaining individual field/track disciplines with live scoring and optional score validation.
+
+> **Mobile-first scorer UX requirement:** While tournament setup, Disc Golf, and DDC are primarily desktop-first HQ workflows, live score entry for field/track disciplines (**Accuracy, Distance, SCF, Discathon**) MUST be designed **mobile-first (phone mode)** for volunteers out on the field — large touch targets, minimal taps per throw/attempt, quick next-player navigation, and native numeric/decimal keypads (`inputmode`).
 
 - [ ] **M2.1 – Accuracy & Distance Live Scoring:** Throw-by-throw / station-by-station or round total entry, higher-is-better ranking, cumulative cuts, and optional venue capacity metadata (e.g., number of Accuracy targets/stations).
 - [ ] **M2.2 – Self-Caught Flight (SCF):** Enter `MTA` (seconds) and `TRC` (meters) with automatic WFDF calculation `SCF = (MTA * 5.5) + TRC`.

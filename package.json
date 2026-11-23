@@ -15,6 +15,7 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix --fix-type problem,suggestion,layout",
     "typecheck": "nuxi typecheck",
+    "test:e2e": "playwright test",
     "prepare": "husky || echo \"husky skipped\"",
     "center-logos": "node scripts/center-logos.js",
     "db:seed-divisions": "tsx scripts/seed-divisions.ts",
@@ -51,6 +52,7 @@
   "devDependencies": {
     "@antfu/eslint-config": "^9.5.1",
     "@nuxt/icon": "2.4.1",
+    "@playwright/test": "^1.65.1",
     "@types/leaflet": "^1.9.22",
     "@types/nodemailer": "^8.0.2",
     "daisyui": "^5.8.0",
