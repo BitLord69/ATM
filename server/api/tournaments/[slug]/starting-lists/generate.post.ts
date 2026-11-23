@@ -6,7 +6,7 @@ import { auth } from "../../../../../lib/auth";
 import db from "../../../../../lib/db";
 import { eventEntry, startingListEntry, startingListLock, tournament, tournamentMembership } from "../../../../../lib/db/schema";
 import { hasTournamentRole } from "../../../../utils/authorization";
-import { buildStartingListEntries } from "../../../../utils/starting-list";
+import { buildGolfStartingListEntries, buildStartingListEntries } from "../../../../utils/starting-list";
 
 export default defineEventHandler(async (event) => {
   const slug = getRouterParam(event, "slug");
@@ -27,7 +27,11 @@ export default defineEventHandler(async (event) => {
   }
 
   const tournamentRows = await db
-    .select({ id: tournament.id })
+    .select({
+      id: tournament.id,
+      golfPoolMode: tournament.golfPoolMode,
+      golfPoolCount: tournament.golfPoolCount,
+    })
     .from(tournament)
     .where(eq(tournament.slug, slug))
     .limit(1);
@@ -52,17 +56,64 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 403, message: "Forbidden" });
   }
 
-  const lockRows = await db
-    .select({ isLocked: startingListLock.isLocked })
-    .from(startingListLock)
-    .where(
-      and(
-        eq(startingListLock.tournamentId, foundTournament.id),
-        eq(startingListLock.discipline, body.discipline),
-        eq(startingListLock.roundNumber, body.roundNumber),
-      ),
-    )
-    .limit(1);
+  const [lockRows, existingRows, sourceEntries, previousRoundEntries] = await Promise.all([
+    db
+      .select({ isLocked: startingListLock.isLocked })
+      .from(startingListLock)
+      .where(
+        and(
+          eq(startingListLock.tournamentId, foundTournament.id),
+          eq(startingListLock.discipline, body.discipline),
+          eq(startingListLock.roundNumber, body.roundNumber),
+        ),
+      )
+      .limit(1),
+    db
+      .select({ id: startingListEntry.id })
+      .from(startingListEntry)
+      .where(
+        and(
+          eq(startingListEntry.tournamentId, foundTournament.id),
+          eq(startingListEntry.discipline, body.discipline),
+          eq(startingListEntry.roundNumber, body.roundNumber),
+        ),
+      )
+      .orderBy(asc(startingListEntry.position)),
+    db
+      .select({
+        id: eventEntry.id,
+        tournamentId: eventEntry.tournamentId,
+        discipline: eventEntry.discipline,
+        activeCompetitiveDivision: eventEntry.activeCompetitiveDivision,
+        createdAt: eventEntry.createdAt,
+        status: eventEntry.status,
+      })
+      .from(eventEntry)
+      .where(
+        and(
+          eq(eventEntry.tournamentId, foundTournament.id),
+          eq(eventEntry.discipline, body.discipline),
+        ),
+      )
+      .orderBy(asc(eventEntry.createdAt), asc(eventEntry.id)),
+    body.discipline === "golf" && body.roundNumber > 1
+      ? db
+          .select({
+            eventEntryId: startingListEntry.eventEntryId,
+            poolName: startingListEntry.poolName,
+            position: startingListEntry.position,
+          })
+          .from(startingListEntry)
+          .where(
+            and(
+              eq(startingListEntry.tournamentId, foundTournament.id),
+              eq(startingListEntry.discipline, body.discipline),
+              eq(startingListEntry.roundNumber, body.roundNumber - 1),
+            ),
+          )
+          .orderBy(asc(startingListEntry.position))
+      : Promise.resolve([]),
+  ]);
 
   if (lockRows[0]?.isLocked) {
     throw createError({
@@ -71,55 +122,49 @@ export default defineEventHandler(async (event) => {
     });
   }
 
-  const existingRows = await db
-    .select({ id: startingListEntry.id })
-    .from(startingListEntry)
+  if (existingRows.length > 0 && !body.overwrite) {
+    throw createError({ statusCode: 409, message: "Starting list already exists for this round. Set overwrite=true to regenerate." });
+  }
+
+  const activeSourceEntries = sourceEntries.filter(row => row.status !== "withdrawn");
+
+  const mappedInputs = activeSourceEntries.map(row => ({
+    eventEntryId: row.id,
+    tournamentId: row.tournamentId,
+    discipline: row.discipline,
+    activeCompetitiveDivision: row.activeCompetitiveDivision,
+    sortValue: row.createdAt,
+  }));
+
+  const generatedRows = body.discipline === "golf"
+    ? buildGolfStartingListEntries(mappedInputs, {
+        roundNumber: body.roundNumber,
+        poolCount: typeof foundTournament.golfPoolCount === "number" && foundTournament.golfPoolCount >= 1
+          ? foundTournament.golfPoolCount
+          : 1,
+        poolMode: foundTournament.golfPoolMode === "dynamic" ? "dynamic" : "static",
+        assignmentMode: body.assignmentMode,
+        cutSize: body.cutSize ?? null,
+        previousRoundEntries,
+      })
+    : buildStartingListEntries(mappedInputs, body.roundNumber);
+
+  const now = Date.now();
+  const deleteStatement = db
+    .delete(startingListEntry)
     .where(
       and(
         eq(startingListEntry.tournamentId, foundTournament.id),
         eq(startingListEntry.discipline, body.discipline),
         eq(startingListEntry.roundNumber, body.roundNumber),
       ),
-    )
-    .orderBy(asc(startingListEntry.position));
+    );
 
-  if (existingRows.length > 0 && !body.overwrite) {
-    throw createError({ statusCode: 409, message: "Starting list already exists for this round. Set overwrite=true to regenerate." });
-  }
+  if (generatedRows.length === 0) {
+    if (existingRows.length > 0 && body.overwrite) {
+      await deleteStatement;
+    }
 
-  if (existingRows.length > 0 && body.overwrite) {
-    await db
-      .delete(startingListEntry)
-      .where(
-        and(
-          eq(startingListEntry.tournamentId, foundTournament.id),
-          eq(startingListEntry.discipline, body.discipline),
-          eq(startingListEntry.roundNumber, body.roundNumber),
-        ),
-      );
-  }
-
-  const sourceEntries = await db
-    .select({
-      id: eventEntry.id,
-      tournamentId: eventEntry.tournamentId,
-      discipline: eventEntry.discipline,
-      activeCompetitiveDivision: eventEntry.activeCompetitiveDivision,
-      createdAt: eventEntry.createdAt,
-      status: eventEntry.status,
-    })
-    .from(eventEntry)
-    .where(
-      and(
-        eq(eventEntry.tournamentId, foundTournament.id),
-        eq(eventEntry.discipline, body.discipline),
-      ),
-    )
-    .orderBy(asc(eventEntry.createdAt), asc(eventEntry.id));
-
-  const activeSourceEntries = sourceEntries.filter(row => row.status !== "withdrawn");
-
-  if (activeSourceEntries.length === 0) {
     return {
       success: true,
       generated: 0,
@@ -129,20 +174,7 @@ export default defineEventHandler(async (event) => {
     };
   }
 
-  const generatedRows = buildStartingListEntries(
-    activeSourceEntries.map(row => ({
-      eventEntryId: row.id,
-      tournamentId: row.tournamentId,
-      discipline: row.discipline,
-      activeCompetitiveDivision: row.activeCompetitiveDivision,
-      sortValue: row.createdAt,
-    })),
-    body.roundNumber,
-  );
-
-  const now = Date.now();
-
-  await db.insert(startingListEntry).values(
+  const insertStatement = db.insert(startingListEntry).values(
     generatedRows.map(row => ({
       id: crypto.randomUUID(),
       eventEntryId: row.eventEntryId,
@@ -150,11 +182,19 @@ export default defineEventHandler(async (event) => {
       discipline: row.discipline,
       roundNumber: row.roundNumber,
       position: row.position,
+      poolName: row.poolName,
       activeCompetitiveDivisionSnapshot: row.activeCompetitiveDivisionSnapshot,
       createdAt: now,
       updatedAt: now,
     })),
   );
+
+  if (existingRows.length > 0 && body.overwrite) {
+    await db.batch([deleteStatement, insertStatement]);
+  }
+  else {
+    await insertStatement;
+  }
 
   return {
     success: true,
