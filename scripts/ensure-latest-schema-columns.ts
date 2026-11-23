@@ -323,6 +323,11 @@ const REQUIRED_COLUMNS: ColumnSpec[] = [
     name: "pool_name",
     ddl: "ALTER TABLE starting_list_entry ADD COLUMN pool_name TEXT",
   },
+  {
+    table: "event_entry",
+    name: "playoff_rank",
+    ddl: "ALTER TABLE event_entry ADD COLUMN playoff_rank INTEGER",
+  },
 ];
 
 async function tableColumns(db: ReturnType<typeof createClient>, table: string) {
@@ -397,7 +402,26 @@ async function main() {
     )
   `);
 
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS event_round_score (
+      id TEXT PRIMARY KEY NOT NULL,
+      event_entry_id TEXT NOT NULL REFERENCES event_entry(id) ON DELETE CASCADE,
+      tournament_id INTEGER NOT NULL REFERENCES tournaments(id) ON DELETE CASCADE,
+      discipline TEXT NOT NULL,
+      round_number INTEGER NOT NULL,
+      raw_score REAL,
+      status TEXT NOT NULL DEFAULT 'ok',
+      notes TEXT,
+      entered_by TEXT,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    )
+  `);
+
   const requiredIndexes = [
+    "CREATE UNIQUE INDEX IF NOT EXISTS event_round_score_entry_round_unique ON event_round_score (event_entry_id, round_number)",
+    "CREATE INDEX IF NOT EXISTS event_round_score_scope_idx ON event_round_score (tournament_id, discipline, round_number)",
+    "CREATE INDEX IF NOT EXISTS event_round_score_entry_idx ON event_round_score (event_entry_id)",
     "CREATE INDEX IF NOT EXISTS venue_course_layout_venue_id_idx ON venue_course_layout (venue_id)",
     "CREATE INDEX IF NOT EXISTS tournaments_organization_id_idx ON tournaments (organization_id)",
     "CREATE INDEX IF NOT EXISTS tournamentvenues_tournament_id_idx ON tournamentvenues (tournament_id)",

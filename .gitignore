@@ -32,5 +32,8 @@ logs
 !.env.example
 !.env.cloud.example
 lib/db/migrations/
+playwright-report/
+test-results/
+.env.e2e
 .vercel
 .env*.local

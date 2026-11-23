@@ -1,10 +1,10 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, lt } from "drizzle-orm";
 
 import { startingListGenerateBodySchema } from "#shared/schemas/starting-lists";
 
 import { auth } from "../../../../../lib/auth";
 import db from "../../../../../lib/db";
-import { eventEntry, startingListEntry, startingListLock, tournament, tournamentMembership } from "../../../../../lib/db/schema";
+import { eventEntry, eventRoundScore, startingListEntry, startingListLock, tournament, tournamentMembership } from "../../../../../lib/db/schema";
 import { hasTournamentRole } from "../../../../utils/authorization";
 import { buildGolfStartingListEntries, buildStartingListEntries } from "../../../../utils/starting-list";
 
@@ -56,7 +56,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 403, message: "Forbidden" });
   }
 
-  const [lockRows, existingRows, sourceEntries, previousRoundEntries] = await Promise.all([
+  const [lockRows, existingRows, sourceEntries, previousRoundEntries, priorScoreRows] = await Promise.all([
     db
       .select({ isLocked: startingListLock.isLocked })
       .from(startingListLock)
@@ -113,6 +113,22 @@ export default defineEventHandler(async (event) => {
           )
           .orderBy(asc(startingListEntry.position))
       : Promise.resolve([]),
+    body.discipline === "golf" && body.roundNumber > 1 && foundTournament.golfPoolMode === "dynamic"
+      ? db
+          .select({
+            eventEntryId: eventRoundScore.eventEntryId,
+            rawScore: eventRoundScore.rawScore,
+            status: eventRoundScore.status,
+          })
+          .from(eventRoundScore)
+          .where(
+            and(
+              eq(eventRoundScore.tournamentId, foundTournament.id),
+              eq(eventRoundScore.discipline, "golf"),
+              lt(eventRoundScore.roundNumber, body.roundNumber),
+            ),
+          )
+      : Promise.resolve([]),
   ]);
 
   if (lockRows[0]?.isLocked) {
@@ -136,6 +152,43 @@ export default defineEventHandler(async (event) => {
     sortValue: row.createdAt,
   }));
 
+  // For dynamic R2+ golf pools, if prior round scores exist, rank by cumulative strokes (LOWER_IS_BETTER)
+  let effectivePreviousEntries = previousRoundEntries;
+  if (body.discipline === "golf" && body.roundNumber > 1 && foundTournament.golfPoolMode === "dynamic" && priorScoreRows.length > 0) {
+    const totals = new Map<string, { completed: number; strokes: number }>();
+    for (const s of priorScoreRows) {
+      if (s.status === "ok" && typeof s.rawScore === "number") {
+        const cur = totals.get(s.eventEntryId) ?? { completed: 0, strokes: 0 };
+        cur.completed += 1;
+        cur.strokes += s.rawScore;
+        totals.set(s.eventEntryId, cur);
+      }
+    }
+
+    const prevPoolByEntry = new Map(previousRoundEntries.map(e => [e.eventEntryId, e.poolName]));
+    const rankedByScore = [...activeSourceEntries].sort((left, right) => {
+      const a = totals.get(left.id);
+      const b = totals.get(right.id);
+      if (a && !b)
+        return -1;
+      if (!a && b)
+        return 1;
+      if (a && b) {
+        if (a.completed !== b.completed)
+          return b.completed - a.completed;
+        if (a.strokes !== b.strokes)
+          return a.strokes - b.strokes;
+      }
+      return left.createdAt - right.createdAt;
+    });
+
+    effectivePreviousEntries = rankedByScore.map((row, idx) => ({
+      eventEntryId: row.id,
+      poolName: prevPoolByEntry.get(row.id) ?? null,
+      position: idx + 1,
+    }));
+  }
+
   const generatedRows = body.discipline === "golf"
     ? buildGolfStartingListEntries(mappedInputs, {
         roundNumber: body.roundNumber,
@@ -145,7 +198,7 @@ export default defineEventHandler(async (event) => {
         poolMode: foundTournament.golfPoolMode === "dynamic" ? "dynamic" : "static",
         assignmentMode: body.assignmentMode,
         cutSize: body.cutSize ?? null,
-        previousRoundEntries,
+        previousRoundEntries: effectivePreviousEntries,
       })
     : buildStartingListEntries(mappedInputs, body.roundNumber);
 

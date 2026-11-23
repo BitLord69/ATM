@@ -16,6 +16,7 @@ export const eventEntry = sqliteTable(
     primaryMinorDivision: text("primary_minor_division"),
     activeCompetitiveDivision: text("active_competitive_division").notNull(),
     status: text("status").notNull().default("registered"),
+    playoffRank: integer("playoff_rank"),
     createdAt: integer("created_at").notNull().$default(() => Date.now()),
     updatedAt: integer("updated_at").notNull().$default(() => Date.now()).$onUpdate(() => Date.now()),
     changedBy: text("changed_by"),

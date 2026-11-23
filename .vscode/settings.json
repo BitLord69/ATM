@@ -3,6 +3,11 @@
   "prettier.enable": false,
   "editor.formatOnSave": false,
 
+  // Prevent Auto Save from racing with agent disk edits and cap open editor tabs
+  "files.autoSave": "off",
+  "workbench.editor.limit.enabled": true,
+  "workbench.editor.limit.value": 5,
+
   // Auto fix
   "editor.codeActionsOnSave": {
     "source.fixAll.eslint": "explicit",

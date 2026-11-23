@@ -77,6 +77,19 @@ const items = computed<WorkspaceNavItem[]>(() => {
     { id: "players", label: "Players", to: `/dashboard/tournaments/${slug.value}/players` },
   ];
 
+  const source = navDisciplines.value ?? tournamentData.value;
+  if (source && !Array.isArray(source) && !!(source as any).hasGolf) {
+    base.push({
+      kind: "section",
+      id: "scores-section",
+      label: "Score entry",
+      defaultOpen: route.path.includes("/scores/"),
+      items: [
+        { id: "scores:golf", label: "Disc golf", to: `/dashboard/tournaments/${slug.value}/scores/golf`, indented: true },
+      ],
+    });
+  }
+
   if (enabledDisciplineLinks.value.length > 0) {
     base.push({
       kind: "section",
@@ -107,6 +120,9 @@ const activeSection = computed(() => {
     if (typeof venueId === "string") {
       return `venue:${venueId}`;
     }
+  }
+  if (path.includes("/scores/golf")) {
+    return "scores:golf";
   }
   if (path.includes("/disciplines/")) {
     const discipline = route.params.discipline;
