@@ -27,10 +27,10 @@ This document is the living Command Center for ATM development, synchronized wit
     - Register both existing users and offline/guest players (creating a `player` profile without requiring a `user` login account).
     - Edit division/discipline registrations and handle withdrawals.
 
-- [ ] **M1.3 – Starting Lists & Pool Assignment for Disc Golf** (`#61`)
-  - Add `poolName` (e.g., `Pool A`, `Pool B`) to `starting_list_entry`.
-  - Support Round 1 pool assignment (by division, random, or manual adjustment).
-  - Support Round 2+ generation respecting the tournament's Pool Mode (`static` vs. `dynamic` standings order + Cut filter) and optional Golf Start ordering.
+- [x] **M1.3 – Starting Lists & Pool Assignment for Disc Golf** (`#61`)
+  - Added `pool_name` (e.g., `Pool A`, `Pool B`) to `starting_list_entry` (`0030_starting_list_pool_name.sql`).
+  - Supported Round 1 pool assignment with `Manual (unassigned)` as default (with 1-click `A | B | C` pool buttons per player row to match external Tjing/UDisc pools), plus optional `By division` and `Random` auto-assignment.
+  - Supported Round 2+ generation respecting the tournament's Pool Mode (`static` inherits previous round pools; `dynamic` tiers across pools with optional cut size) and optional Golf Start ordering (`↑ / ↓`).
 
 - [ ] **M1.4 – Disc Golf Round Score Entry (Strokes, Par, Statuses & Playoffs)** (`#62`)
   - Database schema & API for round scores (`LOWER_IS_BETTER`).
