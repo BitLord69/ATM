@@ -76,7 +76,7 @@ watch(() => route.fullPath, closeAdminMenu);
                   />
                 </svg>
               </summary>
-              <ul class="z-1 menu p-2 rounded-box w-52 bg-base-100 opacity-100 text-base-content border border-base-300 shadow-xl">
+              <ul class="z-50 menu p-2 rounded-box w-52 bg-base-200 opacity-100 text-base-content border border-primary/50 ring-1 ring-primary/20 shadow-2xl">
                 <li v-if="canAccessTournamentWorkspace">
                   <NuxtLink to="/dashboard/tournaments" @click="closeAdminMenu">
                     Tournament workspace

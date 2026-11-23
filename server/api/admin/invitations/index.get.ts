@@ -1,13 +1,49 @@
 import { and, desc, eq, gt, inArray, lt, or } from "drizzle-orm";
 
+import { auth } from "../../../../lib/auth";
 import db from "../../../../lib/db";
-import { invitation, organization, user } from "../../../../lib/db/schema";
+import { invitation, organization, tournamentMembership, user } from "../../../../lib/db/schema";
 
 export default defineEventHandler(async (event) => {
+  const session = await auth.api.getSession({ headers: event.headers });
+  if (!session?.user) {
+    throw createError({ statusCode: 401, message: "Unauthorized" });
+  }
+
+  const isAdmin = session.user.role === "admin";
   const query = getQuery(event);
   const statusFilter = typeof query.status === "string" ? query.status : "all";
 
   const conditions = [];
+
+  if (!isAdmin) {
+    const managedMemberships = await db
+      .select({ organizationId: tournamentMembership.organizationId })
+      .from(tournamentMembership)
+      .where(
+        and(
+          eq(tournamentMembership.userId, session.user.id),
+          or(
+            eq(tournamentMembership.role, "owner"),
+            eq(tournamentMembership.role, "admin"),
+            eq(tournamentMembership.role, "td"),
+          ),
+          eq(tournamentMembership.status, "active"),
+        ),
+      );
+
+    const managedOrgIds = [...new Set(managedMemberships.map(m => m.organizationId))];
+    if (managedOrgIds.length === 0) {
+      throw createError({ statusCode: 403, message: "Forbidden" });
+    }
+
+    conditions.push(
+      or(
+        eq(invitation.inviterId, session.user.id),
+        inArray(invitation.organizationId, managedOrgIds),
+      ),
+    );
+  }
 
   if (statusFilter === "pending") {
     conditions.push(
@@ -41,7 +77,7 @@ export default defineEventHandler(async (event) => {
     })
     .from(invitation)
     .leftJoin(organization, eq(invitation.organizationId, organization.id))
-    .where(conditions.length > 0 ? conditions[0] : undefined)
+    .where(conditions.length > 0 ? and(...conditions) : undefined)
     .orderBy(desc(invitation.createdAt));
 
   // Fetch inviter names separately to avoid complex join issues

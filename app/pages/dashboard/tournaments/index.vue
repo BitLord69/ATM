@@ -70,15 +70,27 @@ onMounted(async () => {
     <div class="mb-5 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
       <div>
         <h1 class="text-2xl md:text-3xl font-bold">
-          Tournament Workspace
+          Tournament workspace
         </h1>
         <p class="opacity-70">
           Select a tournament to open its admin workspace.
         </p>
       </div>
-      <NuxtLink to="/dashboard" class="btn btn-ghost btn-sm self-start md:self-auto">
-        Back to my dashboard
-      </NuxtLink>
+      <div class="flex flex-wrap items-center gap-2 self-start md:self-auto">
+        <NuxtLink
+          to="/dashboard/tournaments/new"
+          class="btn btn-primary btn-sm gap-1.5"
+        >
+          <Icon
+            name="tabler:plus"
+            size="16"
+          />
+          New tournament
+        </NuxtLink>
+        <NuxtLink to="/dashboard" class="btn btn-ghost btn-sm">
+          Back to my dashboard
+        </NuxtLink>
+      </div>
     </div>
 
     <div class="mb-5 grid gap-3 md:grid-cols-[1fr_auto] md:items-end">
@@ -154,7 +166,7 @@ onMounted(async () => {
           </p>
 
           <div class="card-actions justify-end">
-            <span class="btn btn-primary btn-sm">Open Workspace</span>
+            <span class="btn btn-primary btn-sm">Open workspace</span>
           </div>
         </div>
       </NuxtLink>

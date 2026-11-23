@@ -5,18 +5,7 @@ import { playerNumberGenerateBodySchema } from "#shared/schemas/player-numbers";
 import { auth } from "../../../../../lib/auth";
 import db from "../../../../../lib/db";
 import { eventEntry, player, tournament, tournamentMembership, tournamentPlayerNumber, user } from "../../../../../lib/db/schema";
-
-function canManageTournament(globalRole: string | undefined, membership: { role: string; status: string } | undefined) {
-  if (globalRole === "admin") {
-    return true;
-  }
-
-  if (!membership || membership.status !== "active") {
-    return false;
-  }
-
-  return ["owner", "admin", "td", "scorer"].includes(membership.role);
-}
+import { hasTournamentRole } from "../../../../utils/authorization";
 
 export default defineEventHandler(async (event) => {
   const slug = getRouterParam(event, "slug");
@@ -58,7 +47,7 @@ export default defineEventHandler(async (event) => {
     )
     .limit(1);
 
-  if (!canManageTournament(session.user.role, membershipRows[0])) {
+  if (!hasTournamentRole(session.user.role, membershipRows[0], "scorer")) {
     throw createError({ statusCode: 403, message: "Forbidden" });
   }
 
@@ -79,18 +68,29 @@ export default defineEventHandler(async (event) => {
     .select({
       playerId: player.id,
       playerName: player.displayName,
+      playerCountry: player.country,
       userName: user.name,
       userCountry: user.country,
     })
     .from(eventEntry)
     .innerJoin(player, eq(player.id, eventEntry.playerId))
     .leftJoin(user, eq(user.id, player.userId))
-    .where(eq(eventEntry.tournamentId, foundTournament.id));
+    .where(
+      and(
+        eq(eventEntry.tournamentId, foundTournament.id),
+        eq(eventEntry.status, "registered"),
+      ),
+    );
 
   const uniquePlayers = new Map<string, { playerId: string; playerName: string | null; userName: string | null; userCountry: string | null }>();
   for (const row of entryRows) {
     if (!uniquePlayers.has(row.playerId)) {
-      uniquePlayers.set(row.playerId, row);
+      uniquePlayers.set(row.playerId, {
+        playerId: row.playerId,
+        playerName: row.playerName,
+        userName: row.userName,
+        userCountry: row.playerCountry || row.userCountry,
+      });
     }
   }
 

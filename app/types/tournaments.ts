@@ -25,6 +25,14 @@ export type PublicTournament = TournamentDisciplineFlags & {
   isActive: boolean;
 };
 
+export type VenueCourseLayoutItem = {
+  id?: string;
+  name: string;
+  par: number;
+  holeCount: number | null;
+  sortOrder?: number;
+};
+
 export type TournamentEditVenue = TournamentDisciplineFlags & {
   id: number;
   name: string;
@@ -39,6 +47,7 @@ export type TournamentEditVenue = TournamentDisciplineFlags & {
   baseHasDiscathon?: boolean;
   baseHasDDC?: boolean;
   baseHasFreestyle?: boolean;
+  courseLayouts?: VenueCourseLayoutItem[];
 };
 
 export type TournamentEditResponse = TournamentDisciplineFlags & {
@@ -81,12 +90,36 @@ export type TournamentEditResponse = TournamentDisciplineFlags & {
   availableVenueRadiusKm: number;
 };
 
+export type GolfRoundLayoutSnapshotItem = {
+  venueId?: number | null;
+  venueName?: string | null;
+  layoutId?: string | null;
+  layoutName?: string | null;
+};
+
+export type GolfVenueWithLayouts = {
+  id: number;
+  name: string;
+  courseLayouts: Array<{
+    id: string;
+    name: string;
+    par: number;
+    holeCount: number | null;
+  }>;
+};
+
 export type DisciplineSettingsResponse = {
   discipline: string;
   label: string;
   isEnabled: boolean;
   rounds: number | null;
   cumulativeRounds: number | null;
+  poolMode?: "static" | "dynamic";
+  poolCount?: number;
+  golfStartEnabled?: boolean;
+  roundPars?: Array<number | null>;
+  roundLayouts?: Array<GolfRoundLayoutSnapshotItem | null>;
+  golfVenues?: GolfVenueWithLayouts[];
 };
 
 export type InviteTournamentOrganization = {

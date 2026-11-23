@@ -264,7 +264,7 @@ watch(
 <template>
   <div class="space-y-3">
     <FormHeader
-      title="Starting Lists"
+      title="Starting lists"
       title-tag="h1"
       title-class="text-2xl font-bold"
       wrapper-class="mb-0"
@@ -297,7 +297,7 @@ watch(
               </option>
             </select>
           </FormField>
-          <FormField label="Round Number">
+          <FormField label="Round number">
             <input
               v-model.number="selectedRoundNumber"
               class="input input-bordered w-full"
@@ -347,7 +347,7 @@ watch(
         <div class="flex items-start justify-between gap-3 rounded-box border border-base-300/60 p-3">
           <div>
             <h3 class="font-semibold">
-              List Status
+              List status
             </h3>
             <p class="text-xs opacity-70">
               Entries: <strong>{{ state?.entries.length ?? 0 }}</strong>
@@ -392,7 +392,7 @@ watch(
             type="button"
             @click="generate(true)"
           >
-            Regenerate Overview
+            Regenerate overview
           </button>
           <button
             class="btn btn-sm btn-warning"
@@ -400,7 +400,7 @@ watch(
             type="button"
             @click="setLock(true)"
           >
-            Lock List
+            Lock list
           </button>
           <button
             class="btn btn-sm btn-outline"
@@ -408,7 +408,7 @@ watch(
             type="button"
             @click="setLock(false)"
           >
-            Unlock List
+            Unlock list
           </button>
           <button
             class="btn btn-sm btn-ghost"

@@ -68,12 +68,12 @@ const items = computed<WorkspaceNavItem[]>(() => {
       label: "Venues",
       defaultOpen: route.path.includes("/venues") || route.path.includes("/venue/"),
       items: [
-        { id: "venues", label: "All Venues", to: `/dashboard/tournaments/${slug.value}/venues` },
+        { id: "venues", label: "All venues", to: `/dashboard/tournaments/${slug.value}/venues` },
         ...venueLinks.value,
       ],
     },
     { id: "schedule", label: "Schedule", to: `/dashboard/tournaments/${slug.value}/schedule` },
-    { id: "starting-lists", label: "Starting Lists", to: `/dashboard/tournaments/${slug.value}/starting-lists` },
+    { id: "starting-lists", label: "Starting lists", to: `/dashboard/tournaments/${slug.value}/starting-lists` },
     { id: "players", label: "Players", to: `/dashboard/tournaments/${slug.value}/players` },
   ];
 
@@ -127,8 +127,8 @@ const activeSection = computed(() => {
         :active-id="activeSection"
         :heading="tournamentData && !Array.isArray(tournamentData) ? tournamentData.name : undefined"
         back-to="/dashboard/tournaments"
-        back-label="Change Tournament"
-        badge-text="Tournament Workspace"
+        back-label="Change tournament"
+        badge-text="Tournament workspace"
       >
         <div :key="route.fullPath">
           <slot />

@@ -5,16 +5,7 @@ import { disciplineSettingsPatchSchema } from "#shared/schemas/discipline-settin
 import { auth } from "../../../../../lib/auth";
 import db from "../../../../../lib/db";
 import { tournament, tournamentMembership } from "../../../../../lib/db/schema";
-
-function canEditTournament(globalRole: string | undefined, membership: { role: string; status: string } | undefined) {
-  if (globalRole === "admin") {
-    return true;
-  }
-  if (!membership || membership.status !== "active") {
-    return false;
-  }
-  return ["owner", "admin", "td"].includes(membership.role);
-}
+import { hasTournamentRole } from "../../../../utils/authorization";
 
 const disciplineConfig = {
   golf: {
@@ -99,19 +90,45 @@ export default defineEventHandler(async (event) => {
     .limit(1);
 
   const membership = membershipRows[0];
-  if (!canEditTournament(session.user.role, membership)) {
+  if (!hasTournamentRole(session.user.role, membership, "td")) {
     throw createError({ statusCode: 403, message: "Forbidden" });
   }
 
-  const changedBy = session.user.id as any;
+  const changedBy = session.user.id;
+  const updatePayload: Record<string, unknown> = {
+    [config.roundsKey]: parsed.data.rounds,
+    [config.cumulativeKey]: parsed.data.cumulativeRounds,
+    changedBy,
+    changedAt: Date.now(),
+  };
+
+  if (disciplineParam === "golf") {
+    if (parsed.data.poolMode !== undefined) {
+      updatePayload.golfPoolMode = parsed.data.poolMode;
+    }
+    if (parsed.data.poolCount !== undefined) {
+      updatePayload.golfPoolCount = parsed.data.poolCount;
+    }
+    if (parsed.data.golfStartEnabled !== undefined) {
+      updatePayload.golfStartEnabled = parsed.data.golfStartEnabled;
+    }
+    if (parsed.data.roundPars !== undefined) {
+      const trimmedPars = parsed.data.rounds
+        ? parsed.data.roundPars.slice(0, parsed.data.rounds)
+        : [];
+      updatePayload.golfRoundPars = JSON.stringify(trimmedPars);
+    }
+    if (parsed.data.roundLayouts !== undefined) {
+      const trimmedLayouts = parsed.data.rounds
+        ? parsed.data.roundLayouts.slice(0, parsed.data.rounds)
+        : [];
+      updatePayload.golfRoundLayouts = JSON.stringify(trimmedLayouts);
+    }
+  }
+
   await db
     .update(tournament)
-    .set({
-      [config.roundsKey]: parsed.data.rounds,
-      [config.cumulativeKey]: parsed.data.cumulativeRounds,
-      changedBy,
-      changedAt: Date.now(),
-    } as any)
+    .set(updatePayload as any)
     .where(eq(tournament.id, found.id));
 
   return { success: true };

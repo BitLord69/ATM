@@ -76,12 +76,14 @@ export const useAuthStore = defineStore("useAuthStore", () => {
   const currentUser = ref<any>(null);
   const authClient = useAuthClient();
 
-  async function signInSocial(provider: socialLoginProvider) {
+  async function signInSocial(provider: socialLoginProvider, redirectPath?: string | null) {
     loading.value = true;
     try {
+      const basePath = redirectPath || "/dashboard";
+      const separator = basePath.includes("?") ? "&" : "?";
       const { error } = await authClient.signIn.social({
         provider,
-        callbackURL: `/dashboard?socialConnected=${encodeURIComponent(provider)}`,
+        callbackURL: `${basePath}${separator}socialConnected=${encodeURIComponent(provider)}`,
         errorCallbackURL: "/error?flow=social",
       });
 
@@ -114,6 +116,31 @@ export const useAuthStore = defineStore("useAuthStore", () => {
 
       // Sync store state immediately after sign-in so navbar/UI updates
       // without waiting for a full app reload.
+      const session = await authClient.getSession();
+      isSignedIn.value = !!session.data;
+      currentUser.value = session.data?.user || null;
+
+      return { ok: true, error: null };
+    }
+    finally {
+      loading.value = false;
+    }
+  }
+
+  async function signUpEmail(name: string, email: string, password: string) {
+    loading.value = true;
+
+    try {
+      const { error } = await authClient.signUp.email({
+        name,
+        email,
+        password,
+      });
+
+      if (error) {
+        return { ok: false, error: error.message || "Unable to create account." };
+      }
+
       const session = await authClient.getSession();
       isSignedIn.value = !!session.data;
       currentUser.value = session.data?.user || null;
@@ -200,6 +227,7 @@ export const useAuthStore = defineStore("useAuthStore", () => {
     currentUser,
     signInSocial,
     signInEmail,
+    signUpEmail,
     requestPasswordReset,
     signOut,
     checkSession,

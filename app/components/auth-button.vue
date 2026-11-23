@@ -10,13 +10,15 @@ type Props = {
 
 const props = defineProps<Props>();
 const authStore = useAuthStore();
+const route = useRoute();
+const redirectPath = computed(() => getSafeRedirectPath(route.query.redirect));
 </script>
 
 <template>
   <button
     class="btn btn-accent"
     :disabled="authStore.loading"
-    @click="authStore.signInSocial(props.provider)"
+    @click="authStore.signInSocial(props.provider, redirectPath)"
   >
     <span v-if="authStore.loading" class="loading loading-spinner loading-sm" />
     <Icon

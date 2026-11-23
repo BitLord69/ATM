@@ -1,9 +1,15 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, or } from "drizzle-orm";
 
+import { auth } from "../../../lib/auth";
 import db from "../../../lib/db";
-import { invitation } from "../../../lib/db/schema";
+import { invitation, tournamentMembership } from "../../../lib/db/schema";
 
 export default defineEventHandler(async (event) => {
+  const session = await auth.api.getSession({ headers: event.headers });
+  if (!session?.user) {
+    throw createError({ statusCode: 401, message: "Unauthorized" });
+  }
+
   const body = await readBody(event);
   const { email, organizationId } = body;
 
@@ -12,6 +18,29 @@ export default defineEventHandler(async (event) => {
       statusCode: 400,
       message: "Email and organizationId required",
     });
+  }
+
+  if (session.user.role !== "admin") {
+    const allowedMembership = await db
+      .select({ id: tournamentMembership.id })
+      .from(tournamentMembership)
+      .where(
+        and(
+          eq(tournamentMembership.userId, session.user.id),
+          eq(tournamentMembership.organizationId, organizationId),
+          or(
+            eq(tournamentMembership.role, "owner"),
+            eq(tournamentMembership.role, "admin"),
+            eq(tournamentMembership.role, "td"),
+          ),
+          eq(tournamentMembership.status, "active"),
+        ),
+      )
+      .limit(1);
+
+    if (allowedMembership.length === 0) {
+      throw createError({ statusCode: 403, message: "Forbidden" });
+    }
   }
 
   const existing = await db

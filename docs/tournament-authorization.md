@@ -25,6 +25,7 @@ This implements a tournament-scoped role system where users can have different r
 
 - `can(user, action, tournamentContext)` - Check if user can perform an action
 - `hasRoleLevel(tournamentContext, minRole)` - Check role hierarchy
+- `hasTournamentRole(globalRole, membership, minRole)` - Check if a user has at least the specified active tournament role (`owner`, `admin`, `td`, `scorer`, `viewer`) or is a global system `admin`
 - `isTournamentActive(startDate, endDate)` - Check tournament date status
 - `getTournamentStatus(startDate, endDate)` - Return 'active' | 'coming' | 'past'
 - `isPrivilegedMember(tournamentContext)` - Check if user is TD or higher
@@ -66,6 +67,19 @@ Returns all tournaments the user is a member of, enriched with:
 - `GET /api/tournaments/:slug/check-invite-permission` → `{ canInvite: boolean }`
 
 Use these endpoints as the source of truth for UI gating of management actions.
+
+### Registration & Player Management Endpoints
+
+- **Open Self-Registration:** Any non-banned user may create an account via email/password or OAuth (`GitHub`, `Google`, `Facebook`) without requiring a prior admin invitation.
+- `POST /api/tournaments` — Open to any authenticated, non-banned user. Creates a new tournament (auto-creating a personal/club `organization` + `member` row if the user has none), generates a unique slug, and assigns the creator as `owner` in `tournament_membership`.
+- `GET /api/tournaments/:slug/my-registration` — Publicly callable; returns `{ authenticated: false }` for guests (no DB queries), or the signed-in user's `player` profile, `playerNumber`, entries, and derived minor divisions.
+- `GET /api/tournaments/:slug/entries` — Requires at least `viewer` role (or global `admin`). Returns grouped player registrations, discipline entries, offered major divisions, and `canManage` (`scorer`+). Does **not** expose platform-wide user lists.
+- `GET /api/tournaments/:slug/user-search?q=` — Requires `scorer` role or higher (or global `admin`). Requires at least 2 characters, returns at most 20 non-banned users with minimal fields (`id`, `name`, `email`, `country`).
+- `POST /api/tournaments/:slug/entries` — Requires authentication.
+  - Regular signed-in users may self-register only while `isRegistrationOpen` is `true` (calculated from `registrationOpenDate`, `registrationCloseDate`, `startDate`, `closedAt`, and `tournament_registration_lock`).
+  - `scorer`+ (or global `admin`) may register existing users (`userId` / `playerId`) or offline guest players (`guestPlayer`, stored with `player.userId = null`) regardless of registration window/lock.
+  - All validation runs before any database write; all writes execute atomically via `db.batch(...)`.
+- `PATCH /api/tournaments/:slug/entries/:id` — Route param `:id` is the `player.id`. Regular users may edit or withdraw their own registration while `isRegistrationOpen` is `true`; `scorer`+ (or global `admin`) may edit, withdraw, or restore any player's registration at any time. All writes execute atomically via `db.batch(...)`.
 
 ## Frontend Components
 

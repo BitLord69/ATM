@@ -5,19 +5,8 @@ import { cloneTournamentBodySchema, slugParamSchema } from "#shared/schemas/tour
 import { auth } from "../../../../lib/auth";
 import db from "../../../../lib/db";
 import { tournament, tournamentMembership, tournamentVenue } from "../../../../lib/db/schema";
+import { hasTournamentRole } from "../../../utils/authorization";
 import { buildUniqueTournamentSlug } from "../../../utils/tournament-slug";
-
-function canCloneTournament(globalRole: string | undefined, membership: { role: string; status: string } | undefined) {
-  if (globalRole === "admin") {
-    return true;
-  }
-
-  if (!membership || membership.status !== "active") {
-    return false;
-  }
-
-  return ["owner", "admin", "td"].includes(membership.role);
-}
 
 export default defineEventHandler(async (event) => {
   const slugResult = slugParamSchema.safeParse({ slug: getRouterParam(event, "slug") });
@@ -72,6 +61,10 @@ export default defineEventHandler(async (event) => {
       hasGolf: tournament.hasGolf,
       golfRounds: tournament.golfRounds,
       golfCumulativeRounds: tournament.golfCumulativeRounds,
+      golfPoolMode: tournament.golfPoolMode,
+      golfPoolCount: tournament.golfPoolCount,
+      golfStartEnabled: tournament.golfStartEnabled,
+      golfRoundPars: tournament.golfRoundPars,
       hasAccuracy: tournament.hasAccuracy,
       accuracyRounds: tournament.accuracyRounds,
       accuracyCumulativeRounds: tournament.accuracyCumulativeRounds,
@@ -116,13 +109,13 @@ export default defineEventHandler(async (event) => {
     .limit(1);
 
   const membership = membershipRows[0];
-  if (!canCloneTournament(session.user.role, membership)) {
+  if (!hasTournamentRole(session.user.role, membership, "td")) {
     throw createError({ statusCode: 403, message: "Forbidden" });
   }
 
   const body = bodyResult.data;
   const now = Date.now();
-  const changedBy = session.user.id as any;
+  const changedBy = session.user.id;
   const cloneSlug = await buildUniqueTournamentSlug(body.name);
   const organizationId = source.organizationId ?? membership?.organizationId ?? null;
 
@@ -166,6 +159,10 @@ export default defineEventHandler(async (event) => {
         hasGolf: !!source.hasGolf,
         golfRounds: source.golfRounds ?? null,
         golfCumulativeRounds: source.golfCumulativeRounds ?? null,
+        golfPoolMode: source.golfPoolMode ?? "static",
+        golfPoolCount: source.golfPoolCount ?? 1,
+        golfStartEnabled: !!source.golfStartEnabled,
+        golfRoundPars: source.golfRoundPars ?? null,
         hasAccuracy: !!source.hasAccuracy,
         accuracyRounds: source.accuracyRounds ?? null,
         accuracyCumulativeRounds: source.accuracyCumulativeRounds ?? null,

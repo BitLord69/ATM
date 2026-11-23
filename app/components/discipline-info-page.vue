@@ -10,9 +10,9 @@ withDefaults(defineProps<{
   ctaButtonLabel?: string;
 }>(), {
   backTo: "/tournaments",
-  backLabel: "Back to Tournaments",
+  backLabel: "Back to tournaments",
   ctaTo: "/tournaments",
-  ctaButtonLabel: "View Tournaments",
+  ctaButtonLabel: "View tournaments",
 });
 </script>
 

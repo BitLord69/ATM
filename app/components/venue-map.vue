@@ -79,6 +79,16 @@ const markerOptions = computed(() => {
   return { title: props.title || "Venue" };
 });
 
+const baseMapRef = ref<{ recenter: (targetCenter?: [number, number], targetZoom?: number) => void } | null>(null);
+
+function recenter() {
+  baseMapRef.value?.recenter(center.value, hasCoordinates.value ? props.setZoom : props.unsetZoom);
+}
+
+defineExpose({
+  recenter,
+});
+
 function onMapClick(event: any) {
   if (!props.clickable) {
     return;
@@ -90,6 +100,7 @@ function onMapClick(event: any) {
 
 <template>
   <BaseMap
+    ref="baseMapRef"
     :zoom="hasCoordinates ? setZoom : unsetZoom"
     :center="center"
     :height="height"
@@ -98,6 +109,7 @@ function onMapClick(event: any) {
   >
     <LMarker
       v-if="markerLatLng"
+      :key="markerOptions.icon ? 'with-icon' : 'default'"
       :lat-lng="markerLatLng"
       :options="markerOptions"
     >

@@ -3,6 +3,7 @@ import { and, eq } from "drizzle-orm";
 import { auth } from "../../../../lib/auth";
 import db from "../../../../lib/db";
 import { tournament, tournamentMembership } from "../../../../lib/db/schema";
+import { hasTournamentRole } from "../../../utils/authorization";
 
 export default defineEventHandler(async (event) => {
   const slug = getRouterParam(event, "slug");
@@ -43,9 +44,7 @@ export default defineEventHandler(async (event) => {
       .limit(1);
 
     const membership = membershipRows[0];
-    const canDelete = membership?.status === "active" && (membership.role === "owner" || membership.role === "admin");
-
-    if (!canDelete) {
+    if (!hasTournamentRole(session.user.role, membership, "admin")) {
       throw createError({ statusCode: 403, message: "Forbidden" });
     }
   }

@@ -1,22 +1,13 @@
-import { and, eq } from "drizzle-orm";
+import type { BatchItem } from "drizzle-orm/batch";
+
+import { and, asc, eq } from "drizzle-orm";
 
 import { slugParamSchema, venueInputSchema } from "#shared/schemas/tournament-edit";
 
 import { auth } from "../../../../../lib/auth";
 import db from "../../../../../lib/db";
-import { tournament, tournamentMembership, tournamentVenue, venue } from "../../../../../lib/db/schema";
-
-function canEditTournament(globalRole: string | undefined, membership: { role: string; status: string } | undefined) {
-  if (globalRole === "admin") {
-    return true;
-  }
-
-  if (!membership || membership.status !== "active") {
-    return false;
-  }
-
-  return ["owner", "admin", "td"].includes(membership.role);
-}
+import { tournament, tournamentMembership, tournamentVenue, venue, venueCourseLayout } from "../../../../../lib/db/schema";
+import { hasTournamentRole } from "../../../../utils/authorization";
 
 export default defineEventHandler(async (event) => {
   const slugResult = slugParamSchema.safeParse({ slug: getRouterParam(event, "slug") });
@@ -67,11 +58,11 @@ export default defineEventHandler(async (event) => {
     .limit(1);
 
   const membership = membershipRows[0];
-  if (!canEditTournament(session.user.role, membership)) {
+  if (!hasTournamentRole(session.user.role, membership, "td")) {
     throw createError({ statusCode: 403, message: "Forbidden" });
   }
 
-  const changedBy = session.user.id as any;
+  const changedBy = session.user.id;
 
   let venueId = body.id;
 
@@ -167,18 +158,57 @@ export default defineEventHandler(async (event) => {
     });
   }
 
-  const venueRows = await db
-    .select({
-      id: venue.id,
-      name: venue.name,
-      description: venue.description,
-      facilities: venue.facilities,
-      lat: venue.lat,
-      long: venue.long,
-    })
-    .from(venue)
-    .where(eq(venue.id, venueId))
-    .limit(1);
+  if (body.courseLayouts !== undefined) {
+    const now = Date.now();
+    const layoutStatements: BatchItem<"sqlite">[] = [
+      db.delete(venueCourseLayout).where(eq(venueCourseLayout.venueId, venueId)),
+    ];
+
+    body.courseLayouts.forEach((layout, index) => {
+      layoutStatements.push(
+        db.insert(venueCourseLayout).values({
+          id: layout.id?.trim() || crypto.randomUUID(),
+          venueId: venueId!,
+          name: layout.name.trim(),
+          par: layout.par,
+          holeCount: layout.holeCount ?? null,
+          sortOrder: index,
+          createdAt: now,
+          updatedAt: now,
+        }),
+      );
+    });
+
+    const [firstStmt, ...restStmts] = layoutStatements;
+    if (firstStmt) {
+      await db.batch([firstStmt, ...restStmts]);
+    }
+  }
+
+  const [venueRows, savedLayouts] = await Promise.all([
+    db
+      .select({
+        id: venue.id,
+        name: venue.name,
+        description: venue.description,
+        facilities: venue.facilities,
+        lat: venue.lat,
+        long: venue.long,
+      })
+      .from(venue)
+      .where(eq(venue.id, venueId))
+      .limit(1),
+    db
+      .select({
+        id: venueCourseLayout.id,
+        name: venueCourseLayout.name,
+        par: venueCourseLayout.par,
+        holeCount: venueCourseLayout.holeCount,
+      })
+      .from(venueCourseLayout)
+      .where(eq(venueCourseLayout.venueId, venueId))
+      .orderBy(asc(venueCourseLayout.sortOrder), asc(venueCourseLayout.name)),
+  ]);
 
   const [resolvedVenue] = venueRows;
 
@@ -202,6 +232,7 @@ export default defineEventHandler(async (event) => {
       hasDiscathon: !!body.hasDiscathon,
       hasDDC: !!body.hasDDC,
       hasFreestyle: !!body.hasFreestyle,
+      courseLayouts: savedLayouts,
     },
   };
 });

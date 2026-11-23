@@ -68,18 +68,42 @@ const filteredTournaments = computed(() => {
 
 const filteredCount = computed(() => filteredTournaments.value.length);
 
+const authStore = useAuthStore();
+const authUiReady = ref(false);
+onMounted(() => {
+  authUiReady.value = true;
+});
+
+const createTournamentTarget = computed(() =>
+  authUiReady.value && authStore.isSignedIn
+    ? "/dashboard/tournaments/new"
+    : { path: "/signin", query: { mode: "signup", redirect: "/dashboard/tournaments/new" } },
+);
+
 const { formatDateRange } = useFormatDate();
 </script>
 
 <template>
   <div class="container mx-auto p-4 max-w-7xl">
-    <div class="mb-5">
-      <h1 class="text-4xl font-bold mb-2">
-        Tournaments
-      </h1>
-      <p class="text-lg opacity-70">
-        Browse upcoming and active allround frisbee tournaments worldwide
-      </p>
+    <div class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+      <div>
+        <h1 class="text-4xl font-bold mb-2">
+          Tournaments
+        </h1>
+        <p class="text-lg opacity-70">
+          Browse upcoming and active allround frisbee tournaments worldwide
+        </p>
+      </div>
+      <NuxtLink
+        :to="createTournamentTarget"
+        class="btn btn-primary gap-2 self-start sm:self-auto"
+      >
+        <Icon
+          name="tabler:plus"
+          size="20"
+        />
+        Create a tournament
+      </NuxtLink>
     </div>
 
     <!-- Filter Tabs + Discipline Filters -->
@@ -97,7 +121,7 @@ const { formatDateRange } = useFormatDate();
           :class="{ 'tab-active': filter === 'active' }"
           @click="filter = 'active'"
         >
-          Active Now
+          Active now
         </button>
         <button
           class="tab"
@@ -111,7 +135,7 @@ const { formatDateRange } = useFormatDate();
           :class="{ 'tab-active': filter === 'all' }"
           @click="filter = 'all'"
         >
-          All Tournaments
+          All tournaments
         </button>
       </div>
 
@@ -184,7 +208,7 @@ const { formatDateRange } = useFormatDate();
               :to="`/tournaments/${tournament.slug}`"
               class="btn btn-ghost btn-sm flex-1"
             >
-              View Details
+              View details
             </NuxtLink>
             <NuxtLink
               v-if="editPermissions[tournament.id]"

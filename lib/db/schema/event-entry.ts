@@ -23,6 +23,7 @@ export const eventEntry = sqliteTable(
   table => [
     index("event_entry_tournament_id_idx").on(table.tournamentId),
     index("event_entry_player_id_idx").on(table.playerId),
+    index("event_entry_tournament_status_idx").on(table.tournamentId, table.status),
     uniqueIndex("event_entry_player_tournament_discipline_unique").on(table.playerId, table.tournamentId, table.discipline),
   ],
 );

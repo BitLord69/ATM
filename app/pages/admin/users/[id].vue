@@ -45,7 +45,7 @@ const userId = computed(() => decodeURIComponent(String(route.params.id || "")))
 
 const tabs: VerticalTabConfig[] = [
   { id: "profile", label: "Profile" },
-  { id: "tournaments", label: "Tournaments & Roles" },
+  { id: "tournaments", label: "Tournaments & roles" },
 ];
 
 const activeTab = ref("profile");
@@ -68,7 +68,7 @@ function formatDate(ms: number | null | undefined) {
   <div class="space-y-4">
     <div class="flex items-center justify-between gap-3 flex-wrap">
       <h2 class="text-lg font-semibold">
-        User Details
+        User details
       </h2>
       <NuxtLink to="/admin/users" class="btn btn-sm btn-ghost">
         Back to users

@@ -131,6 +131,24 @@ const cloneDraft = reactive({
   endDate: "",
   includeVenues: true,
 });
+
+watch(() => form.startDate, (newStart, oldStart) => {
+  if (newStart && (!form.endDate || form.endDate < newStart || form.endDate === oldStart)) {
+    form.endDate = newStart;
+  }
+});
+
+watch(() => form.registrationOpenDate, (newOpen, oldOpen) => {
+  if (newOpen && (!form.registrationCloseDate || form.registrationCloseDate < newOpen || form.registrationCloseDate === oldOpen)) {
+    form.registrationCloseDate = newOpen;
+  }
+});
+
+watch(() => cloneDraft.startDate, (newStart, oldStart) => {
+  if (newStart && (!cloneDraft.endDate || cloneDraft.endDate < newStart || cloneDraft.endDate === oldStart)) {
+    cloneDraft.endDate = newStart;
+  }
+});
 const venueEditScope = ref<"tournament" | "global">("tournament");
 const isExistingVenueDraft = computed(() => !!venueDraft.value?.id);
 const isAddingExistingVenue = computed(() => venueModalMode.value === "add" && isExistingVenueDraft.value);
@@ -660,6 +678,14 @@ const filteredAvailableVenues = computed(() => {
     selectedVenueDisciplineFilters.value.some(key => !!venue[key]),
   );
 });
+
+const existingVenueOptions = computed(() =>
+  filteredAvailableVenues.value.map(existing => ({
+    value: String(existing.id),
+    label: existing.name,
+    sublabel: `${existing.lat.toFixed(3)}, ${existing.long.toFixed(3)}`,
+  })),
+);
 
 watch(
   venueDisciplineFilterOptions,
@@ -1245,7 +1271,7 @@ async function saveTournament(closeTournament = false) {
           v-if="saving"
           class="loading loading-spinner loading-xs"
         />
-        <span v-else>Save Tournament</span>
+        <span v-else>Save tournament</span>
       </button>
       <button
         class="btn btn-outline btn-sm"
@@ -1257,13 +1283,13 @@ async function saveTournament(closeTournament = false) {
           v-if="cloningTournament"
           class="loading loading-spinner loading-xs"
         />
-        <span v-else>Clone Tournament</span>
+        <span v-else>Clone tournament</span>
       </button>
       <NuxtLink
         :to="`/tournaments/${form.slug || slug}`"
         class="btn btn-outline btn-sm"
       >
-        View Public Page
+        View public page
       </NuxtLink>
     </div>
 
@@ -1277,7 +1303,7 @@ async function saveTournament(closeTournament = false) {
       class="space-y-3"
     >
       <FormHeader
-        title="Edit Tournament"
+        title="Edit tournament"
         description="Update tournament details and venues. The slug remains permanent after creation."
         title-tag="h1"
         title-class="text-3xl font-bold"
@@ -1343,7 +1369,7 @@ async function saveTournament(closeTournament = false) {
             <template #general>
               <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-x-4 gap-y-3">
                 <FormField
-                  label="Tournament Name"
+                  label="Tournament name"
                   required
                   wrapper-class="xl:col-span-2"
                   :error="getFieldError('name')"
@@ -1408,6 +1434,7 @@ async function saveTournament(closeTournament = false) {
                       v-model="form.endDate"
                       class="input input-bordered w-full"
                       type="date"
+                      :min="form.startDate || undefined"
                     >
                   </FormField>
                   <FormField label="Registration opening date">
@@ -1422,6 +1449,7 @@ async function saveTournament(closeTournament = false) {
                       v-model="form.registrationCloseDate"
                       class="input input-bordered w-full"
                       type="date"
+                      :min="form.registrationOpenDate || undefined"
                     >
                   </FormField>
                 </div>
@@ -1460,7 +1488,7 @@ async function saveTournament(closeTournament = false) {
               <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
                 <div class="rounded-box border border-base-300/50 p-3">
                   <h3 class="font-semibold mb-3">
-                    Contact Person
+                    Contact person
                   </h3>
                   <div class="grid grid-cols-1 gap-3">
                     <FormField label="Name">
@@ -1518,7 +1546,7 @@ async function saveTournament(closeTournament = false) {
 
                 <div class="rounded-box border border-base-300/50 p-3 xl:col-span-2">
                   <h3 class="font-semibold mb-2">
-                    Moderation Notifications
+                    Moderation notifications
                   </h3>
                   <p class="text-sm opacity-70 mb-2">
                     Allow optional email notifications when tournament admins submit ban requests.
@@ -1673,7 +1701,7 @@ async function saveTournament(closeTournament = false) {
             <template #map>
               <div class="space-y-4">
                 <h2 class="card-title">
-                  Tournament Location (click map to set)
+                  Tournament location (click map to set)
                 </h2>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <FormField
@@ -1729,7 +1757,7 @@ async function saveTournament(closeTournament = false) {
               <div class="space-y-4">
                 <div class="space-y-3">
                   <h2 class="card-title">
-                    Manage Venues
+                    Manage venues
                   </h2>
 
                   <div class="flex items-center justify-between gap-2">
@@ -1787,21 +1815,15 @@ async function saveTournament(closeTournament = false) {
 
                   <div class="flex flex-wrap items-center gap-2">
                     <div class="flex items-center gap-2">
-                      <select
-                        v-model="selectedExistingVenueId"
-                        class="select select-bordered select-sm min-w-65 bg-base-100 text-base-content border-base-300 hover:border-base-content/40 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                      >
-                        <option value="">
-                          Use existing venue
-                        </option>
-                        <option
-                          v-for="existing in filteredAvailableVenues"
-                          :key="existing.id"
-                          :value="String(existing.id)"
-                        >
-                          {{ existing.name }} ({{ existing.lat.toFixed(3) }}, {{ existing.long.toFixed(3) }})
-                        </option>
-                      </select>
+                      <div class="min-w-65">
+                        <SearchableSelect
+                          v-model="selectedExistingVenueId"
+                          :options="existingVenueOptions"
+                          size="sm"
+                          placeholder="Search or select existing venue..."
+                          empty-text="No matching venues"
+                        />
+                      </div>
                       <button
                         class="btn btn-sm btn-outline"
                         type="button"
@@ -1866,7 +1888,7 @@ async function saveTournament(closeTournament = false) {
                               v-if="deletingVenueId === venue.id"
                               class="loading loading-spinner loading-xs"
                             />
-                            <span v-else>Delete Venue</span>
+                            <span v-else>Delete venue</span>
                           </button>
                         </div>
                       </div>
@@ -1935,7 +1957,7 @@ async function saveTournament(closeTournament = false) {
             v-if="deletingTournament"
             class="loading loading-spinner loading-sm"
           />
-          <span v-else>Delete Tournament</span>
+          <span v-else>Delete tournament</span>
         </button>
         <button
           v-if="!isTournamentClosed"
@@ -1943,7 +1965,7 @@ async function saveTournament(closeTournament = false) {
           :disabled="saving || !canCloseTournament"
           @click="requestCloseTournament"
         >
-          Close Tournament
+          Close tournament
         </button>
         <button
           type="button"
@@ -1961,7 +1983,7 @@ async function saveTournament(closeTournament = false) {
             v-if="saving"
             class="loading loading-spinner loading-sm"
           />
-          <span v-else>Save Tournament</span>
+          <span v-else>Save tournament</span>
         </button>
       </div>
 
@@ -1971,7 +1993,7 @@ async function saveTournament(closeTournament = false) {
       >
         <div class="modal-box max-w-xl py-4">
           <FormHeader
-            title="Clone Tournament"
+            title="Clone tournament"
             description="Create a new recurring tournament using this one as a template."
             title-tag="h3"
             title-class="text-lg font-bold"
@@ -2003,7 +2025,7 @@ async function saveTournament(closeTournament = false) {
             </FormField>
 
             <FormField
-              label="Start Date"
+              label="Start date"
               required
             >
               <input
@@ -2015,13 +2037,14 @@ async function saveTournament(closeTournament = false) {
             </FormField>
 
             <FormField
-              label="End Date"
+              label="End date"
               required
             >
               <input
                 v-model="cloneDraft.endDate"
                 class="input input-bordered w-full"
                 type="date"
+                :min="cloneDraft.startDate || undefined"
                 required
               >
             </FormField>
@@ -2054,7 +2077,7 @@ async function saveTournament(closeTournament = false) {
                 v-if="cloningTournament"
                 class="loading loading-spinner loading-sm"
               />
-              <span v-else>Create Clone</span>
+              <span v-else>Create clone</span>
             </button>
           </div>
         </div>
@@ -2344,7 +2367,7 @@ async function saveTournament(closeTournament = false) {
         :open="showCloseTournamentModal"
         title="Close tournament?"
         message="Closing a tournament marks it as closed for normal management operations. This does not change the end date."
-        confirm-text="Close Tournament"
+        confirm-text="Close tournament"
         cancel-text="Cancel"
         :is-dangerous="true"
         @confirm="confirmCloseTournament"
@@ -2355,7 +2378,7 @@ async function saveTournament(closeTournament = false) {
         :open="showDeleteVenueModal"
         title="Delete venue?"
         :message="`Delete ${pendingDeleteVenue?.name || 'this venue'} permanently? This cannot be undone.`"
-        confirm-text="Delete Venue"
+        confirm-text="Delete venue"
         cancel-text="Cancel"
         :is-dangerous="true"
         @confirm="confirmDeleteVenue"
@@ -2366,7 +2389,7 @@ async function saveTournament(closeTournament = false) {
         :open="showDeleteTournamentModal"
         title="Delete tournament?"
         message="This permanently deletes the tournament and all its links. This action cannot be undone."
-        confirm-text="Delete Tournament"
+        confirm-text="Delete tournament"
         cancel-text="Cancel"
         :is-dangerous="true"
         @confirm="confirmDeleteTournament"

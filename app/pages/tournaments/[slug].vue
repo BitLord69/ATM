@@ -5,10 +5,11 @@
  */
 
 import type { TournamentViewTabId } from "~/schemas/ui/tournament-view-tabs";
+import type { MyRegistrationResponse, TournamentRegistrationInfo } from "~/types/tournament-registration";
 
 import { tournamentViewTabs } from "~/schemas/ui/tournament-view-tabs";
 
-type TournamentDetail = {
+type TournamentDetail = TournamentRegistrationInfo & {
   id: number;
   name: string;
   slug: string;
@@ -26,10 +27,7 @@ type TournamentDetail = {
   directorName: string | null;
   directorEmail: string | null;
   directorPhone: string | null;
-  startDate: number | null;
   endDate: number | null;
-  registrationOpenDate: number | null;
-  registrationCloseDate: number | null;
   closedAt: number | null;
   isSanctioned: boolean;
   hasGolf: boolean;
@@ -42,6 +40,7 @@ type TournamentDetail = {
   organizationId: string;
   status: "active" | "future" | "past";
   isActive: boolean;
+  isRegistrationLocked: boolean;
   venues: Array<{
     id: number;
     name: string;
@@ -55,7 +54,14 @@ type TournamentDetail = {
 const route = useRoute();
 const slug = route.params.slug as string;
 
-const { data: tournament, pending, error } = await useFetch<TournamentDetail>(`/api/tournaments/${slug}`);
+const [
+  { data: tournament, pending, error, refresh: refreshTournament },
+  { data: myRegistration, refresh: refreshMyRegistration },
+] = await Promise.all([
+  useFetch<TournamentDetail>(`/api/tournaments/${slug}`),
+  useFetch<MyRegistrationResponse>(`/api/tournaments/${slug}/my-registration`),
+]);
+
 const {
   canEditTournament,
   isSysadmin,
@@ -123,19 +129,7 @@ function formatDateRange(start: number | null | undefined, end: number | null | 
 }
 
 function formatRegistrationDateRange(start: number | null | undefined, end: number | null | undefined) {
-  if (!start && !end) {
-    return "Registration dates TBD";
-  }
-
-  if (start && end) {
-    return `${formatDate(start)} - ${formatDate(end)}`;
-  }
-
-  if (start) {
-    return `Opens ${formatDate(start)}`;
-  }
-
-  return `Closes ${formatDate(end)}`;
+  return formatRegistrationWindow(start, end, formatDate);
 }
 
 const tournamentDirectorEmail = computed(() => tournament.value?.directorEmail || tournament.value?.contactEmail || null);
@@ -165,6 +159,15 @@ const hasDirectorData = computed(() => {
 
   return !!(tournament.value.directorName || tournament.value.directorEmail || tournament.value.directorPhone);
 });
+
+const isCurrentlyRegistered = computed(() =>
+  (myRegistration.value?.entries ?? []).some(entry => entry.status === "registered"),
+);
+const registrationStatusBadge = computed(() => getRegistrationStatusBadge(tournament.value?.registrationStatusReason));
+
+async function handleRegistrationUpdated() {
+  await Promise.all([refreshMyRegistration(), refreshTournament()]);
+}
 </script>
 
 <template>
@@ -184,11 +187,12 @@ const hasDirectorData = computed(() => {
             name="tabler:arrow-left"
             size="18"
           />
-          Back to Tournaments
+          Back to tournaments
         </NuxtLink>
         <div class="flex items-center gap-2">
           <button
             v-if="showInviteButton && tournament"
+            type="button"
             class="btn btn-secondary btn-sm gap-2"
             :disabled="openingInvitePage"
             @click="openInvitePage(tournament.organizationId)"
@@ -202,7 +206,7 @@ const hasDirectorData = computed(() => {
               v-else
               class="loading loading-spinner loading-sm"
             />
-            {{ openingInvitePage ? "Opening..." : "Invite Member" }}
+            {{ openingInvitePage ? "Opening..." : "Invite member" }}
           </button>
           <NuxtLink
             v-if="showEditButton"
@@ -213,7 +217,7 @@ const hasDirectorData = computed(() => {
               name="tabler:edit"
               size="18"
             />
-            Edit Tournament
+            Edit tournament
           </NuxtLink>
         </div>
       </div>
@@ -229,7 +233,7 @@ const hasDirectorData = computed(() => {
             class="badge badge-success gap-2 py-3"
           >
             <span class="w-2 h-2 bg-white rounded-full animate-pulse" />
-            Live Now
+            Live now
           </span>
           <span
             v-else-if="tournament.status === 'future'"
@@ -241,7 +245,7 @@ const hasDirectorData = computed(() => {
             v-else
             class="badge badge-ghost py-3"
           >
-            Past Event
+            Past event
           </span>
         </div>
       </div>
@@ -250,7 +254,7 @@ const hasDirectorData = computed(() => {
         <VerticalTabsLayout
           v-model="activeViewTab"
           :tabs="tournamentViewTabs"
-          :initial-open-tab-ids="['map', 'venues']"
+          :initial-open-tab-ids="['registration', 'map', 'venues']"
           :session-state-key="`tournament-view:${slug}`"
         >
           <template #overview>
@@ -272,7 +276,7 @@ const hasDirectorData = computed(() => {
                         name="tabler:calendar"
                         size="20"
                       />
-                      Date & Time
+                      Date & time
                     </h3>
                     <p class="text-sm">
                       {{ formatDateRange(tournament.startDate, tournament.endDate) }}
@@ -316,21 +320,35 @@ const hasDirectorData = computed(() => {
                   </div>
                 </div>
 
-                <div
-                  v-if="tournament.registrationOpenDate || tournament.registrationCloseDate"
-                  class="card bg-base-200"
-                >
+                <div class="card bg-base-200">
                   <div class="card-body">
-                    <h3 class="card-title text-base flex items-center gap-2">
-                      <Icon
-                        name="tabler:user-plus"
-                        size="20"
-                      />
-                      Registration
-                    </h3>
+                    <div class="flex items-center justify-between gap-2">
+                      <h3 class="card-title text-base flex items-center gap-2">
+                        <Icon
+                          name="tabler:user-plus"
+                          size="20"
+                        />
+                        Registration
+                      </h3>
+                      <span
+                        class="badge badge-sm"
+                        :class="registrationStatusBadge.badgeClass"
+                      >
+                        {{ registrationStatusBadge.label }}
+                      </span>
+                    </div>
                     <p class="text-sm">
                       {{ formatRegistrationDateRange(tournament.registrationOpenDate, tournament.registrationCloseDate) }}
                     </p>
+                    <div class="mt-2">
+                      <button
+                        type="button"
+                        class="btn btn-primary btn-xs"
+                        @click="activeViewTab = 'registration'"
+                      >
+                        {{ isCurrentlyRegistered ? "View / edit my registration" : "Go to registration" }}
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -362,7 +380,7 @@ const hasDirectorData = computed(() => {
                         name="tabler:trophy"
                         size="20"
                       />
-                      Event Types
+                      Event types
                     </h3>
                     <EventTypesList
                       :has-golf="tournament.hasGolf"
@@ -417,6 +435,15 @@ const hasDirectorData = computed(() => {
             </div>
           </template>
 
+          <template #registration>
+            <TournamentRegistrationPanel
+              :slug="slug"
+              :tournament="tournament"
+              :my-registration="myRegistration"
+              @updated="handleRegistrationUpdated"
+            />
+          </template>
+
           <template #contacts>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div
@@ -429,7 +456,7 @@ const hasDirectorData = computed(() => {
                       name="tabler:user"
                       size="20"
                     />
-                    Tournament Contact
+                    Tournament contact
                   </h3>
                   <div class="text-sm space-y-1">
                     <p v-if="tournament.contactName">
@@ -458,7 +485,7 @@ const hasDirectorData = computed(() => {
                       name="tabler:user-star"
                       size="20"
                     />
-                    Tournament Director
+                    Tournament director
                   </h3>
                   <div class="text-sm space-y-1">
                     <p v-if="tournament.directorName">
@@ -557,7 +584,7 @@ const hasDirectorData = computed(() => {
             Interested in participating?
           </p>
           <p class="text-sm opacity-80">
-            Contact the tournament director to request an invitation. Once invited, you'll receive an email to join and access member features.
+            Register directly in the registration tab, or contact the tournament director if you need assistance.
           </p>
         </div>
         <a

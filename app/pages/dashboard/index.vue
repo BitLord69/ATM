@@ -29,6 +29,73 @@ const showConfirmPassword = ref(false);
 
 type SupportedSocialProvider = "github" | "google" | "facebook";
 
+type MyRegistrationItem = {
+  tournamentId: number;
+  tournamentName: string;
+  tournamentSlug: string;
+  city: string | null;
+  country: string | null;
+  startDate: number | null;
+  endDate: number | null;
+  tournamentStatus: "active" | "future" | "past";
+  isActive: boolean;
+  majorDivision: string;
+  minorDivisionTags: string[];
+  disciplines: string[];
+  playerNumber: number | null;
+};
+
+const myRegistrations = ref<MyRegistrationItem[]>([]);
+const myRegistrationsLoading = ref(false);
+const registrationsFilter = ref<"upcoming" | "past" | "all">("upcoming");
+
+const disciplineLabelMap: Record<string, string> = {
+  golf: "Disc golf",
+  accuracy: "Accuracy",
+  distance: "Distance",
+  scf: "SCF",
+  discathon: "Discathon",
+  ddc: "DDC",
+  freestyle: "Freestyle",
+  overall: "Overall",
+};
+
+function getDisciplineLabel(key: string) {
+  return disciplineLabelMap[key] || key;
+}
+
+const upcomingRegistrationCount = computed(() =>
+  myRegistrations.value.filter(r => r.tournamentStatus === "active" || r.tournamentStatus === "future").length,
+);
+
+const pastRegistrationCount = computed(() =>
+  myRegistrations.value.filter(r => r.tournamentStatus === "past").length,
+);
+
+const filteredMyRegistrations = computed(() => {
+  if (registrationsFilter.value === "upcoming") {
+    return myRegistrations.value.filter(r => r.tournamentStatus === "active" || r.tournamentStatus === "future");
+  }
+  if (registrationsFilter.value === "past") {
+    return myRegistrations.value.filter(r => r.tournamentStatus === "past");
+  }
+  return myRegistrations.value;
+});
+
+async function loadMyRegistrations() {
+  myRegistrationsLoading.value = true;
+  try {
+    const res = await $fetch<{ registrations: MyRegistrationItem[] }>("/api/account/my-registrations");
+    myRegistrations.value = res.registrations ?? [];
+  }
+  catch (error) {
+    console.error("Unable to load my registrations", error);
+  }
+  finally {
+    myRegistrationsLoading.value = false;
+  }
+}
+
 const filter = ref<"all" | "active" | "future" | "past">("all");
 const sortBy = ref<"date" | "name" | "country" | "city">("date");
 const sortDirection = ref<"asc" | "desc">("desc");
@@ -39,6 +106,11 @@ const dashboardTabs: VerticalTabConfig[] = [
     id: "overview",
     label: "Overview",
     description: "Your dashboard summary",
+  },
+  {
+    id: "registrations",
+    label: "My registrations",
+    description: "Tournaments you are registered to play in",
   },
   {
     id: "accounts",
@@ -53,6 +125,11 @@ const dashboardTabs: VerticalTabConfig[] = [
 ];
 
 const filteredTournaments = computed(() => tournamentStore.filteredTournaments(filter.value, sortBy.value, sortDirection.value));
+
+function openUpcomingRegistrations() {
+  registrationsFilter.value = "upcoming";
+  activeDashboardTab.value = "registrations";
+}
 
 function toggleSortDirection() {
   sortDirection.value = sortDirection.value === "asc" ? "desc" : "asc";
@@ -370,12 +447,17 @@ async function openTournamentEdit(tournamentSlug: string) {
 }
 
 onMounted(async () => {
+  const tasks: Promise<unknown>[] = [
+    loadMyRegistrations(),
+    loadLinkedProviders(),
+  ];
+
   // Only load if not already loaded (plugin may have already loaded on app init)
   if (tournamentStore.tournaments.length === 0 && !tournamentStore.loading) {
-    await tournamentStore.loadTournaments();
+    tasks.push(tournamentStore.loadTournaments());
   }
 
-  await loadLinkedProviders();
+  await Promise.all(tasks);
   await maybeShowSocialConnectionMessage();
 });
 </script>
@@ -385,35 +467,70 @@ onMounted(async () => {
     <ClientOnly>
       <TournamentSelectorModal />
 
-      <div class="mb-6">
-        <h1 class="text-3xl font-bold mb-2">
-          My dashboard
-        </h1>
-        <p
-          v-if="tournamentStore.activeTournament"
-          class="text-lg opacity-70"
+      <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 class="text-3xl font-bold mb-2">
+            My dashboard
+          </h1>
+          <p
+            v-if="tournamentStore.activeTournament"
+            class="text-lg opacity-70"
+          >
+            Active tournament: <span class="font-semibold">{{ tournamentStore.activeTournament.tournamentName }}</span>
+            <span class="badge badge-primary ml-2">{{ tournamentStore.activeTournament.role }}</span>
+          </p>
+        </div>
+        <NuxtLink
+          to="/dashboard/tournaments/new"
+          class="btn btn-primary btn-sm gap-1.5 self-start sm:self-auto"
         >
-          Active Tournament: <span class="font-semibold">{{ tournamentStore.activeTournament.tournamentName }}</span>
-          <span class="badge badge-primary ml-2">{{ tournamentStore.activeTournament.role }}</span>
-        </p>
+          <Icon
+            name="tabler:plus"
+            size="16"
+          />
+          Create a tournament
+        </NuxtLink>
       </div>
 
       <VerticalTabsLayout
         v-model="activeDashboardTab"
         :tabs="dashboardTabs"
-        :initial-open-tab-ids="['overview', 'accounts']"
+        :initial-open-tab-ids="['overview', 'registrations']"
         session-state-key="dashboard"
       >
         <template #overview>
-          <div class="space-y-6">
+          <div class="space-y-4">
             <FlashAlert
               :message="socialConnectionMessage"
               type="success"
               @dismiss="dismissSocialConnectionMessage"
             />
 
+            <button
+              v-if="!myRegistrationsLoading && upcomingRegistrationCount > 0"
+              type="button"
+              class="alert alert-info w-full text-left cursor-pointer hover:brightness-105 transition"
+              @click="openUpcomingRegistrations"
+            >
+              <Icon
+                name="tabler:calendar-check"
+                size="22"
+                class="shrink-0"
+              />
+              <span class="flex-1">
+                You are registered for <strong>{{ upcomingRegistrationCount }}</strong> {{ upcomingRegistrationCount === 1 ? "upcoming tournament" : "upcoming tournaments" }}.
+              </span>
+              <span class="text-xs font-medium opacity-80 inline-flex items-center gap-1 shrink-0">
+                View
+                <Icon
+                  name="tabler:chevron-right"
+                  size="16"
+                />
+              </span>
+            </button>
+
             <div
-              v-if="!tournamentStore.loading && !tournamentStore.hasActiveTournaments"
+              v-else-if="!tournamentStore.loading && !myRegistrationsLoading && !tournamentStore.hasActiveTournaments"
               class="alert alert-warning"
             >
               <Icon
@@ -422,6 +539,155 @@ onMounted(async () => {
               />
               <span>No active tournaments at this time. Check back later or contact your tournament director.</span>
             </div>
+          </div>
+        </template>
+
+        <template #registrations>
+          <div class="space-y-4">
+            <PageLoadingState
+              v-if="myRegistrationsLoading"
+              wrapper-class="py-6"
+            />
+
+            <EmptyStateAlert
+              v-else-if="myRegistrations.length === 0"
+              message="You are not registered as a player in any tournaments yet."
+            />
+
+            <template v-else>
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <div class="tabs tabs-boxed tabs-sm">
+                  <button
+                    type="button"
+                    class="tab"
+                    :class="{ 'tab-active': registrationsFilter === 'upcoming' }"
+                    @click="registrationsFilter = 'upcoming'"
+                  >
+                    Upcoming ({{ upcomingRegistrationCount }})
+                  </button>
+                  <button
+                    type="button"
+                    class="tab"
+                    :class="{ 'tab-active': registrationsFilter === 'past' }"
+                    @click="registrationsFilter = 'past'"
+                  >
+                    Past ({{ pastRegistrationCount }})
+                  </button>
+                  <button
+                    type="button"
+                    class="tab"
+                    :class="{ 'tab-active': registrationsFilter === 'all' }"
+                    @click="registrationsFilter = 'all'"
+                  >
+                    All ({{ myRegistrations.length }})
+                  </button>
+                </div>
+              </div>
+
+              <EmptyStateAlert
+                v-if="filteredMyRegistrations.length === 0"
+                :message="registrationsFilter === 'upcoming' ? 'No upcoming tournament registrations.' : 'No registrations match this filter.'"
+              />
+
+              <div
+                v-else
+                class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"
+              >
+                <div
+                  v-for="reg in filteredMyRegistrations"
+                  :key="reg.tournamentId"
+                  class="card bg-base-200 border border-base-300/60"
+                >
+                  <div class="card-body p-4 space-y-2.5">
+                    <div class="flex items-start justify-between gap-2">
+                      <h3 class="card-title text-base leading-snug">
+                        {{ reg.tournamentName }}
+                      </h3>
+                      <span
+                        v-if="reg.isActive"
+                        class="badge badge-success badge-sm shrink-0"
+                      >
+                        Live now
+                      </span>
+                      <span
+                        v-else-if="reg.tournamentStatus === 'future'"
+                        class="badge badge-info badge-sm shrink-0"
+                      >
+                        Upcoming
+                      </span>
+                      <span
+                        v-else
+                        class="badge badge-ghost badge-sm shrink-0"
+                      >
+                        Past
+                      </span>
+                    </div>
+
+                    <div class="text-xs opacity-75 space-y-1">
+                      <div
+                        v-if="reg.startDate && reg.endDate"
+                        class="flex items-center gap-1.5"
+                      >
+                        <Icon
+                          name="tabler:calendar"
+                          size="14"
+                        />
+                        <span>{{ new Date(reg.startDate).toLocaleDateString() }} - {{ new Date(reg.endDate).toLocaleDateString() }}</span>
+                      </div>
+                      <div
+                        v-if="reg.city || reg.country"
+                        class="flex items-center gap-1.5"
+                      >
+                        <Icon
+                          name="tabler:map-pin"
+                          size="14"
+                        />
+                        <span>{{ [reg.city, reg.country].filter(Boolean).join(", ") }}</span>
+                      </div>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-1.5 pt-1">
+                      <span class="badge badge-primary badge-sm">
+                        {{ reg.majorDivision }}
+                      </span>
+                      <span
+                        v-for="tag in reg.minorDivisionTags"
+                        :key="tag"
+                        class="badge badge-secondary badge-xs"
+                      >
+                        {{ tag }}
+                      </span>
+                      <span
+                        v-if="reg.playerNumber != null"
+                        class="badge badge-outline badge-xs font-mono"
+                      >
+                        #{{ reg.playerNumber }}
+                      </span>
+                    </div>
+
+                    <div class="flex flex-wrap gap-1">
+                      <span
+                        v-for="disc in reg.disciplines"
+                        :key="disc"
+                        class="badge badge-ghost badge-xs border border-base-300"
+                      >
+                        {{ getDisciplineLabel(disc) }}
+                      </span>
+                    </div>
+
+                    <div class="card-actions justify-end pt-1">
+                      <NuxtLink
+                        :to="`/tournaments/${reg.tournamentSlug}`"
+                        class="btn btn-xs"
+                        :class="reg.tournamentStatus === 'past' ? 'btn-outline' : 'btn-primary'"
+                      >
+                        {{ reg.tournamentStatus === "past" ? "View tournament" : "View / edit registration" }}
+                      </NuxtLink>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </template>
           </div>
         </template>
 
@@ -712,7 +978,7 @@ onMounted(async () => {
                         class="btn btn-xs btn-outline"
                         @click.stop.prevent="openTournamentEdit(tournament.tournamentSlug)"
                       >
-                        Edit Tournament
+                        Edit tournament
                       </button>
                     </TournamentActionsRow>
                   </template>

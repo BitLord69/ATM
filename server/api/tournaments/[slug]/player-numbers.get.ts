@@ -3,18 +3,7 @@ import { and, eq } from "drizzle-orm";
 import { auth } from "../../../../lib/auth";
 import db from "../../../../lib/db";
 import { eventEntry, player, tournament, tournamentMembership, tournamentPlayerNumber, user } from "../../../../lib/db/schema";
-
-function canViewTournament(globalRole: string | undefined, membership: { role: string; status: string } | undefined) {
-  if (globalRole === "admin") {
-    return true;
-  }
-
-  if (!membership || membership.status !== "active") {
-    return false;
-  }
-
-  return ["owner", "admin", "td", "scorer", "viewer"].includes(membership.role);
-}
+import { hasTournamentRole } from "../../../utils/authorization";
 
 export default defineEventHandler(async (event) => {
   const slug = getRouterParam(event, "slug");
@@ -49,7 +38,7 @@ export default defineEventHandler(async (event) => {
     )
     .limit(1);
 
-  if (!canViewTournament(session.user.role, membershipRows[0])) {
+  if (!hasTournamentRole(session.user.role, membershipRows[0], "viewer")) {
     throw createError({ statusCode: 403, message: "Forbidden" });
   }
 
@@ -57,6 +46,8 @@ export default defineEventHandler(async (event) => {
     .select({
       playerId: player.id,
       playerName: player.displayName,
+      playerCountry: player.country,
+      playerEmail: player.email,
       userName: user.name,
       userCountry: user.country,
       userEmail: user.email,
@@ -64,7 +55,12 @@ export default defineEventHandler(async (event) => {
     .from(eventEntry)
     .innerJoin(player, eq(player.id, eventEntry.playerId))
     .leftJoin(user, eq(user.id, player.userId))
-    .where(eq(eventEntry.tournamentId, foundTournament.id));
+    .where(
+      and(
+        eq(eventEntry.tournamentId, foundTournament.id),
+        eq(eventEntry.status, "registered"),
+      ),
+    );
 
   const numberRows = await db
     .select({
@@ -98,8 +94,8 @@ export default defineEventHandler(async (event) => {
       playerId: row.playerId,
       playerName: row.playerName,
       userName: row.userName,
-      userCountry: row.userCountry,
-      userEmail: row.userEmail,
+      userCountry: row.playerCountry || row.userCountry,
+      userEmail: row.playerEmail || row.userEmail,
       entryCount: 1,
     });
   }

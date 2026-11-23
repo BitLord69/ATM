@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import type { TournamentEntriesResponse, TournamentPlayerGroup } from "~/types/tournament-registration";
+
 type RegistrationLockState = {
   isLocked: boolean;
   lockedBy: string | null;
@@ -8,6 +10,10 @@ type RegistrationLockState = {
 type RegistrationLockResponse = {
   tournamentId: number;
   hasStarted: boolean;
+  registrationOpenDate?: number | null;
+  registrationCloseDate?: number | null;
+  isRegistrationOpen?: boolean;
+  registrationStatusReason?: string;
   lock: RegistrationLockState;
 };
 
@@ -40,12 +46,24 @@ definePageMeta({ ssr: false, layout: "tournament-admin" });
 const route = useRoute();
 const slug = computed(() => route.params.slug as string);
 
+// Entries & Player Management State
+const entriesData = ref<TournamentEntriesResponse | null>(null);
+const entriesLoading = ref(false);
+const entriesBusy = ref(false);
+const entriesError = ref<string | null>(null);
+const entriesSuccess = ref<string | null>(null);
+
+const showRegisterForm = ref(false);
+const editingPlayer = ref<TournamentPlayerGroup | null>(null);
+
+// Registration Lock State
 const registrationLock = ref<RegistrationLockResponse | null>(null);
 const registrationLockLoading = ref(false);
 const registrationLockSaving = ref(false);
 const registrationLockError = ref<string | null>(null);
 const registrationLockSuccess = ref<string | null>(null);
 
+// Player Numbers State
 const playerNumbers = ref<PlayerNumbersResponse | null>(null);
 const playerNumbersLoading = ref(false);
 const playerNumbersBusy = ref(false);
@@ -57,16 +75,22 @@ const manualNumberDraft = ref<Record<string, number | null>>({});
 const showOnlyUnassigned = ref(true);
 const showGenerateConfirmModal = ref(false);
 
-function getApiErrorMessage(error: any, fallback: string) {
-  return error?.data?.message || error?.message || fallback;
-}
-
 function formatTimestamp(timestamp: number | null | undefined) {
   if (!timestamp) {
     return "—";
   }
   return new Date(timestamp).toLocaleString();
 }
+
+const activePlayerCount = computed(() =>
+  (entriesData.value?.players ?? []).filter(p => p.overallStatus === "registered").length,
+);
+
+const withdrawnPlayerCount = computed(() =>
+  (entriesData.value?.players ?? []).filter(p => p.overallStatus === "withdrawn").length,
+);
+
+const canManagePlayers = computed(() => !!entriesData.value?.canManage);
 
 const visiblePlayerRows = computed(() => {
   const rows = playerNumbers.value?.players ?? [];
@@ -81,13 +105,94 @@ function getDisplayPlayerName(row: TournamentPlayerNumberRow) {
   return row.playerName || row.userName || row.userEmail || row.playerId;
 }
 
+function toggleNewPlayerForm() {
+  if (showRegisterForm.value && !editingPlayer.value) {
+    showRegisterForm.value = false;
+    return;
+  }
+  editingPlayer.value = null;
+  showRegisterForm.value = true;
+  entriesError.value = null;
+  entriesSuccess.value = null;
+}
+
+function startEditingPlayer(player: TournamentPlayerGroup) {
+  editingPlayer.value = player;
+  showRegisterForm.value = true;
+  entriesError.value = null;
+  entriesSuccess.value = null;
+}
+
+function closeRegisterForm() {
+  showRegisterForm.value = false;
+  editingPlayer.value = null;
+}
+
+async function handlePlayerSaved(message: string) {
+  showRegisterForm.value = false;
+  editingPlayer.value = null;
+  entriesSuccess.value = message;
+  await Promise.all([loadEntries(), loadPlayerNumbers()]);
+}
+
+async function loadEntries() {
+  entriesLoading.value = true;
+  entriesError.value = null;
+  try {
+    entriesData.value = await $fetch<TournamentEntriesResponse>(`/api/tournaments/${slug.value}/entries`);
+  }
+  catch (error: unknown) {
+    entriesError.value = getApiErrorMessage(error, "Failed to load tournament player entries.");
+  }
+  finally {
+    entriesLoading.value = false;
+  }
+}
+
+async function togglePlayerWithdrawal(p: TournamentPlayerGroup) {
+  if (entriesBusy.value) {
+    return;
+  }
+
+  entriesError.value = null;
+  entriesSuccess.value = null;
+  entriesBusy.value = true;
+
+  const targetStatus = p.overallStatus === "registered" ? "withdrawn" : "registered";
+  const restoreDisciplines = targetStatus === "registered"
+    ? (p.withdrawnDisciplines.length > 0
+        ? p.withdrawnDisciplines
+        : (entriesData.value?.enabledDisciplines ?? []).map(d => d.key))
+    : undefined;
+
+  try {
+    await $fetch(`/api/tournaments/${slug.value}/entries/${p.playerId}`, {
+      method: "PATCH",
+      body: {
+        status: targetStatus,
+        disciplines: restoreDisciplines,
+      },
+    });
+    entriesSuccess.value = targetStatus === "withdrawn"
+      ? `${p.displayName} marked as withdrawn.`
+      : `${p.displayName} restored to registered.`;
+    await Promise.all([loadEntries(), loadPlayerNumbers()]);
+  }
+  catch (error: unknown) {
+    entriesError.value = getApiErrorMessage(error, "Failed to update player status.");
+  }
+  finally {
+    entriesBusy.value = false;
+  }
+}
+
 async function loadRegistrationLock() {
   registrationLockLoading.value = true;
   registrationLockError.value = null;
   try {
     registrationLock.value = await $fetch<RegistrationLockResponse>(`/api/tournaments/${slug.value}/registration-lock`);
   }
-  catch (error: any) {
+  catch (error: unknown) {
     registrationLockError.value = getApiErrorMessage(error, "Failed to load registration lock state.");
   }
   finally {
@@ -105,13 +210,14 @@ async function setRegistrationLock(locked: boolean) {
       body: { locked },
     });
     registrationLock.value = {
+      ...registrationLock.value,
       tournamentId: result.tournamentId,
       hasStarted: registrationLock.value?.hasStarted ?? false,
       lock: result.lock,
     };
     registrationLockSuccess.value = locked ? "Registration locked." : "Registration unlocked.";
   }
-  catch (error: any) {
+  catch (error: unknown) {
     registrationLockError.value = getApiErrorMessage(error, "Failed to update registration lock.");
   }
   finally {
@@ -131,7 +237,7 @@ async function loadPlayerNumbers() {
     }
     manualNumberDraft.value = nextDraft;
   }
-  catch (error: any) {
+  catch (error: unknown) {
     playerNumbersError.value = getApiErrorMessage(error, "Failed to load player numbers.");
   }
   finally {
@@ -152,9 +258,9 @@ async function generatePlayerNumbers() {
       },
     });
     playerNumbersSuccess.value = "Tournament player numbers generated.";
-    await loadPlayerNumbers();
+    await Promise.all([loadPlayerNumbers(), loadEntries()]);
   }
-  catch (error: any) {
+  catch (error: unknown) {
     playerNumbersError.value = getApiErrorMessage(error, "Failed to generate tournament player numbers.");
   }
   finally {
@@ -197,9 +303,9 @@ async function assignManualPlayerNumber(playerId: string) {
       },
     });
     playerNumbersSuccess.value = "Player number assigned.";
-    await loadPlayerNumbers();
+    await Promise.all([loadPlayerNumbers(), loadEntries()]);
   }
-  catch (error: any) {
+  catch (error: unknown) {
     playerNumbersError.value = getApiErrorMessage(error, "Failed to assign player number.");
   }
   finally {
@@ -214,6 +320,7 @@ watch(
       return;
     }
     await Promise.all([
+      loadEntries(),
       loadRegistrationLock(),
       loadPlayerNumbers(),
     ]);
@@ -223,21 +330,102 @@ watch(
 </script>
 
 <template>
-  <div class="space-y-3">
+  <div class="space-y-4">
     <FormHeader
-      title="Players"
+      title="Players & registration"
       title-tag="h1"
       title-class="text-2xl font-bold"
       wrapper-class="mb-0"
-      description="Registration controls and player entry operations."
+      description="Manage registered players, offline/guest entries, discipline selections, and player numbers."
     />
 
+    <!-- Registered Players & Discipline Entries Card -->
+    <div class="card bg-base-200 shadow-sm border border-base-300/60">
+      <div class="card-body space-y-4">
+        <div class="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2
+              id="registered-players-heading"
+              class="text-lg font-semibold"
+            >
+              Registered players & discipline entries
+            </h2>
+            <p class="text-xs opacity-70">
+              Register existing users or offline guest players, edit divisions and disciplines, or process withdrawals.
+            </p>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="badge badge-success badge-sm">
+              Active: {{ activePlayerCount }}
+            </span>
+            <span
+              v-if="withdrawnPlayerCount > 0"
+              class="badge badge-ghost badge-sm"
+            >
+              Withdrawn: {{ withdrawnPlayerCount }}
+            </span>
+            <button
+              v-if="canManagePlayers"
+              type="button"
+              class="btn btn-sm btn-primary gap-1.5"
+              @click="toggleNewPlayerForm"
+            >
+              <Icon
+                :name="showRegisterForm && !editingPlayer ? 'tabler:x' : 'tabler:user-plus'"
+                size="16"
+              />
+              {{ showRegisterForm && !editingPlayer ? "Close form" : "Register player" }}
+            </button>
+          </div>
+        </div>
+
+        <FlashAlert
+          :message="entriesError"
+          type="error"
+          role="alert"
+          :auto-hide-ms="0"
+          @dismiss="entriesError = null"
+        />
+
+        <FlashAlert
+          :message="entriesSuccess"
+          type="success"
+          role="status"
+          @dismiss="entriesSuccess = null"
+        />
+
+        <PlayerRegistrationForm
+          v-if="showRegisterForm && entriesData"
+          :slug="slug"
+          :major-divisions="entriesData.majorDivisions"
+          :enabled-disciplines="entriesData.enabledDisciplines"
+          :editing-player="editingPlayer"
+          @saved="handlePlayerSaved"
+          @cancel="closeRegisterForm"
+        />
+
+        <RegisteredPlayersTable
+          :players="entriesData?.players ?? []"
+          :major-divisions="entriesData?.majorDivisions ?? []"
+          :enabled-disciplines="entriesData?.enabledDisciplines ?? []"
+          :loading="entriesLoading"
+          :busy="entriesBusy"
+          :can-manage="canManagePlayers"
+          @edit="startEditingPlayer"
+          @toggle-withdrawal="togglePlayerWithdrawal"
+          @refresh="loadEntries"
+        />
+      </div>
+    </div>
+
+    <!-- Registration Lock Card -->
     <div class="card bg-base-200 shadow-sm border border-base-300/60">
       <div class="card-body space-y-3">
         <div class="flex items-start justify-between gap-3">
           <div>
             <h3 class="font-semibold">
-              Registration Lock
+              Registration lock
             </h3>
             <p class="text-xs opacity-70">
               Tournament-level registration control (TD/admin discretion after start).
@@ -255,24 +443,26 @@ watch(
           v-if="registrationLock"
           class="text-xs opacity-80"
         >
-          Tournament started: <strong>{{ registrationLock.hasStarted ? "Yes" : "No" }}</strong>
+          Public self-registration open: <strong>{{ registrationLock.isRegistrationOpen ? "Yes" : `No (${registrationLock.registrationStatusReason || "closed"})` }}</strong>
+          · Tournament started: <strong>{{ registrationLock.hasStarted ? "Yes" : "No" }}</strong>
           · Locked by: <strong>{{ registrationLock.lock.lockedBy || "—" }}</strong>
           · Locked at: <strong>{{ formatTimestamp(registrationLock.lock.lockedAt) }}</strong>
         </p>
 
-        <div
-          v-if="registrationLockError"
-          class="alert alert-error py-2"
-        >
-          <span class="text-sm">{{ registrationLockError }}</span>
-        </div>
+        <FlashAlert
+          :message="registrationLockError"
+          type="error"
+          role="alert"
+          :auto-hide-ms="0"
+          @dismiss="registrationLockError = null"
+        />
 
-        <div
-          v-if="registrationLockSuccess"
-          class="alert alert-success py-2"
-        >
-          <span class="text-sm">{{ registrationLockSuccess }}</span>
-        </div>
+        <FlashAlert
+          :message="registrationLockSuccess"
+          type="success"
+          role="status"
+          @dismiss="registrationLockSuccess = null"
+        />
 
         <div class="flex flex-wrap items-center gap-2">
           <button
@@ -285,7 +475,7 @@ watch(
               v-if="registrationLockSaving"
               class="loading loading-spinner loading-xs"
             />
-            <span v-else>Lock Registration</span>
+            <span v-else>Lock registration</span>
           </button>
           <button
             class="btn btn-sm btn-outline"
@@ -293,7 +483,7 @@ watch(
             type="button"
             @click="setRegistrationLock(false)"
           >
-            Unlock Registration
+            Unlock registration
           </button>
           <button
             class="btn btn-sm btn-ghost"
@@ -307,12 +497,13 @@ watch(
       </div>
     </div>
 
+    <!-- Tournament Player Numbers Card -->
     <div class="card bg-base-200 shadow-sm border border-base-300/60">
       <div class="card-body space-y-3">
         <div class="flex items-start justify-between gap-3">
           <div>
             <h3 class="font-semibold">
-              Tournament Player Numbers
+              Tournament player numbers
             </h3>
             <p class="text-xs opacity-70">
               Stable athlete numbers for this tournament. Generate once with gaps, then manually assign only for newly added players.
@@ -351,7 +542,7 @@ watch(
               type="button"
               @click="requestGeneratePlayerNumbers"
             >
-              Generate Once
+              Generate once
             </button>
           </div>
         </div>
@@ -363,19 +554,20 @@ watch(
           Auto-generation is disabled because numbers are already initialized. Only manual assignment for unassigned players is allowed.
         </p>
 
-        <div
-          v-if="playerNumbersError"
-          class="alert alert-error py-2"
-        >
-          <span class="text-sm">{{ playerNumbersError }}</span>
-        </div>
+        <FlashAlert
+          :message="playerNumbersError"
+          type="error"
+          role="alert"
+          :auto-hide-ms="0"
+          @dismiss="playerNumbersError = null"
+        />
 
-        <div
-          v-if="playerNumbersSuccess"
-          class="alert alert-success py-2"
-        >
-          <span class="text-sm">{{ playerNumbersSuccess }}</span>
-        </div>
+        <FlashAlert
+          :message="playerNumbersSuccess"
+          type="success"
+          role="status"
+          @dismiss="playerNumbersSuccess = null"
+        />
 
         <div class="flex items-center justify-between gap-2">
           <label class="label cursor-pointer gap-2">
@@ -404,9 +596,18 @@ watch(
 
         <div
           v-else
+          tabindex="0"
+          role="region"
+          aria-labelledby="player-numbers-caption"
           class="overflow-x-auto"
         >
           <table class="table table-sm">
+            <caption
+              id="player-numbers-caption"
+              class="sr-only"
+            >
+              Tournament player number assignments
+            </caption>
             <thead>
               <tr>
                 <th>Player</th>
@@ -415,7 +616,7 @@ watch(
                 <th>Number</th>
                 <th>Mode</th>
                 <th>Assigned</th>
-                <th>Manual Assign</th>
+                <th>Manual assign</th>
               </tr>
             </thead>
             <tbody>
@@ -423,7 +624,12 @@ watch(
                 v-for="row in visiblePlayerRows"
                 :key="row.playerId"
               >
-                <td>{{ getDisplayPlayerName(row) }}</td>
+                <th
+                  scope="row"
+                  class="font-normal"
+                >
+                  {{ getDisplayPlayerName(row) }}
+                </th>
                 <td>{{ row.userCountry || "—" }}</td>
                 <td>{{ row.entryCount }}</td>
                 <td>{{ row.playerNumber ?? "—" }}</td>
@@ -450,11 +656,17 @@ watch(
                       Assign
                     </button>
                   </div>
-                  <span v-else class="text-xs opacity-60">Assigned</span>
+                  <span
+                    v-else
+                    class="text-xs opacity-60"
+                  >Assigned</span>
                 </td>
               </tr>
               <tr v-if="visiblePlayerRows.length === 0">
-                <td colspan="7" class="text-center text-sm opacity-70 py-4">
+                <td
+                  colspan="7"
+                  class="text-center text-sm opacity-70 py-4"
+                >
                   No players match the current filter.
                 </td>
               </tr>

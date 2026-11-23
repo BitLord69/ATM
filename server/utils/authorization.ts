@@ -156,6 +156,28 @@ export function hasRoleLevel(
 }
 
 /**
+ * Check if a user has at least the specified tournament role (or is a global system admin).
+ */
+export function hasTournamentRole(
+  globalRole: string | null | undefined,
+  membership: { role: string; status: string } | null | undefined,
+  minRole: TournamentRole = "td",
+): boolean {
+  if (normalizeRuntimeUserRole(globalRole) === "admin") {
+    return true;
+  }
+
+  if (!membership || membership.status !== "active") {
+    return false;
+  }
+
+  const userLevel = TOURNAMENT_ROLE_HIERARCHY[membership.role as TournamentRole] ?? 0;
+  const requiredLevel = TOURNAMENT_ROLE_HIERARCHY[minRole];
+
+  return userLevel >= requiredLevel;
+}
+
+/**
  * Check if a tournament is currently active based on dates
  */
 export function isTournamentActive(startDate?: number | null, endDate?: number | null): boolean {

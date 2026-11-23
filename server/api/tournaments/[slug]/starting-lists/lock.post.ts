@@ -5,18 +5,7 @@ import { startingListLockBodySchema, startingListQuerySchema } from "#shared/sch
 import { auth } from "../../../../../lib/auth";
 import db from "../../../../../lib/db";
 import { startingListLock, tournament, tournamentMembership } from "../../../../../lib/db/schema";
-
-function canManageStartingLists(globalRole: string | undefined, membership: { role: string; status: string } | undefined) {
-  if (globalRole === "admin") {
-    return true;
-  }
-
-  if (!membership || membership.status !== "active") {
-    return false;
-  }
-
-  return ["owner", "admin", "td"].includes(membership.role);
-}
+import { hasTournamentRole } from "../../../../utils/authorization";
 
 export default defineEventHandler(async (event) => {
   const slug = getRouterParam(event, "slug");
@@ -65,7 +54,7 @@ export default defineEventHandler(async (event) => {
     )
     .limit(1);
 
-  if (!canManageStartingLists(session.user.role, membershipRows[0])) {
+  if (!hasTournamentRole(session.user.role, membershipRows[0], "td")) {
     throw createError({ statusCode: 403, message: "Forbidden" });
   }
 

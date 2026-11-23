@@ -39,7 +39,7 @@ const disciplines = disciplineCatalog.map(discipline => ({
   <div class="container mx-auto p-4 max-w-7xl">
     <div class="mb-8">
       <h1 class="text-4xl font-bold mb-2">
-        Disc Sport Disciplines
+        Disc sport disciplines
       </h1>
       <p class="text-lg opacity-70">
         Learn about the different events in allround frisbee tournaments
@@ -82,7 +82,7 @@ const disciplines = disciplineCatalog.map(discipline => ({
           name="tabler:tournament"
           size="24"
         />
-        Browse Tournaments
+        Browse tournaments
       </NuxtLink>
     </div>
   </div>

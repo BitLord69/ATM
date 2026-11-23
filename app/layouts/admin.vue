@@ -5,9 +5,9 @@ const route = useRoute();
 
 const items: WorkspaceNavItem[] = [
   { id: "users", label: "Users", to: "/admin/users" },
-  { id: "ban-requests", label: "Ban Requests", to: "/admin/ban-requests" },
+  { id: "ban-requests", label: "Ban requests", to: "/admin/ban-requests" },
   { id: "invitations", label: "Invitations", to: "/admin/invitations" },
-  { id: "invite", label: "Send Invite", to: "/admin/invites" },
+  { id: "invite", label: "Send invite", to: "/admin/invites" },
 ];
 
 const activeId = computed(() => {
@@ -30,7 +30,7 @@ const activeId = computed(() => {
       <WorkspaceShell
         :items="items"
         :active-id="activeId"
-        heading="User Management"
+        heading="User management"
         back-to="/dashboard"
         back-label="My dashboard"
       >

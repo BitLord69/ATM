@@ -8,13 +8,16 @@ type CountryOption = {
 
 type Props = {
   modelValue: string;
+  id?: string;
   placeholder?: string;
   disabled?: boolean;
+  size?: "sm" | "md";
 };
 
-const props = withDefaults(defineProps<Props>(), {
+withDefaults(defineProps<Props>(), {
   placeholder: "Select country",
   disabled: false,
+  size: "md",
 });
 
 const emit = defineEmits<{
@@ -72,36 +75,24 @@ const countryOptions = computed<CountryOption[]>(() => {
     .sort((a, b) => a.name.localeCompare(b.name));
 });
 
-const optionNames = computed(() => new Set(countryOptions.value.map(option => option.name)));
-const hasCustomValue = computed(() => !!props.modelValue && !optionNames.value.has(props.modelValue));
-
-function onChange(event: Event) {
-  emit("update:modelValue", (event.target as HTMLSelectElement).value);
-}
+const selectOptions = computed(() =>
+  countryOptions.value.map(country => ({
+    value: country.name,
+    label: country.name,
+  })),
+);
 </script>
 
 <template>
-  <select
-    class="select select-bordered w-full bg-base-100 text-base-content border-base-300 hover:border-base-content/40 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-    :value="modelValue"
+  <SearchableSelect
+    :id="id"
+    :model-value="modelValue"
+    :options="selectOptions"
+    :placeholder="placeholder"
     :disabled="disabled"
-    @change="onChange"
-  >
-    <option value="">
-      {{ placeholder }}
-    </option>
-    <option
-      v-if="hasCustomValue"
-      :value="modelValue"
-    >
-      {{ modelValue }}
-    </option>
-    <option
-      v-for="country in countryOptions"
-      :key="country.code"
-      :value="country.name"
-    >
-      {{ country.name }}
-    </option>
-  </select>
+    :size="size"
+    autocomplete="country-name"
+    empty-text="No matching country"
+    @update:model-value="emit('update:modelValue', $event)"
+  />
 </template>

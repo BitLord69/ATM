@@ -46,7 +46,7 @@ async function loadInvitation() {
   }
 
   try {
-    const response = await $fetch<{ data?: { email: string; organizationName: string } }>(`/api/invitations/${invitationId.value}/details`);
+    const response = await $fetch<{ data?: { email: string; organizationName: string; accountExists?: boolean } }>(`/api/invitations/${invitationId.value}/details`);
     const data = response?.data;
     if (!data?.email) {
       throw createError({ statusCode: 404, message: "Invitation details not found" });
@@ -63,11 +63,14 @@ async function loadInvitation() {
         await acceptInvite();
       }
     }
+    else if (typeof data.accountExists === "boolean") {
+      accountExists.value = data.accountExists;
+    }
     else {
       // Check if account exists for this email
       const checkResponse = await $fetch("/api/users/check-email", {
         method: "POST",
-        body: { email: data.email },
+        body: { email: data.email, invitationId: invitationId.value },
       });
       accountExists.value = checkResponse.exists;
     }
@@ -227,7 +230,7 @@ onMounted(() => {
     <div class="card w-full max-w-md bg-base-100 shadow-xl">
       <div class="card-body">
         <h2 class="card-title text-2xl font-bold mb-4">
-          Accept Invitation
+          Accept invitation
         </h2>
 
         <!-- Loading State -->
@@ -285,7 +288,7 @@ onMounted(() => {
         <div v-else-if="wrongEmailLoggedIn" class="space-y-4">
           <div class="bg-warning/10 border border-warning rounded-lg p-4 space-y-2">
             <p class="text-sm font-semibold">
-              Invitation For:
+              Invitation for:
             </p>
             <p class="text-lg font-bold">
               {{ invitationDetails?.email }}
@@ -294,7 +297,7 @@ onMounted(() => {
 
           <div class="bg-error/10 border border-error rounded-lg p-4 space-y-2">
             <p class="text-sm font-semibold">
-              Currently Logged In As:
+              Currently logged in as:
             </p>
             <p class="text-lg font-bold">
               {{ currentUserEmail }}
@@ -312,7 +315,7 @@ onMounted(() => {
             @click="handleLogout"
           >
             <span v-if="authStore.loading" class="loading loading-spinner" />
-            <span v-else>Log Out</span>
+            <span v-else>Log out</span>
           </button>
         </div>
 
@@ -320,7 +323,7 @@ onMounted(() => {
         <div v-else-if="invitationDetails && !currentUserEmail && accountExists" class="space-y-4">
           <div class="bg-success/10 border border-success rounded-lg p-4 space-y-2">
             <p class="text-sm font-semibold">
-              Welcome Back!
+              Welcome back!
             </p>
             <p class="text-base font-bold">
               {{ invitationDetails.organizationName }}
@@ -357,7 +360,7 @@ onMounted(() => {
             @click="handleLogin"
           >
             <span v-if="isSubmitting" class="loading loading-spinner" />
-            <span v-else>Log In & Accept Invitation</span>
+            <span v-else>Log in & accept invitation</span>
           </button>
         </div>
 
@@ -365,7 +368,7 @@ onMounted(() => {
         <div v-else-if="invitationDetails && !currentUserEmail && !accountExists" class="space-y-4">
           <div class="bg-info/10 border border-info rounded-lg p-4 space-y-2">
             <p class="text-sm font-semibold">
-              Get Started:
+              Get started:
             </p>
             <p class="text-lg font-bold">
               {{ invitationDetails.organizationName }}
@@ -412,7 +415,7 @@ onMounted(() => {
             @click="handleSignup"
           >
             <span v-if="isSubmitting" class="loading loading-spinner" />
-            <span v-else>Create Account & Accept Invitation</span>
+            <span v-else>Create account & accept invitation</span>
           </button>
 
           <!-- Divider -->
@@ -448,7 +451,7 @@ onMounted(() => {
         <div v-else-if="invitationDetails && currentUserEmail && !wrongEmailLoggedIn" class="space-y-4">
           <div class="bg-info/10 border border-info rounded-lg p-4 space-y-2">
             <p class="text-sm font-semibold">
-              Accepting Invitation To:
+              Accepting invitation to:
             </p>
             <p class="text-lg font-bold">
               {{ invitationDetails.organizationName }}
@@ -468,7 +471,7 @@ onMounted(() => {
             @click="acceptInvite"
           >
             <span v-if="isSubmitting" class="loading loading-spinner" />
-            <span v-else>Accept Invitation</span>
+            <span v-else>Accept invitation</span>
           </button>
         </div>
       </div>
