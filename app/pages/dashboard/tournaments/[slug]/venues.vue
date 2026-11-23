@@ -76,7 +76,7 @@ const venues = computed<TournamentVenue[]>(() => {
             :to="`/dashboard/tournaments/${slug}/edit?tab=general&section=venues-section`"
             class="btn btn-sm btn-primary"
           >
-            Add Venue
+            Add venue
           </NuxtLink>
         </div>
       </div>

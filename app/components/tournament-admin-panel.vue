@@ -10,7 +10,7 @@ const links = computed(() => [
   { id: "details", label: "Details", to: `/dashboard/tournaments/${props.slug}/edit` },
   { id: "venues", label: "Venues", to: `/dashboard/tournaments/${props.slug}/venues` },
   { id: "schedule", label: "Schedule", to: `/dashboard/tournaments/${props.slug}/schedule` },
-  { id: "starting-lists", label: "Starting Lists", to: `/dashboard/tournaments/${props.slug}/starting-lists` },
+  { id: "starting-lists", label: "Starting lists", to: `/dashboard/tournaments/${props.slug}/starting-lists` },
   { id: "players", label: "Players", to: `/dashboard/tournaments/${props.slug}/players` },
 ]);
 
@@ -27,7 +27,7 @@ const items = computed(() => links.value.map(link => ({
     :heading="title"
     back-to="/dashboard"
     back-label="← Back to my dashboard"
-    badge-text="Tournament Workspace"
+    badge-text="Tournament workspace"
   >
     <slot />
   </WorkspaceShell>

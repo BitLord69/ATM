@@ -169,7 +169,7 @@ function removeCourseLayout(index: number) {
           <div class="flex flex-wrap items-center justify-between gap-2">
             <div>
               <h3 class="text-sm font-semibold">
-                Disc Golf Course Layouts
+                Disc golf course layouts
               </h3>
               <p class="text-xs opacity-70">
                 Add one or more layouts (e.g. Main 18, Pro Blue, Short Red) with their par to prefill round settings.
@@ -185,7 +185,7 @@ function removeCourseLayout(index: number) {
                 name="tabler:plus"
                 size="14"
               />
-              Add Layout
+              Add layout
             </button>
           </div>
 
@@ -193,7 +193,7 @@ function removeCourseLayout(index: number) {
             v-if="!model.courseLayouts || model.courseLayouts.length === 0"
             class="text-xs opacity-60 italic py-1"
           >
-            No layouts added yet. Click "+ Add Layout" to define course layouts and pars for this venue.
+            No layouts added yet. Click "+ Add layout" to define course layouts and pars for this venue.
           </div>
 
           <div

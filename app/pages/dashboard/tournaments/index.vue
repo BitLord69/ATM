@@ -70,7 +70,7 @@ onMounted(async () => {
     <div class="mb-5 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
       <div>
         <h1 class="text-2xl md:text-3xl font-bold">
-          Tournament Workspace
+          Tournament workspace
         </h1>
         <p class="opacity-70">
           Select a tournament to open its admin workspace.
@@ -85,7 +85,7 @@ onMounted(async () => {
             name="tabler:plus"
             size="16"
           />
-          New Tournament
+          New tournament
         </NuxtLink>
         <NuxtLink to="/dashboard" class="btn btn-ghost btn-sm">
           Back to my dashboard
@@ -166,7 +166,7 @@ onMounted(async () => {
           </p>
 
           <div class="card-actions justify-end">
-            <span class="btn btn-primary btn-sm">Open Workspace</span>
+            <span class="btn btn-primary btn-sm">Open workspace</span>
           </div>
         </div>
       </NuxtLink>

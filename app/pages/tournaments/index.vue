@@ -102,7 +102,7 @@ const { formatDateRange } = useFormatDate();
           name="tabler:plus"
           size="20"
         />
-        Create a Tournament
+        Create a tournament
       </NuxtLink>
     </div>
 
@@ -121,7 +121,7 @@ const { formatDateRange } = useFormatDate();
           :class="{ 'tab-active': filter === 'active' }"
           @click="filter = 'active'"
         >
-          Active Now
+          Active now
         </button>
         <button
           class="tab"
@@ -135,7 +135,7 @@ const { formatDateRange } = useFormatDate();
           :class="{ 'tab-active': filter === 'all' }"
           @click="filter = 'all'"
         >
-          All Tournaments
+          All tournaments
         </button>
       </div>
 
@@ -208,7 +208,7 @@ const { formatDateRange } = useFormatDate();
               :to="`/tournaments/${tournament.slug}`"
               class="btn btn-ghost btn-sm flex-1"
             >
-              View Details
+              View details
             </NuxtLink>
             <NuxtLink
               v-if="editPermissions[tournament.id]"

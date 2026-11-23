@@ -176,7 +176,7 @@ async function withdrawRegistration() {
               id="self-registration-heading"
               class="text-lg font-bold"
             >
-              Player Registration
+              Player registration
             </h2>
             <span
               class="badge"
@@ -212,31 +212,20 @@ async function withdrawRegistration() {
     </div>
 
     <!-- Feedback -->
-    <div
-      v-if="errorMessage"
+    <FlashAlert
+      :message="errorMessage"
+      type="error"
       role="alert"
-      aria-live="polite"
-      class="alert alert-error"
-    >
-      <Icon
-        name="tabler:alert-circle"
-        size="20"
-      />
-      <span>{{ errorMessage }}</span>
-    </div>
+      :auto-hide-ms="0"
+      @dismiss="errorMessage = null"
+    />
 
-    <div
-      v-if="successMessage"
+    <FlashAlert
+      :message="successMessage"
+      type="success"
       role="status"
-      aria-live="polite"
-      class="alert alert-success"
-    >
-      <Icon
-        name="tabler:circle-check"
-        size="20"
-      />
-      <span>{{ successMessage }}</span>
-    </div>
+      @dismiss="successMessage = null"
+    />
 
     <!-- Guest / Unauthenticated -->
     <div
@@ -245,17 +234,17 @@ async function withdrawRegistration() {
     >
       <div class="card-body space-y-3">
         <h3 class="card-title text-base">
-          Sign in to Register Online
+          Sign in to register online
         </h3>
         <p class="text-sm opacity-80">
-          Sign in with your player account to choose your division and disciplines. If you don't have an account, the Tournament Director can also register you as a guest player.
+          Sign in with your player account to choose your division and disciplines. If you don't have an account, the tournament director can also register you as a guest player.
         </p>
         <div class="card-actions">
           <NuxtLink
             :to="{ path: '/signin', query: { redirect: `/tournaments/${slug}` } }"
             class="btn btn-primary btn-sm"
           >
-            Sign In
+            Sign in
           </NuxtLink>
         </div>
       </div>
@@ -274,7 +263,7 @@ async function withdrawRegistration() {
           :disabled="isFormDisabled"
         >
           <legend class="px-2 text-sm font-semibold">
-            1. Player Profile & Eligibility Details
+            1. Player profile & eligibility details
           </legend>
 
           <div class="flex flex-col gap-1">
@@ -282,7 +271,7 @@ async function withdrawRegistration() {
               for="reg-display-name"
               class="text-sm font-medium"
             >
-              Player Name <span aria-hidden="true">*</span>
+              Player name <span aria-hidden="true">*</span>
             </label>
             <input
               id="reg-display-name"
@@ -302,15 +291,12 @@ async function withdrawRegistration() {
             >
               Country
             </label>
-            <input
+            <CountrySelect
               id="reg-country"
               v-model="regCountry"
-              name="country"
-              type="text"
-              autocomplete="country-name"
-              placeholder="e.g. Sweden"
-              class="input input-bordered w-full"
-            >
+              placeholder="Select country"
+              :disabled="isFormDisabled"
+            />
           </div>
 
           <div class="flex flex-col gap-1">
@@ -318,7 +304,7 @@ async function withdrawRegistration() {
               for="reg-dob"
               class="text-sm font-medium"
             >
-              Date of Birth (for Age/Minor Divisions)
+              Date of birth (for age/minor divisions)
             </label>
             <input
               id="reg-dob"
@@ -332,7 +318,7 @@ async function withdrawRegistration() {
 
           <fieldset class="flex flex-col gap-2">
             <legend class="text-sm font-medium">
-              Gender Eligibility Category
+              Gender eligibility category
             </legend>
             <div class="flex items-center gap-6 pt-1">
               <div class="flex items-center gap-2">
@@ -347,7 +333,7 @@ async function withdrawRegistration() {
                 <label
                   for="reg-gender-open"
                   class="text-sm cursor-pointer"
-                >Open / Mixed</label>
+                >Open / mixed</label>
               </div>
               <div class="flex items-center gap-2">
                 <input
@@ -371,7 +357,7 @@ async function withdrawRegistration() {
               for="reg-pdga"
               class="text-sm font-medium"
             >
-              PDGA Number (optional)
+              PDGA number (optional)
             </label>
             <input
               id="reg-pdga"
@@ -391,7 +377,7 @@ async function withdrawRegistration() {
               for="reg-home-club"
               class="text-sm font-medium"
             >
-              Home Club (optional)
+              Home club (optional)
             </label>
             <input
               id="reg-home-club"
@@ -408,7 +394,7 @@ async function withdrawRegistration() {
           :disabled="isFormDisabled"
         >
           <legend class="px-2 text-sm font-semibold">
-            2. Division Selection
+            2. Division selection
           </legend>
 
           <div class="flex flex-wrap gap-4">
@@ -436,7 +422,7 @@ async function withdrawRegistration() {
 
           <div class="bg-base-200/70 rounded-lg p-3 text-sm flex flex-wrap items-center justify-between gap-2">
             <div>
-              <span class="font-medium">Automatic Age / Minor Division Tags:</span>
+              <span class="font-medium">Automatic age / minor division tags:</span>
               <p class="text-xs opacity-70">
                 Automatically derived from your date of birth and gender category.
               </p>
@@ -455,7 +441,7 @@ async function withdrawRegistration() {
                 v-else
                 class="text-xs opacity-60 italic"
               >
-                {{ regDateOfBirth ? "No age-protected minor division applies" : "Enter Date of Birth to see eligible age divisions" }}
+                {{ regDateOfBirth ? "No age-protected minor division applies" : "Enter date of birth to see eligible age divisions" }}
               </span>
             </div>
           </div>
@@ -466,12 +452,12 @@ async function withdrawRegistration() {
           :disabled="isFormDisabled"
         >
           <legend class="px-2 text-sm font-semibold">
-            3. Select Disciplines
+            3. Select disciplines
           </legend>
 
           <div class="flex flex-wrap items-center justify-between gap-2">
             <p class="text-xs opacity-75">
-              Choose which disciplines you want to compete in, or select all for Full Overall.
+              Choose which disciplines you want to compete in, or select all for full overall.
             </p>
             <button
               type="button"
@@ -483,7 +469,7 @@ async function withdrawRegistration() {
                 name="tabler:checks"
                 size="14"
               />
-              Select All / Full Overall
+              Select all / full overall
             </button>
           </div>
 
@@ -524,7 +510,7 @@ async function withdrawRegistration() {
                 v-if="withdrawing"
                 class="loading loading-spinner loading-xs"
               />
-              Withdraw Registration
+              Withdraw registration
             </button>
           </div>
 
@@ -538,13 +524,13 @@ async function withdrawRegistration() {
               v-if="submitting"
               class="loading loading-spinner loading-xs"
             />
-            {{ isCurrentlyRegistered ? "Update Registration" : "Confirm Registration" }}
+            {{ isCurrentlyRegistered ? "Update registration" : "Confirm registration" }}
           </button>
           <p
             v-else
             class="text-xs opacity-70 italic"
           >
-            Online self-registration is currently closed. Please contact the Tournament Director for changes.
+            Online self-registration is currently closed. Please contact the tournament director for changes.
           </p>
         </div>
       </div>

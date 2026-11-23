@@ -106,7 +106,7 @@ async function submitDecision() {
   <div class="space-y-4">
     <div class="flex items-center justify-between gap-3 flex-wrap">
       <h2 class="text-lg font-semibold">
-        Ban Requests
+        Ban requests
       </h2>
       <div class="tabs tabs-boxed">
         <button
@@ -142,7 +142,7 @@ async function submitDecision() {
 
     <div class="alert alert-info shadow-sm">
       <span>
-        Email notifications for ban requests are configured per tournament in Tournament Workspace settings.
+        Email notifications for ban requests are configured per tournament in tournament workspace settings.
       </span>
     </div>
 
@@ -243,7 +243,7 @@ async function submitDecision() {
     <ConfirmationModal
       :open="!!decisionModal"
       :title="decision === 'approved' ? 'Approve ban request' : 'Reject ban request'"
-      :confirm-text="decision === 'approved' ? 'Approve and Ban' : 'Reject request'"
+      :confirm-text="decision === 'approved' ? 'Approve and ban' : 'Reject request'"
       :is-dangerous="decision === 'approved'"
       :confirm-disabled="deciding"
       @confirm="submitDecision"

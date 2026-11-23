@@ -174,7 +174,7 @@ function statusLabel(inv: InvitationRow) {
 
     <div class="flex justify-end">
       <NuxtLink to="/admin/invites" class="btn btn-primary btn-sm">
-        + Send New Invite
+        + Send new invite
       </NuxtLink>
     </div>
   </div>

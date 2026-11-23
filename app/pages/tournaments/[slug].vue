@@ -187,7 +187,7 @@ async function handleRegistrationUpdated() {
             name="tabler:arrow-left"
             size="18"
           />
-          Back to Tournaments
+          Back to tournaments
         </NuxtLink>
         <div class="flex items-center gap-2">
           <button
@@ -206,7 +206,7 @@ async function handleRegistrationUpdated() {
               v-else
               class="loading loading-spinner loading-sm"
             />
-            {{ openingInvitePage ? "Opening..." : "Invite Member" }}
+            {{ openingInvitePage ? "Opening..." : "Invite member" }}
           </button>
           <NuxtLink
             v-if="showEditButton"
@@ -217,7 +217,7 @@ async function handleRegistrationUpdated() {
               name="tabler:edit"
               size="18"
             />
-            Edit Tournament
+            Edit tournament
           </NuxtLink>
         </div>
       </div>
@@ -233,7 +233,7 @@ async function handleRegistrationUpdated() {
             class="badge badge-success gap-2 py-3"
           >
             <span class="w-2 h-2 bg-white rounded-full animate-pulse" />
-            Live Now
+            Live now
           </span>
           <span
             v-else-if="tournament.status === 'future'"
@@ -245,7 +245,7 @@ async function handleRegistrationUpdated() {
             v-else
             class="badge badge-ghost py-3"
           >
-            Past Event
+            Past event
           </span>
         </div>
       </div>
@@ -276,7 +276,7 @@ async function handleRegistrationUpdated() {
                         name="tabler:calendar"
                         size="20"
                       />
-                      Date & Time
+                      Date & time
                     </h3>
                     <p class="text-sm">
                       {{ formatDateRange(tournament.startDate, tournament.endDate) }}
@@ -346,7 +346,7 @@ async function handleRegistrationUpdated() {
                         class="btn btn-primary btn-xs"
                         @click="activeViewTab = 'registration'"
                       >
-                        {{ isCurrentlyRegistered ? "View / Edit My Registration" : "Go to Registration" }}
+                        {{ isCurrentlyRegistered ? "View / edit my registration" : "Go to registration" }}
                       </button>
                     </div>
                   </div>
@@ -380,7 +380,7 @@ async function handleRegistrationUpdated() {
                         name="tabler:trophy"
                         size="20"
                       />
-                      Event Types
+                      Event types
                     </h3>
                     <EventTypesList
                       :has-golf="tournament.hasGolf"
@@ -456,7 +456,7 @@ async function handleRegistrationUpdated() {
                       name="tabler:user"
                       size="20"
                     />
-                    Tournament Contact
+                    Tournament contact
                   </h3>
                   <div class="text-sm space-y-1">
                     <p v-if="tournament.contactName">
@@ -485,7 +485,7 @@ async function handleRegistrationUpdated() {
                       name="tabler:user-star"
                       size="20"
                     />
-                    Tournament Director
+                    Tournament director
                   </h3>
                   <div class="text-sm space-y-1">
                     <p v-if="tournament.directorName">
@@ -584,7 +584,7 @@ async function handleRegistrationUpdated() {
             Interested in participating?
           </p>
           <p class="text-sm opacity-80">
-            Register directly in the Registration tab, or contact the tournament director if you need assistance.
+            Register directly in the registration tab, or contact the tournament director if you need assistance.
           </p>
         </div>
         <a

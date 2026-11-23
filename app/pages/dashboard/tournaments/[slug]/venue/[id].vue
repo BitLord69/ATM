@@ -5,9 +5,9 @@ import type { TournamentEditResponse, VenueCourseLayoutItem } from "~/types/tour
 definePageMeta({ ssr: false, layout: "tournament-admin" });
 
 const venueTabs: VerticalTabConfig[] = [
-  { id: "details", label: "General Details" },
-  { id: "disciplines", label: "Disciplines & Course Layouts" },
-  { id: "location", label: "Location & Map" },
+  { id: "details", label: "General details" },
+  { id: "disciplines", label: "Disciplines & course layouts" },
+  { id: "location", label: "Location & map" },
 ];
 const activeVenueTab = ref("details");
 
@@ -277,7 +277,7 @@ async function saveVenue() {
             v-if="saving"
             class="loading loading-spinner loading-xs"
           />
-          <span v-else>Save Venue</span>
+          <span v-else>Save venue</span>
         </button>
       </div>
 
@@ -369,7 +369,7 @@ async function saveVenue() {
             v-if="saving"
             class="loading loading-spinner loading-xs"
           />
-          <span v-else>Save Venue</span>
+          <span v-else>Save venue</span>
         </button>
       </div>
     </div>

@@ -11,11 +11,13 @@ type Props = {
   id?: string;
   placeholder?: string;
   disabled?: boolean;
+  size?: "sm" | "md";
 };
 
 withDefaults(defineProps<Props>(), {
   placeholder: "Select country",
   disabled: false,
+  size: "md",
 });
 
 const emit = defineEmits<{
@@ -88,6 +90,7 @@ const selectOptions = computed(() =>
     :options="selectOptions"
     :placeholder="placeholder"
     :disabled="disabled"
+    :size="size"
     autocomplete="country-name"
     empty-text="No matching country"
     @update:model-value="emit('update:modelValue', $event)"

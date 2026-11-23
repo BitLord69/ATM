@@ -435,7 +435,7 @@ async function handleInvite() {
 <template>
   <div class="space-y-4">
     <h2 class="text-lg font-semibold">
-      Send Invite
+      Send invite
     </h2>
 
     <!-- Status Alerts -->
@@ -468,7 +468,7 @@ async function handleInvite() {
       <template #general>
         <div class="grid grid-cols-1 gap-3">
           <FormField
-            label="Recipient Email"
+            label="Recipient email"
             wrapper-class="w-full"
           >
             <div class="relative w-full">
@@ -495,7 +495,7 @@ async function handleInvite() {
           </FormField>
 
           <FormField
-            label="Global Role"
+            label="Global role"
             wrapper-class="w-full"
           >
             <ToggleField
@@ -547,7 +547,7 @@ async function handleInvite() {
 
           <div class="mt-4">
             <FormField
-              label="Assign Role (Tournament)"
+              label="Assign role (tournament)"
               wrapper-class="w-full"
             >
               <select
@@ -578,7 +578,7 @@ async function handleInvite() {
 
             <div class="mt-4 border border-base-300 rounded-lg overflow-hidden">
               <div class="px-3 py-2 bg-base-200/60 text-sm font-semibold">
-                Role Quick Guide
+                Role quick guide
               </div>
               <div class="overflow-x-auto">
                 <table class="table table-sm">
@@ -587,7 +587,7 @@ async function handleInvite() {
                       <th>Role</th>
                       <th>Scope</th>
                       <th>Capabilities</th>
-                      <th>Main Responsibility</th>
+                      <th>Main responsibility</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -622,7 +622,7 @@ async function handleInvite() {
         @click="handleInvite"
       >
         <span v-if="isSubmitting" class="loading loading-spinner" />
-        <span v-else>Send Invitation</span>
+        <span v-else>Send invitation</span>
       </button>
     </div>
 
@@ -633,7 +633,7 @@ async function handleInvite() {
     >
       <div class="modal-box w-full max-w-md bg-base-100 border border-base-300">
         <h3 class="font-bold text-lg mb-4">
-          {{ confirmData?.mode === 'batch' ? 'Confirm Batch Sending' : 'Resend Invitations?' }}
+          {{ confirmData?.mode === 'batch' ? 'Confirm batch sending' : 'Resend invitations?' }}
         </h3>
 
         <div class="space-y-3 text-sm mb-6">

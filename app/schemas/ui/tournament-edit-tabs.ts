@@ -8,8 +8,8 @@ const TOURNAMENT_EDIT_TABS = [
   { id: "divisions", label: "Divisions" },
   { id: "disciplines", label: "Disciplines" },
   { id: "map", label: "Map" },
-  { id: "venue-actions", label: "Venue Actions" },
-  { id: "venue-list", label: "Venue List" },
+  { id: "venue-actions", label: "Venue actions" },
+  { id: "venue-list", label: "Venue list" },
 ] as const satisfies readonly VerticalTabConfig[];
 
 export type TournamentEditTabId = (typeof TOURNAMENT_EDIT_TABS)[number]["id"];

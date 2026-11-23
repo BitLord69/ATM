@@ -181,7 +181,7 @@ async function submit() {
     else {
       const displayName = formDisplayName.value.trim();
       if (!displayName) {
-        errorMessage.value = "Guest player display name is required.";
+        errorMessage.value = "Guest player name is required.";
         return;
       }
       await $fetch(`/api/tournaments/${props.slug}/entries`, {
@@ -215,7 +215,7 @@ async function submit() {
         id="td-register-player-heading"
         class="font-semibold text-base"
       >
-        {{ editingPlayer ? `Edit Registration: ${editingPlayer.displayName}` : "Register Player into Tournament" }}
+        {{ editingPlayer ? `Edit registration: ${editingPlayer.displayName}` : "Register player into tournament" }}
       </h3>
       <button
         type="button"
@@ -226,14 +226,13 @@ async function submit() {
       </button>
     </div>
 
-    <div
-      v-if="errorMessage"
+    <FlashAlert
+      :message="errorMessage"
+      type="error"
       role="alert"
-      aria-live="polite"
-      class="alert alert-error py-2"
-    >
-      <span class="text-sm">{{ errorMessage }}</span>
-    </div>
+      :auto-hide-ms="0"
+      @dismiss="errorMessage = null"
+    />
 
     <!-- Player type (new registrations only) -->
     <fieldset
@@ -241,7 +240,7 @@ async function submit() {
       class="flex flex-wrap items-center gap-6 border border-base-300 rounded-lg px-4 py-2.5"
     >
       <legend class="px-1 text-xs font-semibold uppercase tracking-wide opacity-75">
-        Player Type
+        Player type
       </legend>
       <div class="flex items-center gap-2">
         <input
@@ -256,7 +255,7 @@ async function submit() {
           for="mode-guest"
           class="text-sm font-medium cursor-pointer"
         >
-          New Guest / Offline Player (no login account required)
+          New guest / offline player (no login account required)
         </label>
       </div>
       <div class="flex items-center gap-2">
@@ -272,7 +271,7 @@ async function submit() {
           for="mode-existing"
           class="text-sm font-medium cursor-pointer"
         >
-          Existing Platform User
+          Existing platform user
         </label>
       </div>
     </fieldset>
@@ -374,7 +373,7 @@ async function submit() {
       class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 border border-base-300 rounded-lg p-3"
     >
       <legend class="px-2 text-xs font-semibold uppercase tracking-wide opacity-75">
-        Player Details
+        Player details
       </legend>
 
       <div class="flex flex-col gap-1">
@@ -382,7 +381,7 @@ async function submit() {
           for="td-player-name"
           class="text-xs font-medium"
         >
-          Display Name <span aria-hidden="true">*</span>
+          Player name <span aria-hidden="true">*</span>
         </label>
         <input
           id="td-player-name"
@@ -401,14 +400,12 @@ async function submit() {
         >
           Country
         </label>
-        <input
+        <CountrySelect
           id="td-player-country"
           v-model="formCountry"
-          name="country"
-          type="text"
-          placeholder="e.g. Sweden"
-          class="input input-bordered input-sm w-full"
-        >
+          size="sm"
+          placeholder="Select country"
+        />
       </div>
 
       <div class="flex flex-col gap-1">
@@ -435,7 +432,7 @@ async function submit() {
           for="td-player-dob"
           class="text-xs font-medium"
         >
-          Date of Birth
+          Date of birth
         </label>
         <input
           id="td-player-dob"
@@ -448,7 +445,7 @@ async function submit() {
 
       <fieldset class="flex flex-col gap-1">
         <legend class="text-xs font-medium">
-          Gender Category
+          Gender category
         </legend>
         <div class="flex items-center gap-4 pt-1.5">
           <div class="flex items-center gap-1.5">
@@ -504,7 +501,7 @@ async function submit() {
           for="td-player-club"
           class="text-xs font-medium"
         >
-          Home Club
+          Home club
         </label>
         <input
           id="td-player-club"
@@ -520,7 +517,7 @@ async function submit() {
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
       <fieldset class="border border-base-300 rounded-lg p-3 space-y-2">
         <legend class="px-2 text-xs font-semibold uppercase tracking-wide opacity-75">
-          Major Division
+          Major division
         </legend>
         <div class="flex flex-wrap gap-3">
           <div
@@ -558,7 +555,7 @@ async function submit() {
             :class="isFullOverall ? 'btn-secondary' : 'btn-outline'"
             @click="selectAllDisciplines"
           >
-            Select All / Full Overall
+            Select all / full overall
           </button>
         </div>
         <div class="flex flex-wrap gap-3 pt-1">
@@ -603,7 +600,7 @@ async function submit() {
           v-if="saving"
           class="loading loading-spinner loading-xs"
         />
-        {{ editingPlayer ? "Save Changes" : "Register Player" }}
+        {{ editingPlayer ? "Save changes" : "Register player" }}
       </button>
     </div>
   </form>

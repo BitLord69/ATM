@@ -3,17 +3,17 @@ import type { RegistrationStatusReason } from "~/types/tournament-registration";
 export function getRegistrationStatusBadge(reason: RegistrationStatusReason | string | null | undefined) {
   switch (reason) {
     case "open":
-      return { label: "Registration Open", badgeClass: "badge-success" };
+      return { label: "Registration open", badgeClass: "badge-success" };
     case "not_yet_open":
-      return { label: "Not Yet Open", badgeClass: "badge-warning" };
+      return { label: "Not yet open", badgeClass: "badge-warning" };
     case "registration_closed_date":
-      return { label: "Registration Closed", badgeClass: "badge-neutral" };
+      return { label: "Registration closed", badgeClass: "badge-neutral" };
     case "locked_by_staff":
-      return { label: "Registration Locked", badgeClass: "badge-warning" };
+      return { label: "Registration locked", badgeClass: "badge-warning" };
     case "tournament_started":
-      return { label: "Tournament In Progress", badgeClass: "badge-info" };
+      return { label: "Tournament in progress", badgeClass: "badge-info" };
     case "tournament_closed":
-      return { label: "Tournament Finalized", badgeClass: "badge-ghost" };
+      return { label: "Tournament finalized", badgeClass: "badge-ghost" };
     default:
       return { label: "Closed", badgeClass: "badge-neutral" };
   }

@@ -21,7 +21,7 @@ const { data: organizationsData } = await useFetch<OrganizationOption[]>("/api/o
 const wizardSteps = [
   { id: 1, label: "Basics" },
   { id: 2, label: "Dates" },
-  { id: 3, label: "Events & Divisions" },
+  { id: 3, label: "Events & divisions" },
   { id: 4, label: "Review" },
 ] as const;
 
@@ -296,7 +296,7 @@ async function createTournament() {
           id="create-tournament-heading"
           class="text-2xl md:text-3xl font-bold"
         >
-          Create a New Tournament
+          Create a new tournament
         </h1>
         <p class="text-sm opacity-75 mt-1">
           Set up the basics step by step — you can fine-tune venues, pools, and schedules right after.
@@ -306,7 +306,7 @@ async function createTournament() {
         to="/dashboard/tournaments"
         class="btn btn-ghost btn-sm"
       >
-        Back to Workspace
+        Back to workspace
       </NuxtLink>
     </div>
 
@@ -355,7 +355,7 @@ async function createTournament() {
             tabindex="-1"
             class="text-lg font-semibold focus:outline-none"
           >
-            Step 1: Basic Information & Location
+            Step 1: Basic information & location
           </h2>
 
           <div class="flex flex-col gap-1">
@@ -363,7 +363,7 @@ async function createTournament() {
               for="new-tournament-name"
               class="text-sm font-medium"
             >
-              Tournament Name <span aria-hidden="true">*</span>
+              Tournament name <span aria-hidden="true">*</span>
             </label>
             <input
               id="new-tournament-name"
@@ -435,7 +435,7 @@ async function createTournament() {
               :for="orgMode === 'existing' && hasExistingOrganizations ? 'new-tournament-org-search' : 'new-tournament-org-name'"
               class="text-sm font-medium"
             >
-              Hosting Club / Organization <span class="text-xs font-normal opacity-60">(optional)</span>
+              Hosting club / organization <span class="text-xs font-normal opacity-60">(optional)</span>
             </label>
 
             <div
@@ -494,7 +494,7 @@ async function createTournament() {
           </div>
         </section>
 
-        <!-- Step 2: Dates & Registration Window -->
+        <!-- Step 2: Dates & registration window -->
         <section
           v-else-if="currentStep === 2"
           class="space-y-4 bg-base-100 border border-base-300 rounded-box p-5"
@@ -504,7 +504,7 @@ async function createTournament() {
             tabindex="-1"
             class="text-lg font-semibold focus:outline-none"
           >
-            Step 2: Dates & Registration Window
+            Step 2: Dates & registration window
           </h2>
           <p class="text-xs opacity-70">
             All dates are optional right now and can be adjusted later in tournament details.
@@ -516,7 +516,7 @@ async function createTournament() {
                 for="new-start-date"
                 class="text-sm font-medium"
               >
-                Start Date
+                Start date
               </label>
               <input
                 id="new-start-date"
@@ -532,7 +532,7 @@ async function createTournament() {
                 for="new-end-date"
                 class="text-sm font-medium"
               >
-                End Date
+                End date
               </label>
               <input
                 id="new-end-date"
@@ -549,7 +549,7 @@ async function createTournament() {
                 for="new-reg-open"
                 class="text-sm font-medium"
               >
-                Registration Opens
+                Registration opens
               </label>
               <input
                 id="new-reg-open"
@@ -565,7 +565,7 @@ async function createTournament() {
                 for="new-reg-close"
                 class="text-sm font-medium"
               >
-                Registration Closes
+                Registration closes
               </label>
               <input
                 id="new-reg-close"
@@ -579,7 +579,7 @@ async function createTournament() {
           </div>
         </section>
 
-        <!-- Step 3: Disciplines & Divisions -->
+        <!-- Step 3: Disciplines & divisions -->
         <section
           v-else-if="currentStep === 3"
           class="space-y-4 bg-base-100 border border-base-300 rounded-box p-5"
@@ -589,7 +589,7 @@ async function createTournament() {
             tabindex="-1"
             class="text-lg font-semibold focus:outline-none"
           >
-            Step 3: Disciplines & Divisions
+            Step 3: Disciplines & divisions
           </h2>
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -608,7 +608,7 @@ async function createTournament() {
                     name="tabler:checks"
                     size="14"
                   />
-                  Select All (Full Overall)
+                  Select all (full overall)
                 </button>
               </div>
 
@@ -713,7 +713,7 @@ async function createTournament() {
                     name="tabler:checks"
                     size="14"
                   />
-                  Select All Divisions
+                  Select all divisions
                 </button>
               </div>
 
@@ -805,7 +805,7 @@ async function createTournament() {
           </div>
         </section>
 
-        <!-- Step 4: Review & Create -->
+        <!-- Step 4: Review & create -->
         <section
           v-else
           class="space-y-4 bg-base-100 border border-base-300 rounded-box p-5"
@@ -815,13 +815,13 @@ async function createTournament() {
             tabindex="-1"
             class="text-lg font-semibold focus:outline-none"
           >
-            Step 4: Review & Create
+            Step 4: Review & create
           </h2>
 
           <dl class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
             <div class="bg-base-200/70 rounded-lg p-3">
               <dt class="text-xs uppercase tracking-wide opacity-65">
-                Tournament Name
+                Tournament name
               </dt>
               <dd class="font-semibold mt-0.5">
                 {{ name.trim() }}
@@ -927,7 +927,7 @@ async function createTournament() {
               v-if="submitting"
               class="loading loading-spinner loading-xs"
             />
-            Create Tournament
+            Create tournament
           </button>
         </div>
       </div>

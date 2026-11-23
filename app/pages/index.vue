@@ -137,7 +137,7 @@ const tournamentsWithCoordinates = computed(() =>
               name="tabler:trophy"
               size="24"
             />
-            Browse Tournaments
+            Browse tournaments
           </NuxtLink>
           <NuxtLink
             :to="authUiReady && authStore.isSignedIn
@@ -149,7 +149,7 @@ const tournamentsWithCoordinates = computed(() =>
               name="tabler:plus"
               size="24"
             />
-            Create a Tournament
+            Create a tournament
           </NuxtLink>
           <NuxtLink
             v-if="authUiReady && !authStore.isSignedIn"
@@ -160,7 +160,7 @@ const tournamentsWithCoordinates = computed(() =>
               name="tabler:login"
               size="24"
             />
-            Sign In
+            Sign in
           </NuxtLink>
         </div>
 
@@ -180,7 +180,7 @@ const tournamentsWithCoordinates = computed(() =>
             to="/tournaments?filter=active"
             class="btn btn-sm btn-ghost"
           >
-            View Live
+            View live
           </NuxtLink>
         </div>
 
@@ -190,7 +190,7 @@ const tournamentsWithCoordinates = computed(() =>
           class="mb-12"
         >
           <h2 class="text-2xl font-bold mb-6">
-            Upcoming Tournaments
+            Upcoming tournaments
           </h2>
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <NuxtLink
@@ -233,7 +233,7 @@ const tournamentsWithCoordinates = computed(() =>
           class="mt-12"
         >
           <h2 class="text-2xl font-bold mb-4">
-            Tournaments Worldwide
+            Tournaments worldwide
           </h2>
           <ClientOnly>
             <TournamentsMap
@@ -254,7 +254,7 @@ const tournamentsWithCoordinates = computed(() =>
                 class="text-primary mb-2"
               />
               <h3 class="card-title text-lg">
-                Multi-Event Support
+                Multi-event support
               </h3>
               <p class="text-sm opacity-70">
                 Manage Disc golf, Accuracy, Distance, SCF, Discathon, DDC, and Freestyle events all in one place
@@ -269,7 +269,7 @@ const tournamentsWithCoordinates = computed(() =>
                 class="text-primary mb-2"
               />
               <h3 class="card-title text-lg">
-                Team Collaboration
+                Team collaboration
               </h3>
               <p class="text-sm opacity-70">
                 Invite tournament directors, scorers, and staff with role-based permissions
@@ -284,7 +284,7 @@ const tournamentsWithCoordinates = computed(() =>
                 class="text-primary mb-2"
               />
               <h3 class="card-title text-lg">
-                Real-Time Scoring
+                Real-time scoring
               </h3>
               <p class="text-sm opacity-70">
                 Live score updates, leaderboards, and comprehensive reporting for participants and spectators

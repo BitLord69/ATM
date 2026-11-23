@@ -332,7 +332,7 @@ watch(
 <template>
   <div class="space-y-4">
     <FormHeader
-      title="Players & Registration"
+      title="Players & registration"
       title-tag="h1"
       title-class="text-2xl font-bold"
       wrapper-class="mb-0"
@@ -348,7 +348,7 @@ watch(
               id="registered-players-heading"
               class="text-lg font-semibold"
             >
-              Registered Players & Discipline Entries
+              Registered players & discipline entries
             </h2>
             <p class="text-xs opacity-70">
               Register existing users or offline guest players, edit divisions and disciplines, or process withdrawals.
@@ -375,28 +375,25 @@ watch(
                 :name="showRegisterForm && !editingPlayer ? 'tabler:x' : 'tabler:user-plus'"
                 size="16"
               />
-              {{ showRegisterForm && !editingPlayer ? "Close Form" : "Register Player" }}
+              {{ showRegisterForm && !editingPlayer ? "Close form" : "Register player" }}
             </button>
           </div>
         </div>
 
-        <div
-          v-if="entriesError"
+        <FlashAlert
+          :message="entriesError"
+          type="error"
           role="alert"
-          aria-live="polite"
-          class="alert alert-error py-2"
-        >
-          <span class="text-sm">{{ entriesError }}</span>
-        </div>
+          :auto-hide-ms="0"
+          @dismiss="entriesError = null"
+        />
 
-        <div
-          v-if="entriesSuccess"
+        <FlashAlert
+          :message="entriesSuccess"
+          type="success"
           role="status"
-          aria-live="polite"
-          class="alert alert-success py-2"
-        >
-          <span class="text-sm">{{ entriesSuccess }}</span>
-        </div>
+          @dismiss="entriesSuccess = null"
+        />
 
         <PlayerRegistrationForm
           v-if="showRegisterForm && entriesData"
@@ -428,7 +425,7 @@ watch(
         <div class="flex items-start justify-between gap-3">
           <div>
             <h3 class="font-semibold">
-              Registration Lock
+              Registration lock
             </h3>
             <p class="text-xs opacity-70">
               Tournament-level registration control (TD/admin discretion after start).
@@ -452,19 +449,20 @@ watch(
           · Locked at: <strong>{{ formatTimestamp(registrationLock.lock.lockedAt) }}</strong>
         </p>
 
-        <div
-          v-if="registrationLockError"
-          class="alert alert-error py-2"
-        >
-          <span class="text-sm">{{ registrationLockError }}</span>
-        </div>
+        <FlashAlert
+          :message="registrationLockError"
+          type="error"
+          role="alert"
+          :auto-hide-ms="0"
+          @dismiss="registrationLockError = null"
+        />
 
-        <div
-          v-if="registrationLockSuccess"
-          class="alert alert-success py-2"
-        >
-          <span class="text-sm">{{ registrationLockSuccess }}</span>
-        </div>
+        <FlashAlert
+          :message="registrationLockSuccess"
+          type="success"
+          role="status"
+          @dismiss="registrationLockSuccess = null"
+        />
 
         <div class="flex flex-wrap items-center gap-2">
           <button
@@ -477,7 +475,7 @@ watch(
               v-if="registrationLockSaving"
               class="loading loading-spinner loading-xs"
             />
-            <span v-else>Lock Registration</span>
+            <span v-else>Lock registration</span>
           </button>
           <button
             class="btn btn-sm btn-outline"
@@ -485,7 +483,7 @@ watch(
             type="button"
             @click="setRegistrationLock(false)"
           >
-            Unlock Registration
+            Unlock registration
           </button>
           <button
             class="btn btn-sm btn-ghost"
@@ -505,7 +503,7 @@ watch(
         <div class="flex items-start justify-between gap-3">
           <div>
             <h3 class="font-semibold">
-              Tournament Player Numbers
+              Tournament player numbers
             </h3>
             <p class="text-xs opacity-70">
               Stable athlete numbers for this tournament. Generate once with gaps, then manually assign only for newly added players.
@@ -544,7 +542,7 @@ watch(
               type="button"
               @click="requestGeneratePlayerNumbers"
             >
-              Generate Once
+              Generate once
             </button>
           </div>
         </div>
@@ -556,19 +554,20 @@ watch(
           Auto-generation is disabled because numbers are already initialized. Only manual assignment for unassigned players is allowed.
         </p>
 
-        <div
-          v-if="playerNumbersError"
-          class="alert alert-error py-2"
-        >
-          <span class="text-sm">{{ playerNumbersError }}</span>
-        </div>
+        <FlashAlert
+          :message="playerNumbersError"
+          type="error"
+          role="alert"
+          :auto-hide-ms="0"
+          @dismiss="playerNumbersError = null"
+        />
 
-        <div
-          v-if="playerNumbersSuccess"
-          class="alert alert-success py-2"
-        >
-          <span class="text-sm">{{ playerNumbersSuccess }}</span>
-        </div>
+        <FlashAlert
+          :message="playerNumbersSuccess"
+          type="success"
+          role="status"
+          @dismiss="playerNumbersSuccess = null"
+        />
 
         <div class="flex items-center justify-between gap-2">
           <label class="label cursor-pointer gap-2">
@@ -617,7 +616,7 @@ watch(
                 <th>Number</th>
                 <th>Mode</th>
                 <th>Assigned</th>
-                <th>Manual Assign</th>
+                <th>Manual assign</th>
               </tr>
             </thead>
             <tbody>

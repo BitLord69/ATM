@@ -19,7 +19,7 @@ function handleSelect(tournament: any) {
   >
     <div class="modal-box max-w-2xl">
       <h3 class="font-bold text-lg mb-4">
-        Select a Tournament
+        Select a tournament
       </h3>
 
       <div

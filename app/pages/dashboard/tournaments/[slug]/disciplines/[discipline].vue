@@ -25,12 +25,12 @@ const disciplineLabel = computed(() => disciplineLabelMap[discipline.value] || d
 const activeSettingsTab = ref("rounds");
 const settingsTabs = computed(() => {
   const base = [
-    { id: "rounds", label: "Rounds & Progression" },
+    { id: "rounds", label: "Rounds & progression" },
   ];
   if (isGolf.value) {
     base.push(
-      { id: "pools", label: "Pools & Starting Format" },
-      { id: "courses", label: "Course, Layout & Par per Round" },
+      { id: "pools", label: "Pools & starting format" },
+      { id: "courses", label: "Course, layout & par per round" },
     );
   }
   return base;
@@ -250,7 +250,7 @@ const {
 
 const progressionModeOptions = [
   { value: "straight", label: "Straight sum of all rounds", sublabel: "No cut — all rounds count directly" },
-  { value: "cut", label: "Cut after preliminary rounds", sublabel: "Advance top players to Semifinal / Final" },
+  { value: "cut", label: "Cut after preliminary rounds", sublabel: "Advance top players to semifinal / final" },
 ];
 
 const poolCountOptions = Array.from({ length: 8 }, (_, idx) => {
@@ -628,7 +628,7 @@ async function saveSettings() {
               v-if="parsedRoundsCount === 0"
               class="text-sm opacity-70"
             >
-              Enter Total rounds above to configure Course, Layout & Par for each round.
+              Enter total rounds above to configure course, layout & par for each round.
             </div>
 
             <div

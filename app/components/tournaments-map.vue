@@ -136,7 +136,7 @@ watch(
               v-if="tournament.isActive"
               class="badge badge-success badge-xs mt-2"
             >
-              Live Now
+              Live now
             </span>
             <span
               v-else-if="tournament.status === 'future'"

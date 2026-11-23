@@ -30,7 +30,7 @@
       <li><strong>Angle control</strong> - Throwing at an angle that allows time to run under the disc</li>
     </ul>
 
-    <h2>Competition Format</h2>
+    <h2>Competition format</h2>
     <p>
       In tournaments, SCF is typically run with:
     </p>

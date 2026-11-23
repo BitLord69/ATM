@@ -94,5 +94,17 @@ Collected visual upgrades to tackle together in a dedicated UI polish pass:
   - **Missing discipline icons across Venue modal & Manage Venues / Overview:** In `venue-editor-fields.vue`, `edit.vue` (*Manage Venues* filter chips), and Overview discipline lists, only **Distance** currently renders its icon because the remaining 6 discipline icons in `use-discipline-catalog.ts` are referenced dynamically and skipped by `@nuxt/icon` (`provider: "none"`). Add all 7 discipline icons to `nuxt.config.ts` `icon.clientBundle.icons`.
   - **Unify all remaining `<select>` dropdowns:** Upgrade all native `<select>` dropdowns across the app (e.g., Discipline settings, Starting Lists, Players filters, Admin Users filters) to match the crisp, high-contrast `SearchableSelect` / DaisyUI menu look (`bg-base-200 border-primary/50 ring-1 ring-primary/20 shadow-2xl`).
   - **Auto-dismissing & closable alerts/toasts site-wide:** Standardize all success/error alerts across all forms and admin pages to use a unified closable (`×`) and auto-dismissing (4–5s for success) alert/toast component (`FlashAlert` or DaisyUI `toast`).
+  - **Sentence case audit (no American Title Case):** Do a final copy pass across all English UI copy (headings, tabs, buttons, badges, labels, table headers, placeholders, and toasts) to guarantee strict sentence case everywhere (per `AGENTS.md` Rule 9).
+- **Internationalization (i18n) Preparation:**
+  - Integrate `@nuxtjs/i18n` and extract all UI strings (labels, headings, buttons, badges, tooltips, validation messages, and alerts) into centralized locale files (starting with `i18n/locales/en.json`) so the site is ready for localization (e.g., Swedish, Finnish, German) without hunting down hardcoded strings across components.
+
+## External Integrations (PDGA & Course APIs)
+
+- **PDGA Player API Lookup (`api.pdga.com`):**
+  - Requires an active PDGA membership and approved PDGA developer API license.
+  - Add an optional "Lookup by PDGA #" helper in player registration / profile forms to auto-fill player name, country/city, membership status, and official PDGA rating (for active members), plus optional rating-based seeding for disc golf pools in M1.3+. (Note: PDGA's player API does not store home club.)
+- **DiscGolfAPI Course Import (`discgolfapi.com`):**
+  - Free open read-only REST API with course coordinates, hole counts, and `primary_layout` par data.
+  - Add an optional "Import course from DiscGolfAPI" search in the venue editor to prefill venue coordinates and initial disc golf course layouts/par without manual entry.
 
 

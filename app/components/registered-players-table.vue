@@ -82,13 +82,13 @@ const filteredPlayers = computed(() => {
           class="select select-bordered select-sm"
         >
           <option value="all">
-            All Statuses
+            All statuses
           </option>
           <option value="registered">
-            Registered Only
+            Registered only
           </option>
           <option value="withdrawn">
-            Withdrawn Only
+            Withdrawn only
           </option>
         </select>
 
@@ -102,7 +102,7 @@ const filteredPlayers = computed(() => {
           class="select select-bordered select-sm"
         >
           <option value="all">
-            All Major Divisions
+            All major divisions
           </option>
           <option
             v-for="div in majorDivisions"
@@ -148,8 +148,8 @@ const filteredPlayers = computed(() => {
             <th>Player</th>
             <th>#</th>
             <th>Country</th>
-            <th>Major Div</th>
-            <th>Minor / Age Divs</th>
+            <th>Major div</th>
+            <th>Minor / age divs</th>
             <th>Disciplines</th>
             <th>Status</th>
             <th

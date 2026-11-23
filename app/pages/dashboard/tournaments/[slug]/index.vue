@@ -66,7 +66,7 @@ const tournamentName = computed(() => {
       <NuxtLink :to="`/dashboard/tournaments/${slug}/starting-lists`" class="card bg-base-100 border border-base-300 hover:border-primary transition-colors">
         <div class="card-body p-4">
           <h2 class="card-title text-lg">
-            Starting Lists
+            Starting lists
           </h2>
           <p class="text-sm opacity-70">
             Generate, lock, and reorder lists by discipline and round.
